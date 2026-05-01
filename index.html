@@ -50,7 +50,20 @@
     }
 
     header h1 { font-size: 18px; font-weight: 600; }
-    header p { font-size: 12px; color: var(--text2); }
+    header p  { font-size: 12px; color: var(--text2); }
+
+    .free-badge {
+      margin-left: auto;
+      background: rgba(79,207,142,.15);
+      color: var(--success);
+      border: 1px solid rgba(79,207,142,.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
 
     main {
       flex: 1;
@@ -63,71 +76,12 @@
       gap: 20px;
     }
 
-    /* API Key Section */
-    .api-section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 16px;
-    }
-
-    .section-label {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--text2);
-      margin-bottom: 10px;
-    }
-
-    .api-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    .api-row input {
-      flex: 1;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--text);
-      font-size: 14px;
-      outline: none;
-      transition: border-color .2s;
-    }
-
-    .api-row input:focus { border-color: var(--accent); }
-    .api-row input::placeholder { color: var(--text2); }
-
-    .btn-save {
-      background: var(--accent);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 10px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: opacity .2s;
-    }
-    .btn-save:hover { opacity: .85; }
-    .btn-save.saved { background: var(--success); }
-
-    .api-hint {
-      font-size: 11px;
-      color: var(--text2);
-      margin-top: 6px;
-    }
-    .api-hint a { color: var(--accent); text-decoration: none; }
-
     /* Upload Area */
     .upload-area {
       background: var(--surface);
       border: 2px dashed var(--border);
       border-radius: var(--radius);
-      padding: 36px 20px;
+      padding: 40px 20px;
       text-align: center;
       cursor: pointer;
       transition: border-color .2s, background .2s;
@@ -146,9 +100,9 @@
       width: 100%; height: 100%;
     }
 
-    .upload-icon { font-size: 40px; margin-bottom: 12px; }
+    .upload-icon { font-size: 44px; margin-bottom: 12px; }
     .upload-area h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
-    .upload-area p { font-size: 13px; color: var(--text2); }
+    .upload-area p  { font-size: 13px; color: var(--text2); }
 
     .upload-btns {
       display: flex;
@@ -170,6 +124,7 @@
       align-items: center;
       gap: 6px;
       transition: border-color .2s;
+      text-decoration: none;
     }
     .btn-upload:hover { border-color: var(--accent); }
 
@@ -184,7 +139,7 @@
 
     .preview-wrap img {
       width: 100%;
-      max-height: 400px;
+      max-height: 420px;
       object-fit: contain;
       display: block;
       background: #000;
@@ -193,7 +148,7 @@
     .preview-clear {
       position: absolute;
       top: 10px; right: 10px;
-      background: rgba(0,0,0,.6);
+      background: rgba(0,0,0,.65);
       border: none;
       border-radius: 50%;
       width: 32px; height: 32px;
@@ -206,11 +161,16 @@
     .preview-clear:hover { background: var(--danger); }
 
     /* Notes */
-    .notes-section {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 8px;
     }
+
+    .notes-section { display: flex; flex-direction: column; gap: 6px; }
 
     .notes-section textarea {
       background: var(--surface);
@@ -243,7 +203,7 @@
       letter-spacing: 0.03em;
     }
     .btn-analyze:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
-    .btn-analyze:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+    .btn-analyze:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 
     /* Loading */
     .loading {
@@ -251,7 +211,7 @@
       flex-direction: column;
       align-items: center;
       gap: 16px;
-      padding: 40px 20px;
+      padding: 44px 20px;
       background: var(--surface);
       border-radius: var(--radius);
       border: 1px solid var(--border);
@@ -259,7 +219,7 @@
     .loading.active { display: flex; }
 
     .spinner {
-      width: 44px; height: 44px;
+      width: 48px; height: 48px;
       border: 3px solid var(--border);
       border-top-color: var(--accent);
       border-radius: 50%;
@@ -267,10 +227,23 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .loading p {
+    .loading-steps {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .loading-steps p {
       color: var(--text2);
       font-size: 14px;
       text-align: center;
+    }
+
+    .loading-steps small {
+      color: var(--text2);
+      font-size: 11px;
+      opacity: .6;
     }
 
     /* Result */
@@ -292,20 +265,15 @@
       gap: 10px;
     }
     .result-header span { font-size: 20px; }
-    .result-header h2 { font-size: 16px; font-weight: 600; }
+    .result-header h2  { font-size: 16px; font-weight: 600; }
 
-    .result-body {
-      padding: 20px;
-    }
+    .result-body { padding: 20px; }
 
-    /* Sections inside result */
-    .result-section {
-      margin-bottom: 22px;
-    }
+    .result-section { margin-bottom: 24px; }
     .result-section:last-child { margin-bottom: 0; }
 
     .rs-title {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
@@ -315,25 +283,21 @@
       margin-bottom: 10px;
     }
 
-    .rs-type { background: rgba(79,142,247,.15); color: var(--accent); }
-    .rs-findings { background: rgba(76,207,142,.15); color: var(--success); }
-    .rs-warnings { background: rgba(247,147,79,.15); color: var(--warn); }
-    .rs-interpretation { background: rgba(108,99,255,.15); color: var(--accent2); }
-    .rs-recommendations { background: rgba(247,95,95,.15); color: var(--danger); }
+    .rs-type            { background: rgba(79,142,247,.15); color: var(--accent); }
+    .rs-findings        { background: rgba(76,207,142,.15); color: var(--success); }
+    .rs-warnings        { background: rgba(247,147,79,.15); color: var(--warn); }
+    .rs-interpretation  { background: rgba(108,99,255,.15); color: var(--accent2); }
+    .rs-recommendations { background: rgba(247,95,95,.15);  color: var(--danger); }
 
     .rs-content {
       font-size: 14px;
-      line-height: 1.75;
+      line-height: 1.8;
       color: var(--text);
-      white-space: pre-wrap;
     }
-
-    .rs-content ul { padding-left: 18px; }
-    .rs-content li { margin-bottom: 6px; }
 
     .result-raw {
       font-size: 14px;
-      line-height: 1.75;
+      line-height: 1.8;
       color: var(--text);
       white-space: pre-wrap;
     }
@@ -351,7 +315,7 @@
     .error-box.active { display: block; }
 
     .btn-reset {
-      margin-top: 16px;
+      margin-top: 14px;
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 8px;
@@ -366,8 +330,9 @@
     /* Responsive */
     @media (max-width: 500px) {
       header h1 { font-size: 15px; }
+      .free-badge { display: none; }
       .btn-analyze { font-size: 15px; padding: 13px; }
-      .upload-area { padding: 24px 16px; }
+      .upload-area { padding: 28px 16px; }
     }
   </style>
 </head>
@@ -379,22 +344,10 @@
     <h1>Mühendislik Analiz Yorumlayıcı</h1>
     <p>Makine Mühendisi AI Asistanı</p>
   </div>
+  <div class="free-badge">TAMAMEN ÜCRETSİZ</div>
 </header>
 
 <main>
-
-  <!-- API Key -->
-  <div class="api-section">
-    <div class="section-label">Anthropic API Anahtarı</div>
-    <div class="api-row">
-      <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off" />
-      <button class="btn-save" id="saveBtn" onclick="saveKey()">Kaydet</button>
-    </div>
-    <p class="api-hint">
-      Anahtarınız yalnızca tarayıcınızda saklanır.
-      <a href="https://console.anthropic.com/settings/keys" target="_blank">Anahtar al →</a>
-    </p>
-  </div>
 
   <!-- Upload -->
   <div id="uploadSection">
@@ -405,14 +358,10 @@
       <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)" />
       <div class="upload-icon">📊</div>
       <h3>Analiz Görselini Yükle</h3>
-      <p>Sürükle &amp; bırak veya tıklayarak seç</p>
+      <p>FEA, termal, titreşim, CFD, gerilme vb.</p>
       <div class="upload-btns">
-        <label class="btn-upload" for="fileInput">
-          🖼️ Dosya Seç
-        </label>
-        <label class="btn-upload" for="cameraInput">
-          📷 Kamera
-        </label>
+        <label class="btn-upload" for="fileInput">🖼️ Dosya Seç</label>
+        <label class="btn-upload" for="cameraInput">📷 Kamera</label>
       </div>
       <input type="file" id="cameraInput" accept="image/*" capture="environment"
              style="display:none" onchange="handleFile(event)" />
@@ -428,7 +377,8 @@
   <!-- Notes -->
   <div class="notes-section">
     <div class="section-label">Ek Notlar (İsteğe Bağlı)</div>
-    <textarea id="notes" placeholder="Analiz hakkında ek bilgi, malzeme türü, yük koşulları, çalışma sıcaklığı vb. belirtebilirsiniz..."></textarea>
+    <textarea id="notes"
+      placeholder="Malzeme türü, yük koşulları, çalışma sıcaklığı, parça adı vb. ekleyebilirsiniz..."></textarea>
   </div>
 
   <!-- Analyze -->
@@ -439,7 +389,10 @@
   <!-- Loading -->
   <div class="loading" id="loading">
     <div class="spinner"></div>
-    <p>Makine mühendisi perspektifiyle analiz ediliyor...<br/>Bu işlem 10-20 saniye sürebilir.</p>
+    <div class="loading-steps">
+      <p id="loadingMsg">Görsel AI'ya gönderiliyor...</p>
+      <small>Mühendislik perspektifiyle analiz ediliyor, lütfen bekleyin</small>
+    </div>
   </div>
 
   <!-- Error -->
@@ -461,43 +414,13 @@
 </main>
 
 <script>
-  const STORAGE_KEY = 'muh_api_key';
   let imageBase64 = null;
-  let imageMime = 'image/jpeg';
+  let imageMime   = 'image/jpeg';
 
-  // Load saved key
-  window.addEventListener('DOMContentLoaded', () => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      document.getElementById('apiKey').value = saved;
-      setSaved(true);
-    }
-  });
-
-  function setSaved(state) {
-    const btn = document.getElementById('saveBtn');
-    btn.textContent = state ? '✓ Kaydedildi' : 'Kaydet';
-    btn.className = 'btn-save' + (state ? ' saved' : '');
-  }
-
-  function saveKey() {
-    const key = document.getElementById('apiKey').value.trim();
-    if (!key) return;
-    localStorage.setItem(STORAGE_KEY, key);
-    setSaved(true);
-    updateAnalyzeBtn();
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  document.getElementById('apiKey').addEventListener('input', () => {
-    setSaved(false);
-    updateAnalyzeBtn();
-  });
+  const API_URL = 'https://text.pollinations.ai/';
 
   function updateAnalyzeBtn() {
-    const hasKey = document.getElementById('apiKey').value.trim().length > 10;
-    const hasImage = imageBase64 !== null;
-    document.getElementById('analyzeBtn').disabled = !(hasKey && hasImage);
+    document.getElementById('analyzeBtn').disabled = !imageBase64;
   }
 
   // Drag & drop
@@ -524,11 +447,13 @@
   function loadImage(file) {
     imageMime = file.type || 'image/jpeg';
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target.result;
-      imageBase64 = dataUrl.split(',')[1];
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      imageBase64   = dataUrl.split(',')[1];
       document.getElementById('previewImg').src = dataUrl;
       document.getElementById('previewWrap').style.display = 'block';
+      document.getElementById('resultBox').classList.remove('active');
+      document.getElementById('errorBox').classList.remove('active');
       updateAnalyzeBtn();
     };
     reader.readAsDataURL(file);
@@ -547,20 +472,23 @@
     document.getElementById('errorBox').classList.remove('active');
   }
 
+  function setLoadingMsg(msg) {
+    document.getElementById('loadingMsg').textContent = msg;
+  }
+
   async function analyze() {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    if (!apiKey) { alert('Lütfen API anahtarınızı girin.'); return; }
-    if (!imageBase64) { alert('Lütfen bir görsel yükleyin.'); return; }
+    if (!imageBase64) return;
 
     const notes = document.getElementById('notes').value.trim();
 
-    // Show loading
     document.getElementById('loading').classList.add('active');
     document.getElementById('resultBox').classList.remove('active');
     document.getElementById('errorBox').classList.remove('active');
     document.getElementById('analyzeBtn').disabled = true;
+    setLoadingMsg('Görsel AI\'ya gönderiliyor...');
 
-    const systemPrompt = `Sen deneyimli bir makine mühendisisin. 20 yıllık endüstriyel deneyiminle FEA (Sonlu Elemanlar Analizi), dinamik analiz, termal analiz, titreşim analizi, akış simülasyonu (CFD), yorulma analizi ve malzeme mekaniği konularında uzmanlaşmışsın.
+    const systemPrompt =
+`Sen deneyimli bir makine mühendisisin. 20 yıllık endüstriyel deneyiminle FEA (Sonlu Elemanlar Analizi), dinamik analiz, termal analiz, titreşim analizi, akış simülasyonu (CFD), yorulma analizi ve malzeme mekaniği konularında uzmanlaşmışsın.
 
 Sana gönderilen teknik analiz görselini aşağıdaki yapıda Türkçe olarak yorumla:
 
@@ -579,49 +507,49 @@ Sonuçların mühendislik açısından ne anlama geldiğini, standartlarla (ASME
 **ÖNERİLER**
 Tasarım iyileştirme, malzeme değişikliği, boyutlandırma düzeltmesi veya ek analiz önerileri sun.
 
-Yanıtın teknik, net ve uygulamaya yönelik olsun. Belirsiz bir görselde bile mümkün olan en kapsamlı yorumu yap.`;
+Yanıtın teknik, net ve uygulamaya yönelik olsun.`;
 
-    const userContent = [
-      {
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: imageMime,
-          data: imageBase64
+    const userText = notes
+      ? `Lütfen bu mühendislik analizini yorumla.\n\nEk bilgiler: ${notes}`
+      : 'Lütfen bu mühendislik analizini yorumla.';
+
+    const body = {
+      model: 'openai',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: { url: `data:${imageMime};base64,${imageBase64}` }
+            },
+            { type: 'text', text: userText }
+          ]
         }
-      },
-      {
-        type: "text",
-        text: notes
-          ? `Lütfen bu mühendislik analizini yorumla.\n\nEk bilgiler: ${notes}`
-          : "Lütfen bu mühendislik analizini yorumla."
-      }
-    ];
+      ],
+      seed: Math.floor(Math.random() * 999999)
+    };
 
     try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      setLoadingMsg('Makine mühendisi perspektifiyle analiz ediliyor...');
+
+      const response = await fetch(API_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 2048,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userContent }]
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err?.error?.message || `HTTP ${response.status}`);
+        const txt = await response.text().catch(() => '');
+        throw new Error(`Sunucu hatası: HTTP ${response.status}${txt ? ' — ' + txt.slice(0, 120) : ''}`);
       }
 
       const data = await response.json();
-      const text = data.content[0]?.text || '';
+      const text = data?.choices?.[0]?.message?.content || '';
+
+      if (!text) throw new Error('AI boş yanıt döndürdü, lütfen tekrar deneyin.');
+
       renderResult(text);
 
     } catch (err) {
@@ -642,42 +570,40 @@ Yanıtın teknik, net ve uygulamaya yönelik olsun. Belirsiz bir görselde bile 
       { key: 'ÖNERİLER',               cls: 'rs-recommendations',  label: 'Öneriler' },
     ];
 
-    // Try to parse structured sections
-    const patterns = sections.map(s => ({
-      ...s,
-      regex: new RegExp(`\\*\\*${s.key}\\*\\*([\\s\\S]*?)(?=\\*\\*[A-ZÇĞİÖŞÜ /]+\\*\\*|$)`, 'i')
-    }));
-
-    let parsed = false;
-    const matches = patterns.map(p => {
-      const m = text.match(p.regex);
-      return m ? { ...p, content: m[1].trim() } : null;
+    const matches = sections.map(s => {
+      const re = new RegExp(
+        `\\*\\*${s.key}\\*\\*([\\s\\S]*?)(?=\\*\\*[A-ZÇĞİÖŞÜ /]+\\*\\*|$)`, 'i'
+      );
+      const m = text.match(re);
+      return m ? { ...s, content: m[1].trim() } : null;
     }).filter(Boolean);
 
     if (matches.length >= 2) {
-      parsed = true;
-      const html = matches.map(m => `
+      document.getElementById('resultBody').innerHTML = matches.map(m => `
         <div class="result-section">
           <div class="rs-title ${m.cls}">${m.label}</div>
-          <div class="rs-content">${escapeHtml(m.content)}</div>
-        </div>
-      `).join('');
-      document.getElementById('resultBody').innerHTML = html;
+          <div class="rs-content">${formatContent(m.content)}</div>
+        </div>`).join('');
     } else {
-      // Fallback: render as-is
       document.getElementById('resultBody').innerHTML =
-        `<div class="result-raw">${escapeHtml(text)}</div>`;
+        `<div class="result-raw">${formatContent(text)}</div>`;
     }
 
     document.getElementById('resultBox').classList.add('active');
     document.getElementById('resultBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function escapeHtml(str) {
+  function formatContent(str) {
     return str
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
+      // bold
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      // bullet lines
+      .replace(/^[•\-\*] (.+)/gm, '<li>$1</li>')
+      .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+      // newlines
       .replace(/\n/g, '<br/>');
   }
 </script>
