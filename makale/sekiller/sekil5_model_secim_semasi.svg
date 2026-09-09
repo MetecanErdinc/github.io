@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 486" width="900" height="486" font-family="DejaVu Sans, Arial, sans-serif">
+  <defs>
+    <marker id="a" markerWidth="8" markerHeight="8" refX="6.5" refY="2.6" orient="auto">
+      <path d="M0,0 L6.5,2.6 L0,5.2 z" fill="#a9a8a2"/>
+    </marker>
+  </defs>
+  <rect width="900" height="486" fill="#fcfcfb"/>
+
+  <!-- sutun basliklari -->
+  <g font-size="13.5" font-weight="bold" fill="#0b0b0b" text-anchor="middle">
+    <text x="150" y="26">a) Türbülans modeli</text>
+    <text x="450" y="26">b) Işınım modeli</text>
+    <text x="750" y="26">c) Fanın sayısal temsili</text>
+  </g>
+  <line x1="300" y1="10" x2="300" y2="470" stroke="#e6e5e0" stroke-width="1.5"/>
+  <line x1="600" y1="10" x2="600" y2="470" stroke="#e6e5e0" stroke-width="1.5"/>
+
+  <!-- ============ a) turbulans ============ -->
+  <rect x="24" y="42" width="252" height="46" rx="6" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.6"/>
+  <g font-size="12" fill="#0b0b0b" text-anchor="middle">
+    <text x="150" y="62">Hangi büyüklük hedefleniyor?</text>
+    <text x="150" y="79" font-size="11" fill="#52514e">(çözülmek istenen soru)</text>
+  </g>
+  <path d="M150,88 v18 M60,106 h180 M60,106 v22 M240,106 v22" fill="none" stroke="#a9a8a2" stroke-width="1.4"/>
+  <path d="M60,124 v10" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+  <path d="M240,124 v10" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <rect x="18" y="140" width="126" height="64" rx="6" fill="#ffffff" stroke="#c9c8c2" stroke-width="1.4"/>
+  <g font-size="11" fill="#52514e" text-anchor="middle">
+    <text x="81" y="160">Kavite ortalaması</text><text x="81" y="175">sıcaklık, genel</text><text x="81" y="190">sirkülasyon deseni</text>
+  </g>
+  <rect x="164" y="140" width="126" height="64" rx="6" fill="#ffffff" stroke="#c9c8c2" stroke-width="1.4"/>
+  <g font-size="11" fill="#52514e" text-anchor="middle">
+    <text x="227" y="160">Ayrılma, geri</text><text x="227" y="175">sirkülasyon, yerel</text><text x="227" y="190">ısı akısı</text>
+  </g>
+  <path d="M81,204 v14" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+  <path d="M227,204 v14" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <rect x="18" y="226" width="126" height="76" rx="6" fill="#2a78d6"/>
+  <g text-anchor="middle" fill="#ffffff">
+    <text x="81" y="248" font-size="13" font-weight="bold">k-ε ailesi</text>
+    <text x="81" y="266" font-size="10.5">duvar fonksiyonu</text>
+    <text x="81" y="281" font-size="10.5">y⁺ = 30–300</text>
+    <text x="81" y="296" font-size="10.5">[21], [34], [17]</text>
+  </g>
+  <rect x="164" y="226" width="126" height="76" rx="6" fill="#2a78d6"/>
+  <g text-anchor="middle" fill="#ffffff">
+    <text x="227" y="248" font-size="13" font-weight="bold">k-ω SST</text>
+    <text x="227" y="266" font-size="10.5">duvara kadar çözüm</text>
+    <text x="227" y="281" font-size="10.5">y⁺ ≈ 1</text>
+    <text x="227" y="296" font-size="10.5">[13], [25]</text>
+  </g>
+  <g font-size="10.5" fill="#52514e">
+    <text x="24" y="330">Ödünleşme: y⁺ ≈ 1 çözünürlüğü,</text>
+    <text x="24" y="346">çok yüzeyli kavitelerde eleman</text>
+    <text x="24" y="362">sayısını katlamalı artırır [19], [21].</text>
+  </g>
+
+  <!-- ============ b) isinim ============ -->
+  <rect x="324" y="42" width="252" height="46" rx="6" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.6"/>
+  <g font-size="12" fill="#0b0b0b" text-anchor="middle">
+    <text x="450" y="62">Ortam ışınıma katılıyor mu?</text>
+    <text x="450" y="79" font-size="11" fill="#52514e">(yakıt tipi belirler)</text>
+  </g>
+  <path d="M450,88 v18 M360,106 h180 M360,106 v22 M540,106 v22" fill="none" stroke="#a9a8a2" stroke-width="1.4"/>
+  <path d="M360,124 v10" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+  <path d="M540,124 v10" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <rect x="318" y="140" width="126" height="64" rx="6" fill="#ffffff" stroke="#c9c8c2" stroke-width="1.4"/>
+  <g font-size="11" fill="#52514e" text-anchor="middle">
+    <text x="381" y="163">Hayır: elektrikli</text><text x="381" y="178">fırın, kavite havası</text><text x="381" y="193">ışınıma şeffaf</text>
+  </g>
+  <rect x="464" y="140" width="126" height="64" rx="6" fill="#ffffff" stroke="#c9c8c2" stroke-width="1.4"/>
+  <g font-size="11" fill="#52514e" text-anchor="middle">
+    <text x="527" y="163">Evet: gazlı fırın,</text><text x="527" y="178">yanma ürünleri</text><text x="527" y="193">(CO₂, H₂O)</text>
+  </g>
+  <path d="M381,204 v14" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+  <path d="M527,204 v14" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <rect x="318" y="226" width="126" height="76" rx="6" fill="#eb6834"/>
+  <g text-anchor="middle" fill="#ffffff">
+    <text x="381" y="248" font-size="13" font-weight="bold">S2S</text>
+    <text x="381" y="266" font-size="10.5">yüzeyler arası,</text>
+    <text x="381" y="281" font-size="10.5">görüş faktörü</text>
+    <text x="381" y="296" font-size="10.5">[27], [34], [44]</text>
+  </g>
+  <rect x="464" y="226" width="126" height="76" rx="6" fill="#eb6834"/>
+  <g text-anchor="middle" fill="#ffffff">
+    <text x="527" y="248" font-size="13" font-weight="bold">DO</text>
+    <text x="527" y="266" font-size="10.5">hacimsel çözüm,</text>
+    <text x="527" y="281" font-size="10.5">katılan ortam</text>
+    <text x="527" y="296" font-size="10.5">[15], [26]</text>
+  </g>
+  <g font-size="10.5" fill="#52514e">
+    <text x="324" y="330">Her iki durumda da ışınımı tamamen</text>
+    <text x="324" y="346">ihmal etmek ciddi bir hata kaynağıdır</text>
+    <text x="324" y="362">[11], [28].</text>
+  </g>
+
+  <!-- ============ c) fan ============ -->
+  <rect x="624" y="42" width="252" height="46" rx="6" fill="#eef4fc" stroke="#2a78d6" stroke-width="1.6"/>
+  <g font-size="12" fill="#0b0b0b" text-anchor="middle">
+    <text x="750" y="62">Fan bir tasarım değişkeni mi?</text>
+    <text x="750" y="79" font-size="11" fill="#52514e">(geometrisi taranacak mı?)</text>
+  </g>
+  <path d="M750,88 v18 M660,106 h180 M660,106 v22 M840,106 v22" fill="none" stroke="#a9a8a2" stroke-width="1.4"/>
+  <path d="M660,124 v10" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+  <path d="M840,124 v10" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <rect x="618" y="140" width="126" height="64" rx="6" fill="#ffffff" stroke="#c9c8c2" stroke-width="1.4"/>
+  <g font-size="11" fill="#52514e" text-anchor="middle">
+    <text x="681" y="163">Hayır: odak kanal</text><text x="681" y="178">ve kavite</text><text x="681" y="193">geometrisi</text>
+  </g>
+  <rect x="764" y="140" width="126" height="64" rx="6" fill="#ffffff" stroke="#c9c8c2" stroke-width="1.4"/>
+  <g font-size="11" fill="#52514e" text-anchor="middle">
+    <text x="827" y="163">Evet: anlık jet</text><text x="827" y="178">yapısı veya akustik</text><text x="827" y="193">gerekli mi?</text>
+  </g>
+  <path d="M681,204 v14" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+  <path d="M827,204 v14" stroke="#a9a8a2" stroke-width="1.4" marker-end="url(#a)"/>
+
+  <rect x="618" y="226" width="126" height="76" rx="6" fill="#1baf7a"/>
+  <g text-anchor="middle" fill="#ffffff">
+    <text x="681" y="248" font-size="12.5" font-weight="bold">Momentum</text>
+    <text x="681" y="264" font-size="12.5" font-weight="bold">kaynağı</text>
+    <text x="681" y="281" font-size="10.5">en düşük maliyet</text>
+    <text x="681" y="296" font-size="10.5">[18]</text>
+  </g>
+  <rect x="764" y="226" width="126" height="34" rx="6" fill="#1baf7a"/>
+  <g text-anchor="middle" fill="#ffffff">
+    <text x="827" y="241" font-size="12.5" font-weight="bold">Hayır → MRF</text>
+    <text x="827" y="255" font-size="10.5">[8], [15]</text>
+  </g>
+  <rect x="764" y="268" width="126" height="34" rx="6" fill="#1baf7a"/>
+  <g text-anchor="middle" fill="#ffffff">
+    <text x="827" y="283" font-size="12.5" font-weight="bold">Evet → Kayan Ağ</text>
+    <text x="827" y="297" font-size="10.5">en yüksek maliyet</text>
+  </g>
+  <g font-size="10.5" fill="#52514e">
+    <text x="624" y="330">Pişirme çevrimi dakikalar, kanat geçişi</text>
+    <text x="624" y="346">milisaniyeler mertebesinde olduğundan</text>
+    <text x="624" y="362">MRF çoğu durumda yeterlidir.</text>
+  </g>
+
+  <!-- alt not -->
+  <line x1="24" y1="392" x2="876" y2="392" stroke="#e6e5e0" stroke-width="1.5"/>
+  <g font-size="11" fill="#52514e">
+    <text x="24" y="414">Üç seçim birbirinden bağımsız değildir: y⁺ ≈ 1 gerektiren bir türbülans modeli, dönen fan bölgesinde de aynı çözünürlüğü zorunlu kılar ve</text>
+    <text x="24" y="431">Kayan Ağ ile birleştiğinde maliyeti hızla büyütür. Kutulardaki numaralar, o tercihi kullanan çalışmaların kaynakça numaralarıdır.</text>
+    <text x="24" y="455" font-style="italic">Şema, bu derlemede taranan çalışmaların modelleme tercihlerinden (Tablo 5) türetilmiştir; literatürde önerilen hazır bir karar ağacının aktarımı değildir.</text>
+  </g>
+</svg>

@@ -62,7 +62,9 @@ Havuza alınan çalışmalar şu üç koşulu birlikte sağlar: ev tipi veya end
 
 ### 2.3. Zaman aralığı ve havuzun bileşimi
 
-Uygulama çalışmaları için 2000-2026 aralığı esas alındı; metodolojik birincil kaynaklar bakımından bu sınır uygulanmadı ve en eski kaynak 1974 tarihlidir. Nihai havuz 44 kaynaktan oluşmaktadır:
+Uygulama çalışmaları için 2000-2026 aralığı esas alındı; metodolojik birincil kaynaklar bakımından bu sınır uygulanmadı ve en eski kaynak 1974 tarihlidir. Nihai havuz 44 kaynaktan oluşmaktadır (Tablo 1):
+
+Tablo 1. Kaynak havuzunun kategorilere göre bileşimi.
 
 | Kategori | Adet |
 |---|---|
@@ -76,6 +78,13 @@ Uygulama çalışmaları için 2000-2026 aralığı esas alındı; metodolojik b
 
 Dil dağılımı 35 İngilizce ve 9 Türkçedir. Yayın yılına göre dağılım şöyledir: 1974-1999 arası 4, 2000-2009 arası 8, 2010-2019 arası 19, 2020-2026 arası 13 kaynak. Havuzun %73'ü 2010 ve sonrasına, %36'sı son yedi yıla aittir.
 
+Havuzun yayın yılına göre dağılımı Şekil 1'de görülmektedir.
+
+![Şekil 1](sekiller/sekil1_yil_dagilimi.png)
+
+*Şekil 1. Kaynak havuzunun yayın yılına göre dağılımı (44 kaynak). Sayılar Tablo 1'deki havuzdan sayılarak elde edilmiştir; 1974-1999 aralığındaki dört kayıt, uygulama çalışmaları için konan 2000 sınırının dışında tutulan metodolojik birincil kaynaklardır.*
+
+
 Havuza yalnızca künyesi birincil kaynağından (dergi sayfası, DOI kaydı veya kurumsal arşiv) doğrulanabilen çalışmalar alındı. Bu ölçüt gereği, konusu ilgili olmakla birlikte yayın yeri veya künye bilgisi doğrulanamayan iki kayıt havuz dışında bırakıldı (bkz. Ek A, A.6).
 
 ### 2.4. Sınırlılıklar
@@ -85,6 +94,12 @@ Tarama yalnızca İngilizce ve Türkçe yayınları kapsamaktadır; Çince, Kore
 ---
 
 ## 3. FIRINLARDA ISI TRANSFERİ VE TERMO-AKIŞKAN DİNAMİĞİ
+
+Aşağıdaki alt bölümlerde ele alınan akış olgularının kavite içindeki yerleşimi Şekil 2'de bir arada gösterilmiştir.
+
+![Şekil 2](sekiller/sekil2_kavite_akis_yolu.png)
+
+*Şekil 2. Zorlanmış konveksiyonlu bir fırın kavitesinde hava yolu ve başlıca akış olguları (şematik, ölçekli değildir). Şema, 3. ve 6. Bölümlerde tartışılan olguları tek bir görselde toplamak üzere bu derleme için çizilmiştir.*
 
 ### 3.1. Konveksiyon, radyasyon ve iletim etkileşimi
 
@@ -97,6 +112,13 @@ Hassan ve ark. [11] doğal ve zorlanmış konveksiyon modlarındaki ışınım d
 Doğal konveksiyon (statik mod) ile zorlanmış konveksiyon (fanlı mod) arasındaki fark yalnızca bir fanın varlığı değildir. Fan yokken kavitedeki hava hareketi yoğunluk gradyanlarına, yani kaldırma kuvvetine dayanır. Akış bu koşullarda genellikle laminer veya geçiş rejimindedir ve konvektif katsayı düşük kalır. Sıcak havanın yükselmesi kavitede dikey bir sıcaklık katmanlaşması yaratır: alt bölgeler üst bölgelere göre sistematik olarak daha soğuk kalır [12], [21].
 
 Fan çalışmaya başladığında tablo değişir. Fan, arka duvardaki emme ağzından havayı çeker ve FKS üzerindeki deliklerden hava kanalları aracılığıyla kaviteye geri basar. Oluşan türbülanslı jetler konvektif katsayıyı yükseltir. Bu artışın büyüklüğü ölçülmüştür. Sakin ve ark. [42] birleşik yüzey ısı taşınım katsayısını fanlı çalışmada 28-34 W/m²K, fansız çalışmada 11-20 W/m²K aralığında belirlemiştir. Carson ve ark. [43] dört farklı yöntemle (geçici rejim sıcaklık verisinden geri hesaplama, ısı akısı sensörü, kütle kaybı hızı ve psikrometrik yöntem) ev tipi bir fanlı fırın ile ticari bir kesikli fırında görünür ısı taşınım katsayısının ağırlıklı olarak 15-40 W/m²K aralığında olduğunu bulmuş; bu değerlerin düz levha üzerindeki laminer akış korelasyonlarının yaklaşık iki katı çıktığını ve farkın kısmen ışınımdan geldiğini göstermiştir. İki bağımsız ölçüm çalışması, "fan konvektif katsayıyı kabaca ikiye katlar" ifadesine nicel bir taban sağlar.
+
+İki çalışmanın bildirdiği aralıklar Şekil 3'te karşılaştırılmıştır.
+
+![Şekil 3](sekiller/sekil3_h_araliklari.png)
+
+*Şekil 3. Fırın kavitelerinde ölçülmüş birleşik yüzey ısı taşınım katsayısı aralıkları. Sakin ve ark. [42] değerleri 70-220 °C çalışma aralığına, Carson ve ark. [43] değerleri dört farklı ölçüm yönteminin birlikte değerlendirilmesine aittir. Fanlı ve fansız çalışma arasındaki fark, aynı kavitede konvektif katsayının kabaca ikiye katlanabildiğini gösterir.*
+
 
 Verboven ve ark. [21] zorlanmış konveksiyonlu bir fırında kavite içi hava hızını sıcak-film anemometresiyle ölçmüş ve sıcaklık dağılımının birincil olarak akış alanı tarafından belirlendiğini göstermiştir [22]. Önal ve ark. [13] fan devir sayısı 600'den 2400 RPM'e yükseltildiğinde kavite içi ortalama hızın doğrusal olmayan bir artış sergilediğini k-ω SST modeliyle ortaya koymuştur. Kişin ve ark. [18] endüstriyel bir fırını FloEFD ile modelleyerek momentum transferinin sıcaklık haritası üzerindeki etkisini göstermiştir.
 
@@ -136,6 +158,20 @@ Yang ve ark. [8] Realizable k-ε modeliyle çalıştı. Shih ve ark. [24] taraf�
 
 Bu çeşitlilik, fırın simülasyonları için tek bir "en iyi" türbülans modelinin bulunmadığını gösterir. Model seçimi çözülmek istenen soruya bağlıdır. Kavite ortalaması sıcaklık ve genel sirkülasyon deseni hedefleniyorsa k-ε ailesi yeterli doğruluk sunar. Buna karşılık FKS deliklerinden çıkan jetlerin ayrılma davranışı, tepsi kenarlarındaki geri sirkülasyon yapıları veya yerel ısı akısı dağılımı hedefleniyorsa k-ω SST tercih edilmelidir. Son dönem çalışmaların k-ω SST'ye yönelmesi [13], [15] bu ikinci sınıf soruların ağırlık kazanmasıyla açıklanabilir.
 
+Bu bölümde ele alınan modeller, duvar yakını yaklaşımları ve seçim ölçütleri Tablo 2'de karşılaştırılmıştır.
+
+Tablo 2. Fırın simülasyonlarında kullanılan türbülans modellerinin karşılaştırması.
+
+| Model | Duvar yakını yaklaşımı | Hedeflenen *y*⁺ | Güçlü olduğu durum | Sınırlılığı | Bu derlemede kullanan |
+|---|---|---|---|---|---|
+| Standart k-ε [23] | Logaritmik duvar fonksiyonu | 30-300 | Yüksek Reynolds sayılı, ekli akış; düşük maliyet | Ayrılmış akış ve güçlü basınç gradyanında zayıf | [21], [22], [17] |
+| RNG k-ε | Duvar fonksiyonu | 30-300 | Düşük Reynolds sayılı bölgelerde standart varyanta göre iyileşme | k-ε ailesinin ayrılma zayıflığı sürer | [21] |
+| Realizable k-ε [24] | Duvar fonksiyonu | 30-300 | Dönel akış; gerilme tensörünün fiziksel gerçeklenebilirliği | Duvar yakını hâlâ modellenir, çözülmez | [8], [34] |
+| k-ω SST [25] | Duvara kadar çözüm | ≈ 1 | Ters basınç gradyanı, ayrılma, yerel ısı akısı | Eleman sayısı ve hesaplama maliyeti yüksek | [13] |
+| Varyantı bildirilmemiş k-ε | Duvar fonksiyonu | Bildirilmemiş | Bildirilmemiş | Yeniden üretilebilirliği kısıtlar | [16] |
+
+*Not: Modelin adı verilmeden yalnızca "RANS" nitelemesiyle geçen çalışmalar tabloya alınmamıştır; bu grubun büyüklüğü için bkz. Şekil 4.*
+
 ### 4.2. Işınım modelleri
 
 Işınımın modellenmesi, özellikle 200 °C üzeri çalışma sıcaklıklarında simülasyon doğruluğunu etkiler.
@@ -150,6 +186,19 @@ Elektrikli fırınlarda ise kavite havası ışınıma büyük ölçüde şeffaf
 
 Kısacası elektrikli fırınlarda S2S yeterlidir, gazlı fırınlarda DO gerekir ve her iki durumda da ışınımı tamamen ihmal etmek ciddi bir hata kaynağıdır [11], [26], [28].
 
+Işınım modeli seçiminin fiziksel gerekçeleri ve fırın literatüründeki karşılıkları Tablo 3'te özetlenmiştir.
+
+Tablo 3. Işınım modeli seçimi: fiziksel varsayım, uygunluk ve fırın literatüründeki kullanım.
+
+| Model | Ortama ilişkin varsayım | Ne zaman gerekli | Ne zaman aşırı veya eksik | Bu derlemede kullanan |
+|---|---|---|---|---|
+| S2S (yüzeyden yüzeye) | Ortam ışınıma katılmaz | Elektrikli fırınlarda yeterli | Gazlı fırında yanma ürünlerinin katkısını yakalayamaz | [34], [27], [44] |
+| DO (Ayrık Ordinatlar) | Ortam ışınıma katılabilir | Gazlı fırınlarda gerekli | Elektrikli fırında da geçerlidir, açısal çözünürlükle maliyet artar | [26] (gazlı), [15] (elektrikli) |
+| DTRM | Işın izleme, saçılma yok | İlgisiz | Yalnızca karşılaştırma amacıyla denenmiştir | [26] |
+| Işınımın ihmali | Işınım yok | Hiçbir zaman (200 °C üzeri çalışma) | Erken dönem hesaplama kısıtının basitleştirmesi | [21], [22] |
+
+*Not: Rek ve ark. [15] elektrikli çok fonksiyonlu bir fırında DO kullanmıştır. DO'nun gazlı fırınlarda gerekli olması, elektrikli fırınlarda kullanılamayacağı anlamına gelmez; ayrım gereklilik ile maliyet arasındadır.*
+
 ### 4.3. Fan modelleme teknikleri
 
 Fan dönel bir bileşendir, kavite ise durağandır. İkisini aynı hesaplama alanında birleştirmek özel yaklaşımlar gerektirir.
@@ -159,6 +208,19 @@ En yaygın yöntem MRF (Moving Reference Frame) yaklaşımıdır. Fan çevresind
 Kayan Ağ (Sliding Mesh) yöntemi bu sınırlamayı aşar. Fan bölgesinin ağı her zaman adımında gerçekten döner ve kavite ağıyla arayüzey üzerinden veri alışverişi yapar; fan kanatlarının periyodik geçişi sırasında oluşan basınç dalgalanmaları böylece yakalanabilir. Hesaplama maliyeti MRF'ye kıyasla çok daha yüksektir ve fırın simülasyonlarında kullanımı sınırlı kalmıştır. Çoğu araştırmacı MRF doğruluğunu yeterli bulmuştur. Bu tercih problemin zaman ölçeklerinden gelir: bir pişirme çevrimi dakikalar mertebesinde sürerken fan geçiş periyodu milisaniyeler mertebesindedir, dolayısıyla kanat geçişine bağlı dalgalanmalar sıcaklık alanı üzerinde büyük ölçüde ortalanır. Akustik veya fan çıkışındaki anlık jet yapısı ilgi konusuysa MRF yetersiz kalır.
 
 Üçüncü bir yaklaşım fanı momentum kaynağı olarak temsil etmektir. Kişin ve ark. [18] FloEFD'de fanı geometrik olarak modellemek yerine akışa belirli bir momentum ve enerji ekleyen bir kaynak terimi olarak tanımladı. Ağ oluşturma süreci basitleşir; buna karşılık fan çıkışındaki detaylı akış yapısı hakkında bilgi kaybedilir. Bu yaklaşım, fanın kendisi tasarım değişkeni olmadığı ve ilgi odağının kanal ile kavite geometrisi olduğu çalışmalar için makul bir ödünleşmedir.
+
+Dört tekniğin maliyet ve kapsam bakımından karşılaştırması Tablo 4'te verilmiştir.
+
+Tablo 4. Fanın sayısal temsili için kullanılan tekniklerin karşılaştırması.
+
+| Teknik | Çözüm rejimi | Yakalanan fizik | Yakalanamayan | Bağıl maliyet | Bu derlemede kullanan |
+|---|---|---|---|---|---|
+| Fan basınç-debi karakteristiği | Kararlı | Toplam debi ve çıkış dönmesi (swirl) | Kanat düzeyindeki akış yapısı | En düşük | [21], [22] |
+| Momentum kaynağı | Kararlı | Akışa eklenen momentum ve enerji | Fan çıkışındaki ayrıntılı akış yapısı | Düşük | [18] |
+| MRF / dönel bölge | Kararlı, dönel referans çerçevesi | Ortalama dönel akış alanı | Fan-stator etkileşimi, zamana bağlı yapılar | Orta | [8], [15], [13] |
+| Kayan Ağ | Zamana bağlı | Kanat geçişi, periyodik basınç dalgalanmaları | Yok (fan fiziği çözülür) | Yüksek | Taranan fırın literatüründe kullanılmamış |
+
+*Not: Bir pişirme çevrimi dakikalar, kanat geçiş periyodu milisaniyeler mertebesindedir. Kanat geçişine bağlı dalgalanmalar sıcaklık alanı üzerinde büyük ölçüde ortalandığı için MRF çoğu fırın probleminde savunulabilir bir ödünleşmedir.*
 
 ### 4.4. Ağ yapısı, sayısal belirsizlik ve yazılım platformları
 
@@ -172,7 +234,7 @@ Yazılım platformları açısından ANSYS Fluent en sık tercih edilen araçtı
 
 ### 4.5. Modelleme tercihlerinin karşılaştırmalı özeti
 
-Tablo 1. Derlemede incelenen başlıca HAD çalışmalarının modelleme tercihleri ve doğrulama yaklaşımları.
+Tablo 5. Derlemede incelenen başlıca HAD çalışmalarının modelleme tercihleri ve doğrulama yaklaşımları.
 
 | Çalışma | Fırın tipi | Yazılım | Türbülans modeli | Işınım modeli | Fan modeli | Deneysel doğrulama |
 |---|---|---|---|---|---|---|
@@ -201,7 +263,20 @@ Tablo 1. Derlemede incelenen başlıca HAD çalışmalarının modelleme tercihl
 
 *Tablo, kaynakların özetleri ile erişilebilen tam metin bilgisine dayanır. "Bildirilmemiş", ilgili modelleme tercihinin bu düzeyde açıkça belirtilmediğini; "Yok", o bileşenin çalışmanın kapsamı gereği bulunmadığını (örneğin statik fırında fan modeli); "İlgisiz" ise sütunun o çalışma türü için anlamsız olduğunu gösterir.*
 
-Tablonun kendisi bir bulgu üretir. Fanın sayısal temsilini açıkça bildiren çalışma sayısı beştir (MRF: [8], [15]; momentum kaynağı: [18]; fan basınç-debi karakteristiği: [21]; dönel bölge: [13]). Geri kalan sayısal çalışmalarda fanın nasıl temsil edildiği okunamaz. Kullanılan yazılım, sayısal çalışmaların yarısından fazlasında adlandırılmamıştır. Türbülans kapanışını genel "RANS" nitelemesinin ötesinde belirli bir model adıyla bildirenlerin sayısı altıdır ([21], [34], [17], [16], [8], [13]) ve bunların yalnızca biri [13] duvar yakını çözümlemesine uygun bir hibrit modeli tercih etmiştir. Ağ yakınsama belirsizliğini nicel olarak raporlayan çalışma yoktur. Bu raporlama boşlukları, Bölüm 9.5'te önerilen asgari çerçevenin ve Bölüm 10.1'deki araştırma boşluğunun doğrudan gerekçesidir.
+Tablo 5 kendisi bir bulgu üretir. Fanın sayısal temsilini açıkça bildiren çalışma sayısı beştir (MRF: [8], [15]; momentum kaynağı: [18]; fan basınç-debi karakteristiği: [21]; dönel bölge: [13]). Geri kalan sayısal çalışmalarda fanın nasıl temsil edildiği okunamaz. Kullanılan yazılım, sayısal çalışmaların yarısından fazlasında adlandırılmamıştır. Türbülans kapanışını genel "RANS" nitelemesinin ötesinde belirli bir model adıyla bildirenlerin sayısı altıdır ([21], [34], [17], [16], [8], [13]) ve bunların yalnızca biri [13] duvar yakını çözümlemesine uygun bir hibrit modeli tercih etmiştir. Ağ yakınsama belirsizliğini nicel olarak raporlayan çalışma yoktur. Bu raporlama boşlukları, Bölüm 9.5'te önerilen asgari çerçevenin ve Bölüm 10.1'deki araştırma boşluğunun doğrudan gerekçesidir.
+
+Bu raporlama boşluklarının niceliksel görünümü Şekil 4'tedir.
+
+![Şekil 4](sekiller/sekil4_raporlama_tamligi.png)
+
+*Şekil 4. Tablo 5'teki 19 sayısal çalışmada modelleme tercihlerinin açıkça bildirilme durumu. Türbülans ve ışınım için "belirli ad", genel bir "RANS" veya "ışınım dâhil" nitelemesinin ötesinde model adının verilmesi anlamındadır. Bazı çalışmalarda ilgili bileşen kapsam gereği bulunmaz (statik fırında fan modeli, ışınım analizinde türbülans kapanışı gibi); bu durumda sayım, raporlama boşluğunun alt sınırını verir.*
+
+Tablo 2, Tablo 3 ve Tablo 4'te derlenen ölçütler, Şekil 5'teki karar şemasında birleştirilmiştir.
+
+![Şekil 5](sekiller/sekil5_model_secim_semasi.png)
+
+*Şekil 5. Fırın HAD modellemesinde türbülans, ışınım ve fan temsili tercihleri için karar şeması. Şema, Tablo 2, Tablo 3 ve Tablo 4'te derlenen ölçütlerin birleştirilmesiyle bu çalışmada oluşturulmuştur.*
+
 
 ---
 
@@ -224,6 +299,20 @@ Fan devir sayısı kavite içi hava hızını, dolayısıyla konvektif katsayıy
 Bu bulgu fan devrinin doygun bir tasarım değişkeni olduğunu gösterir. Enerji açısından da anlamlıdır: fan motorunun kendi tüketimi EEI hesabına dâhil olduğundan [3], [5], homojenliğe katkı sağlamayan her ek devir bir verimlilik kaybıdır.
 
 Dönüş yönü daha az incelenmiş bir parametredir. Önal ve ark. [13] saat yönünde ve saat yönünün tersine dönüşü karşılaştırdı ve dönüş yönünün kavite içindeki akış yapısını asimetrik biçimde etkilediğini gösterdi; yön değiştiğinde sıcak ve soğuk noktaların konumları da yer değiştirdi. Bu, geometri kaynaklı bir asimetridir: fan çıkışındaki havanın kavite duvarlarıyla etkileşimi dönüş yönüne göre farklı akış yolları izler. Timur ve ark. [9] da ticari fırınlarda dönüş yönünü bir değişken olarak ele alarak benzer bir yön bağımlılığı raporladı. Bazı ticari fırınlarda dönüş yönünün pişirme çevrimi boyunca periyodik olarak değiştirilmesi tam da bu asimetriyi zaman ortalamasında dengelemeye yöneliktir; ancak bu stratejiyi HAD ile sistematik biçimde inceleyen bir çalışmaya rastlanmadı (bkz. Bölüm 10).
+
+İncelenen çalışmalarda taranan fan parametre aralıkları Tablo 6'da toplanmıştır.
+
+Tablo 6. İncelenen çalışmalarda taranan fan ve akış parametreleri.
+
+| Çalışma | Fırın | Fan tipi | Fan çapı | Devir aralığı | Dönüş yönü | Birlikte taranan diğer değişkenler |
+|---|---|---|---|---|---|---|
+| Önal ve ark. [13] | Ev tipi fanlı pişirici | Bildirilmemiş | Bildirilmemiş | 600-2400 RPM | Saat yönü ve tersi | Yok |
+| Timur ve ark. [9] | Ticari pişirme fırını | Bildirilmemiş | 280 ve 350 mm | 450, 1100, 1655 RPM | Saat yönü ve tersi | Kanat sayısı |
+| Burhan ve ark. [14] | Turbo kuzine | Radyal ve tanjansiyel | Bildirilmemiş | Bildirilmemiş | Bildirilmemiş | Kanat açısı, gövde yalıtım malzemesi |
+| Rek ve ark. [15] | Çok fonksiyonlu ısıtma fırını | Bildirilmemiş | Bildirilmemiş | Bildirilmemiş | Bildirilmemiş | Fan geometrisi (HAD ile optimize edilmiş) |
+| Yang ve ark. [8] | Çok fonksiyonlu ev tipi | Bildirilmemiş | Bildirilmemiş | Optimizasyon değişkeni | Bildirilmemiş | Kavite ve raf yerleşimi |
+
+*Not: Tabloda yalnızca fan parametresini açıkça tarayan çalışmalar yer alır. "Bildirilmemiş", ilgili değerin erişilen kaynak düzeyinde verilmediğini gösterir.*
 
 ### 5.3. Fan-kavite bütünleşik optimizasyonu
 
@@ -279,6 +368,12 @@ EEI hesaplamasının temeli EN IEC 60350-1 standardıdır [5]. Standartta belirl
 
 Pratikte bunun anlamı şudur: üreticiler yalnızca fırının pişirme performansını değil, bunu ne kadar enerjiyle başardığını da kanıtlamak durumundadır. HAD simülasyonları bu süreçte enerji tüketimini prototip üretmeden tahmin etme olanağı sunar. Simülasyonun güvenilir olması için ise ısı kayıplarının (duvarlar, kapak, sızdırmazlık) doğru modellenmesi şarttır.
 
+Yürürlük takvimi ve EEI kademeleri Şekil 6'da gösterilmiştir.
+
+![Şekil 6](sekiller/sekil6_ab_zaman_cizelgesi.png)
+
+*Şekil 6. Ev tipi fırınlar için AB ekotasarım gerekliliklerinin yürürlük takvimi ve 2019'da devreye giren sıkı EEI kademesi [3]. Enerji etiketlemesi aynı tarihlerde Komisyon Delege Tüzüğü (AB) No 65/2014 ile düzenlenmiştir [4].*
+
 ### 7.2. Enerji tüketimini etkileyen tasarım faktörleri
 
 Fırının enerji tüketimini yalnızca rezistans gücü belirlemez; kaviteden dışarıya kaçan ısının büyüklüğü ve dağılımı da en az o kadar etkilidir.
@@ -325,6 +420,19 @@ Pratik öneri şudur: sıcaklık tabanlı bir metrik optimizasyon döngüsünde 
 
 ---
 
+Bu bölümde ele alınan metriklerin karşılaştırması Tablo 7'dedir.
+
+Tablo 7. Sıcaklık homojenliği ve pişirme performansı metriklerinin karşılaştırması.
+
+| Metrik | Nasıl elde edilir | Güçlü yönü | Sınırlılığı | Bu derlemede kullanan |
+|---|---|---|---|---|
+| Noktalar arası maksimum fark | Termokupl dizisinden en yüksek ve en düşük değerin farkı | Yorumu kolay, doğrudan ölçülebilir | Yalnızca iki uç noktaya duyarlıdır | [8] |
+| Standart sapma | Ölçüm noktalarından veya HAD sıcaklık alanından | Yaygın, çalışmalar arası karşılaştırılabilir | Dağılımın mekânsal yapısını yansıtmaz | [8], [13] |
+| Ortalamadan bağıl sapma | Sapmanın ortalama sıcaklığa oranı | Ölçekten bağımsız | Referansın tanımına duyarlıdır | [13], [10] |
+| Sıcaklık homojenliği indeksi | HAD hacim alanından türetilir | Optimizasyonda amaç fonksiyonu olabilir | Tanımı çalışmadan çalışmaya değişir | [8] |
+| Esmerleşme homojenliği indeksi (UBI) | Ürün yüzeyindeki renk dağılımından | Nihai ürün kalitesini birebir yansıtır | Pahalı; hammadde değişkenliğine açık | [17], [38] |
+| EN IEC 60350-1 ıslak tuğla testi | Standart yükü ısıtmak için harcanan enerji ve süre | Laboratuvarlar arası karşılaştırılabilir | Homojenliği değil enerji tüketimini ölçer | [5], [7] |
+
 ## 9. DENEYSEL DOĞRULAMA YÖNTEMLERİ
 
 HAD sonuçlarının mühendislik kararlarına temel oluşturabilmesi, modelin deneysel verilerle karşılaştırılmasına bağlıdır. Bu bölümde taranan literatürde kullanılan doğrulama yöntemleri ve bunların sınırlılıkları ele alınmaktadır.
@@ -369,9 +477,41 @@ Taranan literatürün karşılaştırmalı değerlendirmesinden, fırın HAD ça
 
 ---
 
+Bölümde geçen ölçüm teknikleri, uzamsal kapsamları ve başlıca hata kaynakları Tablo 8'de toplanmıştır.
+
+Tablo 8. Fırın HAD çalışmalarında kullanılan deneysel doğrulama tekniklerinin karşılaştırması.
+
+| Teknik | Ölçtüğü büyüklük | Uzamsal kapsam | Başlıca hata kaynağı | Bu derlemede kullanan |
+|---|---|---|---|---|
+| Termokupl dizisi | Nokta sıcaklığı | 5-15 nokta | Işınım hatası; probun yerel akışı bozması | [8], [13], [15], [18] |
+| Sıcak-tel / sıcak-film anemometre | Nokta hızı | Nokta | Yönsel kalibrasyon; yüksek sıcaklıkta sürüklenme | [21], [19] |
+| Isı akısı sensörü | Yüzey ısı akısı | Nokta | Sensörün yerel akışı ve ısıl alanı bozması | [34], [37], [43] |
+| Kütle kaybı hızı | Görünür ısı taşınım katsayısı | Bütünsel | Buharlaşma varsayımları | [43] |
+| Psikrometrik yöntem | Görünür ısı taşınım katsayısı | Bütünsel | Nem ölçüm belirsizliği | [43] |
+| IR termografi | Yüzey sıcaklık alanı | Alan | Emisivite kalibrasyonu; optik erişim gereği | [26] |
+| PIV | Hız alanı | Alan | Yüksek sıcaklık, optik erişim, tohumlama kısıtı | Taranan literatürde kullanılmamış |
+| Standart yük (ıslak tuğla) testi | Enerji ve süre | Bütünsel | Standarda uygunluk koşulları | [5], [7] |
+| Pişirme testi | Ürün kalitesi | Ürün yüzeyi | Hammadde değişkenliği; öznel değerlendirme | [16], [17], [9] |
+
 ## 10. ARAŞTIRMA BOŞLUKLARI VE GELECEK ÇALIŞMA ÖNERİLERİ
 
 Taranan literatürün sentezinden birbirini tamamlayan sekiz araştırma boşluğu belirlendi.
+
+Boşluklar, dayandıkları kanıt ve önerilen yaklaşımlar Tablo 9'da özetlenmiştir.
+
+Tablo 9. Belirlenen araştırma boşluklarının özeti.
+
+| Bölüm | Boşluk | Bu derlemedeki kanıt | Önerilen yaklaşım |
+|---|---|---|---|
+| 10.1 | Sayısal belirsizlik nicelenmiyor | Tablo 5'teki 19 sayısal çalışmanın hiçbiri GCI raporlamıyor (Şekil 4) | En az üç ağ seviyesinde GCI raporlaması [40], [41] |
+| 10.2 | Fan, FKS ve kanal etkileşimi taranmıyor | Çalışmalar bir seferde tek bileşeni değiştiriyor [2], [14], [16], [18] | Etkileşim terimlerini kestiren yanıt yüzeyi veya Taguchi tasarımı [29] |
+| 10.3 | Çok amaçlı optimizasyon ev tipine uyarlanmamış | Pareto çerçeveleri yalnızca ticari ekmek fırınlarında [31], [32] | EEI ve TS EN 60335 kısıtlarıyla birlikte Pareto çalışması [2] |
+| 10.4 | Zamana bağlı çalışma stratejileri incelenmemiş | Dönüş yönü statik değişken olarak ele alınıyor [9], [13] | Kayan Ağ veya zamana bağlı MRF ile periyodik yön değişimi |
+| 10.5 | Hız alanı doğrulaması terk edilmiş | İzotermal akış doğrulaması yalnızca [21]'de; PIV kullanan yok (Tablo 8) | Optik erişimli model kavitede PIV; en az nokta hız ölçümü |
+| 10.6 | HAD ile düşük mertebeli modeller birleştirilmemiş | Enerji analizi ayrı bir literatür olarak gelişiyor [39] | HAD'dan çıkan yerel *h* alanını toplu parametreli modele girdi vermek |
+| 10.7 | Pişirme metrikleri optimizasyona girmiyor | Amaç fonksiyonları sıcaklık tabanlı [8], [13]; UBI yalnızca değerlendirmede [17] | Vekil model üzerinden esmerleşme tabanlı amaç fonksiyonu [38] |
+| 10.8 | Buhar ve nem taşınımı ihmal ediliyor | Kavite havası kuru hava olarak modelleniyor | Tür taşınımı içeren modellerin fan ve FKS optimizasyonuna dâhil edilmesi |
+
 
 ### 10.1. Sayısal belirsizliğin nicelenmemesi
 
@@ -540,7 +680,7 @@ Aşağıdaki liste, önceki taslakta tespit edilen hata ve eksiklerin her birine
 | 4 | "Sistematik biçimde incelenmektedir" iddiası vardı ama yöntem anlatılmamıştı | **Bölüm 2 (Yöntem)** eklendi: veri tabanları, arama dizeleri, dâhil/dışlama ölçütleri, havuz bileşimi tablosu, doğrulanabilirlik ölçütü ve sınırlılıklar |
 | 5 | Birleşik kaynakça yoktu; yalnızca "Kaynaklar (Giriş Bölümü)" vardı | Tek bir **44 kayıtlık birleşik kaynakça** yazıldı |
 | 6 | Giriş dosyasındaki ÖZET boştu; ayrı Özet dosyasıyla birleştirilmemişti | Özet metne yerleştirildi, İngilizce **Abstract** eklendi, anahtar kelimeler birleştirildi |
-| 7 | Hiç tablo veya şekil yoktu | **Tablo 1** (22 çalışmanın modelleme tercihleri ve doğrulama yaklaşımları) ile Bölüm 2'deki havuz bileşimi tablosu eklendi |
+| 7 | Hiç tablo veya şekil yoktu | **Tablo 5** (22 çalışmanın modelleme tercihleri ve doğrulama yaklaşımları) ile Bölüm 2'deki havuz bileşimi tablosu eklendi |
 
 ## A.2. Numaralandırmanın birleştirilmesi
 
@@ -601,7 +741,7 @@ Giriş bölümü, içinde dört tekrar kayıt bulunan 28'lik bir listeye göre; 
 | 23 | Böl. 3.1 | Verboven'in yalnızca standart k-ε kullandığı anlatılıyordu | Verboven ve ark. **hem standart hem RNG k-ε** kullanmış ve benzer sonuç bulmuştur; düzeltildi |
 | 24 | Böl. 3.1 | *"Fahey ve ark. RNG k-ε modelini kullanmış"* | Doğrulanamadı. Doğrulanabilen bilgiyle değiştirildi: **ANSYS CFX, iki boyutlu kararlı rejim model, sıcak-tel anemometre + termokupl ile %3'ün altında sapma**. RNG k-ε artık yalnızca Verboven'e atfediliyor |
 | 25 | Böl. 3.4 | *"SolidWorks Flow Simulation'ı Yang ve ark. kullanmıştır"* | Doğrulanamadı. Yazılım, kullanımı **doğrulanmış olan Keyfoğlu ve Kırmızıgöl [6]**'e atfedildi |
-| 26 | Böl. 3 | Bilen ve ark.'nın modelleme tercihi anlatılmamıştı | **FloEFD + k-ε + Kartezyen ağ** tercihi Bölüm 4.4'e ve Tablo 1'e eklendi |
+| 26 | Böl. 3 | Bilen ve ark.'nın modelleme tercihi anlatılmamıştı | **FloEFD + k-ε + Kartezyen ağ** tercihi Bölüm 4.4'e ve Tablo 5'e eklendi |
 | 27 | Böl. 2.1 | *"h = 25-80 W/m²K aralığına taşır"* — aralık atıf verilen kaynaklarda yok | **Ölçülmüş değerlerle değiştirildi:** Sakin ve ark. [42] fanlı 28-34, fansız 11-20 W/m²K; Carson ve ark. [43] 15-40 W/m²K. İki kaynak bu amaçla eklendi |
 | 28 | Böl. 2.2 | *"Re = 10⁴-10⁵"* kesin bulgu gibi atfediliyordu | Mertebe tahmini olarak yeniden ifade edildi |
 | 29 | Böl. 2.1 | *"hava hızını 0,5-3 m/s aralığında ölçmüş"* | Sayısal aralık doğrulanamadı; **ölçüm yöntemi** korunarak aralık kaldırıldı |
@@ -622,7 +762,7 @@ Giriş bölümü, içinde dört tekrar kayıt bulunan 28'lik bir listeye göre; 
 | 39 | **Bölüm 8.3** (metrik seçiminin optimizasyon sonucuna etkisi) | Dağınık gözlemler tek alt bölümde toplanıp pratik öneriye bağlandı |
 | 40 | **Bölüm 4.1'e model seçim ölçütü** | "Tek bir en iyi model yok" tespiti, "soruya göre model seçimi" ilkesiyle işlevsel hâle getirildi |
 | 41 | **Bölüm 4.3'e MRF savunması** | MRF'nin neden yeterli olduğu zaman ölçeği argümanıyla açıklandı |
-| 42 | **Tablo 1'in yeniden kurgulanması** | Tablo 22 çalışmaya genişletildi. Boş hücreler, "yazarlar doldursun" notu yerine **"Bildirilmemiş" / "Yok" / "—"** olarak ayrıştırıldı; bu ayrım tablonun kendisini bir bulguya dönüştürdü (fan modelini bildiren beş, türbülans modelini bildiren sekiz çalışma; GCI bildiren hiç yok) ve Bölüm 9.5 ile 10.1'in doğrudan gerekçesi hâline geldi |
+| 42 | **Tablo 5'in yeniden kurgulanması** | Tablo 5, 22 çalışmaya genişletildi. Boş hücreler, "yazarlar doldursun" notu yerine **"Bildirilmemiş" / "Yok" / "İlgisiz"** olarak ayrıştırıldı; bu ayrım tablonun kendisini bir bulguya dönüştürdü (fan modelini bildiren beş, türbülans modelini bildiren sekiz çalışma; GCI bildiren hiç yok) ve Bölüm 9.5 ile 10.1'in doğrudan gerekçesi hâline geldi |
 | 43 | Sayısal ayrıntıların eklenmesi | Timur ve ark.'nın fan çapları (280/350 mm) ve devirleri (450/1100/1655 RPM), Kişin ve ark.'nın 10 tepsili fırını, Gün'ün TS EN 60335 güvenlik sınırı bulgusu, Park ve Lee'nin aç/kapa denetim algoritması, Ploteau ve ark.'nın konveksiyon-ışınım ayrıştırması metne eklendi |
 | 44 | Üslup birleştirmesi | Giriş'in ağır akademik üslubu ile 2-7. bölümlerin konuşma diline yakın üslubu arasındaki fark giderildi |
 
@@ -646,6 +786,37 @@ Giriş bölümü, içinde dört tekrar kayıt bulunan 28'lik bir listeye göre; 
 | Hiç atıf almayan kaynak | **0** |
 | Numaralandırmanın ilk geçiş sırasıyla uyumu | **Kesintisiz 1→44** |
 | Açık bırakılan madde | **Yok** |
+| Kaynak yayınlardan kopyalanan şekil veya tablo | **0** |
+| Tablo ve şekil numaralandırması | **Tablo 1-9, Şekil 1-6 kesintisiz** |
+| Metinde anılmayan tablo veya şekil | **Yok** |
+
+## A.8. Bu sürümde eklenen tablo ve şekiller
+
+Makaleye sekiz yeni tablo ve altı şekil eklendi. Şekiller `sekiller/` klasöründe hem vektör (SVG) hem 300 dpi raster (PNG) biçiminde bulunur; metinde PNG sürümü gömülüdür.
+
+**Veri kaynağı ilkesi.** Kaynakçadaki yayınlardan hiçbir şekil veya tablo kopyalanmadı. Telif hakkı bir yana, bu tür bir aktarım için kaynak yayınların yayıncı izni gerekir. Bütün görseller ya makalede zaten doğrulanmış sayısal değerlerden ya da bu derlemenin kendi sentezinden üretildi.
+
+| Öge | Yer | Veri kaynağı |
+|---|---|---|
+| Tablo 1 | Böl. 2.3 | Havuz sayımı (bu çalışma). Zaten mevcuttu, numaralandırıldı |
+| Tablo 2 | Böl. 4.1 | Türbülans modellerinin birincil kaynakları [23], [24], [25] ve Tablo 5'teki kullanım kayıtları |
+| Tablo 3 | Böl. 4.2 | [26]'nın model karşılaştırması ile [15], [27], [34], [44]'ün tercihleri |
+| Tablo 4 | Böl. 4.3 | Tablo 5'teki fan temsili sütunu ve Böl. 4.3'teki maliyet tartışması |
+| Tablo 5 | Böl. 4.5 | Önceki sürümdeki Tablo 1; yalnızca numarası değişti, içeriği aynı |
+| Tablo 6 | Böl. 5.2 | [9], [13], [14], [15], [8]'de bildirilen parametre aralıkları |
+| Tablo 7 | Böl. 8.3 | Böl. 8'de tartışılan metrikler ve kaynakları |
+| Tablo 8 | Böl. 9.5 | Böl. 9'da tartışılan ölçüm teknikleri ve kaynakları |
+| Tablo 9 | Böl. 10 | Böl. 10'daki sekiz boşluğun özeti (bu çalışma) |
+| Şekil 1 | Böl. 2.3 | Tablo 1'deki havuzun yıl sayımı (bu çalışma) |
+| Şekil 2 | Böl. 3 | Şematik çizim (bu çalışma); ölçekli değildir, ölçüm verisi içermez |
+| Şekil 3 | Böl. 3.1 | Sakin ve ark. [42]: 28-34 ve 11-20 W/m²K; Carson ve ark. [43]: 15-40 W/m²K |
+| Şekil 4 | Böl. 4.5 | Tablo 5'in sütunlarından sayım (bu çalışma) |
+| Şekil 5 | Böl. 4.5 | Tablo 2, 3 ve 4'ün birleştirilmesi (bu çalışma) |
+| Şekil 6 | Böl. 7.1 | Komisyon Tüzüğü (AB) No 66/2014 tarihleri [3] |
+
+**Renk ve erişilebilirlik.** Şekillerde üç renkli bir kategorik palet kullanıldı (mavi `#2a78d6`, turuncu `#eb6834`, yeşil `#1baf7a`). Palet, renk körlüğü ayrımı ve normal görüş ayrımı bakımından tüm çift kombinasyonları için sınandı ve geçti. Hiçbir şekilde bilgi yalnızca renkle taşınmaz: her seri doğrudan etiketlidir, Şekil 2'de bileşenler numaralandırılmıştır ve Şekil 5'te kutuların içindeki metin tek başına okunabilir. Bu, siyah-beyaz baskıda da bilgi kaybı olmaması içindir.
+
+**Numaralandırmadaki tek değişiklik.** Önceki sürümün "Tablo 1"i (modelleme tercihleri sentezi) artık Tablo 5'tir; içeriği değişmemiştir. Bölüm 2.3'teki havuz bileşimi tablosu önceden numarasızdı, şimdi Tablo 1'dir. Metin, Ek A ve Ek B'deki tüm atıflar buna göre güncellendi.
 
 ---
 
@@ -684,7 +855,7 @@ Kaynak havuzu **25'ten 44'e** çıkarıldı: 21 kayıt eklendi, künyesi doğrul
 
 **[28] Jovicic ve ark. (2020)** — mekanizma paylarının ayrıştırılması
 - *Neden gerekli:* "Işınımın toplam ısı transferindeki payı önemlidir" iddiası, önceki taslakta yalnızca üç sayfalık kısa bir makaleye [11] dayanıyordu. Bu, derlemenin merkezî iddialarından biri için zayıf bir tek dayanaktı.
-- *Kullanım:* Bölüm 3.1; Bölüm 4.2 (ışınımı ihmal etmenin hata kaynağı olduğu sonucu); Tablo 1; Bölüm 11 (sonuç maddesi 5).
+- *Kullanım:* Bölüm 3.1; Bölüm 4.2 (ışınımı ihmal etmenin hata kaynağı olduğu sonucu); Tablo 5; Bölüm 11 (sonuç maddesi 5).
 
 ## B.5. Isı taşınım katsayısı ölçümü (2 kayıt)
 
