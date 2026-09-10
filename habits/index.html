@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
+  <title>Alışkanlıklarım</title>
+  <meta name="description" content="Alışkanlık takibi — telefon, tablet ve bilgisayar arasında senkron çalışır." />
+
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#f4f5f9" media="(prefers-color-scheme: light)" />
+
+  <link rel="icon" href="./icons/favicon-32.png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Alışkanlık" />
+
+  <link rel="stylesheet" href="./app.css" />
+</head>
+<body>
+
+  <!-- ------------------------------------------------------------ yükleniyor -->
+  <div id="screen-loading" class="centered-page">
+    <div class="stack center">
+      <div class="spinner"></div>
+      <p class="muted small" id="loading-text">Yükleniyor…</p>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------------- kurulum -->
+  <div id="screen-setup" class="centered-page hidden"></div>
+
+  <!-- ---------------------------------------------------------------- giriş -->
+  <div id="screen-auth" class="centered-page hidden"></div>
+
+  <!-- ------------------------------------------------------------ uygulama -->
+  <div id="screen-app" class="hidden">
+    <nav class="navbar" id="navbar">
+      <div class="nav-brand">
+        <img src="./icons/icon-192.png" alt="" />
+        <span>Alışkanlıklarım</span>
+      </div>
+      <button data-view="today"   aria-selected="true"><span class="ico">✅</span><span>Bugün</span></button>
+      <button data-view="habits"  aria-selected="false"><span class="ico">📋</span><span>Alışkanlıklar</span></button>
+      <button data-view="stats"   aria-selected="false"><span class="ico">📊</span><span>İstatistik</span></button>
+      <button data-view="settings" aria-selected="false"><span class="ico">⚙️</span><span>Ayarlar</span></button>
+    </nav>
+
+    <div class="grow" style="display:flex;flex-direction:column;min-width:0">
+      <header class="topbar">
+        <h2 id="topbar-title">Bugün</h2>
+        <span class="grow"></span>
+        <span class="sync-dot" id="sync-dot" title="Senkron durumu"></span>
+        <span class="tiny muted" id="sync-text"></span>
+      </header>
+      <main id="view"></main>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+
+  <noscript>
+    <div class="centered-page">
+      <div class="card-panel center">
+        <h1>Alışkanlıklarım</h1>
+        <p class="muted mt">Bu uygulamanın çalışması için JavaScript gerekir.</p>
+      </div>
+    </div>
+  </noscript>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

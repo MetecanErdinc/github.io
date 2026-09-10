@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Her kullanıcı yalnızca kendi klasörünü okuyup yazabilir.
+    // Başka bir hesabın alışkanlıkları hiçbir şekilde görünmez.
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Diğer her şey kapalı.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
