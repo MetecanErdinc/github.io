@@ -33,13 +33,21 @@ sadece giriş yapmanız yeter.
 4. **Branch** olarak `main` (veya `master`) ve klasör olarak `/ (root)` seçip **Save**
 5. Birkaç dakika sonra sayfanın üstünde adresiniz görünür.
 
-Uygulamanın adresi şu olacak:
+**Pages ekranının üstünde yazan adresi esas alın.** Depo adı `github.io` olduğu
+için adres büyük ihtimalle şudur:
 
 ```
 https://metecanerdinc.github.io/github.io/habits/
 ```
 
-> Bu adresi bir kenara not edin — üç cihazda da bunu açacaksınız.
+Depo bir "kullanıcı sitesi" olarak tanınmışsa adres şu olur:
+
+```
+https://metecanerdinc.github.io/habits/
+```
+
+> Hangisi olduğunu Settings → Pages ekranı size söyler. Sonundaki `habits/`
+> kısmını siz ekleyeceksiniz. Bu adresi not edin — üç cihazda da bunu açacaksınız.
 
 ---
 
@@ -66,7 +74,7 @@ Firebase, varsayılan olarak yalnızca kendi adreslerinden gelen girişlere izin
 GitHub Pages adresinizi listeye eklemeniz gerekir:
 
 1. **Authentication → Settings** sekmesi → **Authorized domains**
-2. **Add domain** → şunu yazın:
+2. **Add domain** → şunu yazın (yol kısmı olmadan, sadece alan adı):
 
 ```
 metecanerdinc.github.io
