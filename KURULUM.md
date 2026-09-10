@@ -31,7 +31,7 @@ Bu adım tamamlandı. Pages, `claude/funny-dirac-j59wrx` dalından yayın yapaca
 şekilde ayarlandı; uygulamanın adresi:
 
 ```
-https://metecanerdinc.github.io/github.io/habits/
+https://metecanerdinc.github.io/github.io/
 ```
 
 > İlk yayın birkaç dakika sürebilir. Settings → Pages ekranının üstünde
@@ -41,9 +41,12 @@ https://metecanerdinc.github.io/github.io/habits/
 > İleride çalışmayı `main` dalına birleştirirseniz Pages kaynağını da `main`
 > olarak geri değiştirebilirsiniz — zorunlu değil.
 
-Depodaki mevcut siteniz (Mühendislik Analiz Yorumlayıcı) etkilenmez; o da aynı
-dalda duruyor ve `https://metecanerdinc.github.io/github.io/` adresinde çalışmaya
-devam eder.
+Depodaki diğer uygulamanız (Mühendislik Analiz Yorumlayıcı) silinmedi, yalnızca
+bir alt adrese taşındı ve çalışmaya devam ediyor:
+
+```
+https://metecanerdinc.github.io/github.io/muhendislik/
+```
 
 ---
 
@@ -96,7 +99,7 @@ Bu, verilerinizi koruyan asıl adımdır. Her hesabın yalnızca kendi verisini
 görmesini sağlar.
 
 1. Firestore ekranında **Rules** sekmesine geçin
-2. İçerideki her şeyi silip bu depodaki `habits/firestore.rules` dosyasının
+2. İçerideki her şeyi silip bu depodaki `firestore.rules` dosyasının
    içeriğini yapıştırın:
 
 ```
@@ -150,7 +153,7 @@ const firebaseConfig = {
 
 ### A) `config.js` dosyasını düzenleyin (önerilen)
 
-1. GitHub'da depoyu açın → `habits/config.js` dosyasına girin
+1. GitHub'da depoyu açın → `config.js` dosyasına girin
 2. Sağ üstteki **kalem (✏️)** simgesine basın
 3. `BURAYA_...` yazan yerleri Adım 5'te kopyaladığınız değerlerle değiştirin:
 
@@ -177,7 +180,7 @@ ayrı** yapmanız gerekir.
 
 ## Adım 7 — Hesabınızı oluşturun
 
-1. Uygulamayı açın: `https://metecanerdinc.github.io/github.io/habits/`
+1. Uygulamayı açın: `https://metecanerdinc.github.io/github.io/`
 2. **Hesap oluştur** sekmesi → e-posta + şifre (en az 6 karakter) → **Hesabı oluştur**
 3. Diğer cihazlarınızda **aynı e-posta ve şifreyle** *Giriş yap* deyin.
 

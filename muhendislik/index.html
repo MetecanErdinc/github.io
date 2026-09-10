@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mühendislik Analiz Yorumlayıcı</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #242736;
+      --border: #2e3248;
+      --accent: #4f8ef7;
+      --accent2: #6c63ff;
+      --warn: #f7934f;
+      --danger: #f75f5f;
+      --success: #4fcf8e;
+      --text: #e8eaf0;
+      --text2: #9095b0;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    header h1 { font-size: 18px; font-weight: 600; }
+    header p  { font-size: 12px; color: var(--text2); }
+
+    .free-badge {
+      margin-left: auto;
+      background: rgba(79,207,142,.15);
+      color: var(--success);
+      border: 1px solid rgba(79,207,142,.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+
+    main {
+      flex: 1;
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Upload Area */
+    .upload-area {
+      background: var(--surface);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+
+    .upload-area.dragover,
+    .upload-area:hover {
+      border-color: var(--accent);
+      background: #1a1d2f;
+    }
+
+    .upload-area input[type="file"] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+      width: 100%; height: 100%;
+    }
+
+    .upload-icon { font-size: 44px; margin-bottom: 12px; }
+    .upload-area h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .upload-area p  { font-size: 13px; color: var(--text2); }
+
+    .upload-btns {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-upload {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 18px;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color .2s;
+      text-decoration: none;
+    }
+    .btn-upload:hover { border-color: var(--accent); }
+
+    /* Preview */
+    .preview-wrap {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .preview-wrap img {
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      display: block;
+      background: #000;
+    }
+
+    .preview-clear {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: rgba(0,0,0,.65);
+      border: none;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .2s;
+    }
+    .preview-clear:hover { background: var(--danger); }
+
+    /* Notes */
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text2);
+      margin-bottom: 8px;
+    }
+
+    .notes-section { display: flex; flex-direction: column; gap: 6px; }
+
+    .notes-section textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      color: var(--text);
+      font-size: 14px;
+      resize: vertical;
+      min-height: 80px;
+      outline: none;
+      transition: border-color .2s;
+      font-family: inherit;
+    }
+    .notes-section textarea:focus { border-color: var(--accent); }
+    .notes-section textarea::placeholder { color: var(--text2); }
+
+    /* Analyze Button */
+    .btn-analyze {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 15px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity .2s, transform .1s;
+      letter-spacing: 0.03em;
+    }
+    .btn-analyze:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
+    .btn-analyze:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+    /* Loading */
+    .loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 44px 20px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    .loading.active { display: flex; }
+
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-steps {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .loading-steps p {
+      color: var(--text2);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .loading-steps small {
+      color: var(--text2);
+      font-size: 11px;
+      opacity: .6;
+    }
+
+    /* Result */
+    .result {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .result.active { display: block; }
+
+    .result-header {
+      background: linear-gradient(135deg, #1c2540, #1a2035);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .result-header span { font-size: 20px; }
+    .result-header h2  { font-size: 16px; font-weight: 600; }
+
+    .result-body { padding: 20px; }
+
+    .result-section { margin-bottom: 24px; }
+    .result-section:last-child { margin-bottom: 0; }
+
+    .rs-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+
+    .rs-type            { background: rgba(79,142,247,.15); color: var(--accent); }
+    .rs-findings        { background: rgba(76,207,142,.15); color: var(--success); }
+    .rs-warnings        { background: rgba(247,147,79,.15); color: var(--warn); }
+    .rs-interpretation  { background: rgba(108,99,255,.15); color: var(--accent2); }
+    .rs-recommendations { background: rgba(247,95,95,.15);  color: var(--danger); }
+
+    .rs-content {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+
+    .result-raw {
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    /* Error */
+    .error-box {
+      display: none;
+      background: rgba(247,95,95,.1);
+      border: 1px solid rgba(247,95,95,.3);
+      border-radius: var(--radius);
+      padding: 16px;
+      color: var(--danger);
+      font-size: 14px;
+    }
+    .error-box.active { display: block; }
+
+    .btn-reset {
+      margin-top: 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 18px;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: border-color .2s;
+    }
+    .btn-reset:hover { border-color: var(--accent); }
+
+    /* Responsive */
+    @media (max-width: 500px) {
+      header h1 { font-size: 15px; }
+      .free-badge { display: none; }
+      .btn-analyze { font-size: 15px; padding: 13px; }
+      .upload-area { padding: 28px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚙️</div>
+  <div>
+    <h1>Mühendislik Analiz Yorumlayıcı</h1>
+    <p>Makine Mühendisi AI Asistanı</p>
+  </div>
+  <div class="free-badge">TAMAMEN ÜCRETSİZ</div>
+</header>
+
+<main>
+
+  <!-- Upload -->
+  <div id="uploadSection">
+    <div class="upload-area" id="dropZone"
+         ondragover="handleDragOver(event)"
+         ondragleave="handleDragLeave(event)"
+         ondrop="handleDrop(event)">
+      <input type="file" id="fileInput" accept="image/*" onchange="handleFile(event)" />
+      <div class="upload-icon">📊</div>
+      <h3>Analiz Görselini Yükle</h3>
+      <p>FEA, termal, titreşim, CFD, gerilme vb.</p>
+      <div class="upload-btns">
+        <label class="btn-upload" for="fileInput">🖼️ Dosya Seç</label>
+        <label class="btn-upload" for="cameraInput">📷 Kamera</label>
+      </div>
+      <input type="file" id="cameraInput" accept="image/*" capture="environment"
+             style="display:none" onchange="handleFile(event)" />
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-wrap" id="previewWrap" style="display:none">
+    <img id="previewImg" src="" alt="Analiz görseli" />
+    <button class="preview-clear" onclick="clearImage()" title="Kaldır">×</button>
+  </div>
+
+  <!-- Notes -->
+  <div class="notes-section">
+    <div class="section-label">Ek Notlar (İsteğe Bağlı)</div>
+    <textarea id="notes"
+      placeholder="Malzeme türü, yük koşulları, çalışma sıcaklığı, parça adı vb. ekleyebilirsiniz..."></textarea>
+  </div>
+
+  <!-- Analyze -->
+  <button class="btn-analyze" id="analyzeBtn" onclick="analyze()" disabled>
+    ⚙️ Analizi Yorumla
+  </button>
+
+  <!-- Loading -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-steps">
+      <p id="loadingMsg">Görsel AI'ya gönderiliyor...</p>
+      <small>Mühendislik perspektifiyle analiz ediliyor, lütfen bekleyin</small>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="errorBox">
+    <strong>Hata:</strong> <span id="errorMsg"></span>
+    <br/>
+    <button class="btn-reset" onclick="resetError()">Tekrar Dene</button>
+  </div>
+
+  <!-- Result -->
+  <div class="result" id="resultBox">
+    <div class="result-header">
+      <span>🔍</span>
+      <h2>Mühendislik Analiz Raporu</h2>
+    </div>
+    <div class="result-body" id="resultBody"></div>
+  </div>
+
+</main>
+
+<script>
+  let imageBase64 = null;
+  let imageMime   = 'image/jpeg';
+
+  const API_URL = 'https://text.pollinations.ai/';
+
+  function updateAnalyzeBtn() {
+    document.getElementById('analyzeBtn').disabled = !imageBase64;
+  }
+
+  // Drag & drop
+  function handleDragOver(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.add('dragover');
+  }
+  function handleDragLeave() {
+    document.getElementById('dropZone').classList.remove('dragover');
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('dropZone').classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) loadImage(file);
+  }
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (file) loadImage(file);
+    e.target.value = '';
+  }
+
+  function loadImage(file) {
+    imageMime = file.type || 'image/jpeg';
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      imageBase64   = dataUrl.split(',')[1];
+      document.getElementById('previewImg').src = dataUrl;
+      document.getElementById('previewWrap').style.display = 'block';
+      document.getElementById('resultBox').classList.remove('active');
+      document.getElementById('errorBox').classList.remove('active');
+      updateAnalyzeBtn();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearImage() {
+    imageBase64 = null;
+    document.getElementById('previewWrap').style.display = 'none';
+    document.getElementById('previewImg').src = '';
+    document.getElementById('resultBox').classList.remove('active');
+    document.getElementById('errorBox').classList.remove('active');
+    updateAnalyzeBtn();
+  }
+
+  function resetError() {
+    document.getElementById('errorBox').classList.remove('active');
+  }
+
+  function setLoadingMsg(msg) {
+    document.getElementById('loadingMsg').textContent = msg;
+  }
+
+  async function analyze() {
+    if (!imageBase64) return;
+
+    const notes = document.getElementById('notes').value.trim();
+
+    document.getElementById('loading').classList.add('active');
+    document.getElementById('resultBox').classList.remove('active');
+    document.getElementById('errorBox').classList.remove('active');
+    document.getElementById('analyzeBtn').disabled = true;
+    setLoadingMsg('Görsel AI\'ya gönderiliyor...');
+
+    const systemPrompt =
+`Sen deneyimli bir makine mühendisisin. 20 yıllık endüstriyel deneyiminle FEA (Sonlu Elemanlar Analizi), dinamik analiz, termal analiz, titreşim analizi, akış simülasyonu (CFD), yorulma analizi ve malzeme mekaniği konularında uzmanlaşmışsın.
+
+Sana gönderilen teknik analiz görselini aşağıdaki yapıda Türkçe olarak yorumla:
+
+**ANALİZ TÜRÜ VE YÖNTEMİ**
+Kullanılan analiz yöntemini, yazılımı (varsa) ve analiz tipini belirt.
+
+**KRİTİK BULGULAR**
+Görsel üzerindeki en önemli sonuçları (maksimum/minimum değerler, kritik bölgeler, renk skalası yorumu) listele.
+
+**UYARI / ALARM NOKTALARI**
+Güvenlik, dayanım veya performans açısından dikkat gerektiren noktaları vurgula. Risk seviyeleri belirt.
+
+**MÜHENDİSLİK YORUMU**
+Sonuçların mühendislik açısından ne anlama geldiğini, standartlarla (ASME, DIN, TS vb.) nasıl örtüştüğünü açıkla.
+
+**ÖNERİLER**
+Tasarım iyileştirme, malzeme değişikliği, boyutlandırma düzeltmesi veya ek analiz önerileri sun.
+
+Yanıtın teknik, net ve uygulamaya yönelik olsun.`;
+
+    const userText = notes
+      ? `Lütfen bu mühendislik analizini yorumla.\n\nEk bilgiler: ${notes}`
+      : 'Lütfen bu mühendislik analizini yorumla.';
+
+    const body = {
+      model: 'openai',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: { url: `data:${imageMime};base64,${imageBase64}` }
+            },
+            { type: 'text', text: userText }
+          ]
+        }
+      ],
+      seed: Math.floor(Math.random() * 999999)
+    };
+
+    try {
+      setLoadingMsg('Makine mühendisi perspektifiyle analiz ediliyor...');
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (!response.ok) {
+        const txt = await response.text().catch(() => '');
+        throw new Error(`Sunucu hatası: HTTP ${response.status}${txt ? ' — ' + txt.slice(0, 120) : ''}`);
+      }
+
+      const data = await response.json();
+      const text = data?.choices?.[0]?.message?.content || '';
+
+      if (!text) throw new Error('AI boş yanıt döndürdü, lütfen tekrar deneyin.');
+
+      renderResult(text);
+
+    } catch (err) {
+      document.getElementById('errorMsg').textContent = err.message;
+      document.getElementById('errorBox').classList.add('active');
+    } finally {
+      document.getElementById('loading').classList.remove('active');
+      updateAnalyzeBtn();
+    }
+  }
+
+  function renderResult(text) {
+    const sections = [
+      { key: 'ANALİZ TÜRÜ VE YÖNTEMİ', cls: 'rs-type',            label: 'Analiz Türü ve Yöntemi' },
+      { key: 'KRİTİK BULGULAR',         cls: 'rs-findings',        label: 'Kritik Bulgular' },
+      { key: 'UYARI / ALARM NOKTALARI', cls: 'rs-warnings',        label: 'Uyarı / Alarm Noktaları' },
+      { key: 'MÜHENDİSLİK YORUMU',     cls: 'rs-interpretation',  label: 'Mühendislik Yorumu' },
+      { key: 'ÖNERİLER',               cls: 'rs-recommendations',  label: 'Öneriler' },
+    ];
+
+    const matches = sections.map(s => {
+      const re = new RegExp(
+        `\\*\\*${s.key}\\*\\*([\\s\\S]*?)(?=\\*\\*[A-ZÇĞİÖŞÜ /]+\\*\\*|$)`, 'i'
+      );
+      const m = text.match(re);
+      return m ? { ...s, content: m[1].trim() } : null;
+    }).filter(Boolean);
+
+    if (matches.length >= 2) {
+      document.getElementById('resultBody').innerHTML = matches.map(m => `
+        <div class="result-section">
+          <div class="rs-title ${m.cls}">${m.label}</div>
+          <div class="rs-content">${formatContent(m.content)}</div>
+        </div>`).join('');
+    } else {
+      document.getElementById('resultBody').innerHTML =
+        `<div class="result-raw">${formatContent(text)}</div>`;
+    }
+
+    document.getElementById('resultBox').classList.add('active');
+    document.getElementById('resultBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function formatContent(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      // bold
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      // bullet lines
+      .replace(/^[•\-\*] (.+)/gm, '<li>$1</li>')
+      .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
+      // newlines
+      .replace(/\n/g, '<br/>');
+  }
+</script>
+
+</body>
+</html>

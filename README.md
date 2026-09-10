@@ -6,6 +6,13 @@ uygulama olarak kurulur ve çevrimdışı çalışır.
 
 **Kurulum için: [KURULUM.md](KURULUM.md)**
 
+Bu depoda iki uygulama var:
+
+| Adres | Uygulama |
+|---|---|
+| `/` | Alışkanlıklarım (bu uygulama) |
+| `/muhendislik/` | Mühendislik Analiz Yorumlayıcı |
+
 ## Özellikler
 
 - E-posta + şifreyle hesap; her hesap yalnızca kendi alışkanlıklarını görür
@@ -33,6 +40,8 @@ uygulama olarak kurulur ve çevrimdışı çalışır.
 | `firestore.rules` | Firestore güvenlik kuralları — konsola yapıştırın |
 | `sw.js` | Service worker (çevrimdışı önbellek) |
 | `manifest.json` | PWA tanımı |
+| `habits/index.html` | Eski adresten köke yönlendirme |
+| `muhendislik/` | Ayrı uygulama — bu projeyle ilgisi yok |
 
 ## Maliyet
 

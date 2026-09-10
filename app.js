@@ -163,7 +163,7 @@ function renderSetup(errorMsg) {
       <button class="btn btn-primary btn-block mt" data-x="save-config">Kaydet ve bağlan</button>
 
       <div class="info-box mt">
-        Bu adımı bir kez yapıp değerleri depodaki <code>habits/config.js</code> dosyasına yazarsanız
+        Bu adımı bir kez yapıp değerleri depodaki <code>config.js</code> dosyasına yazarsanız
         diğer cihazlarınızda tekrar sormaz.
       </div>
 

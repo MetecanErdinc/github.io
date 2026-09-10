@@ -1,6 +1,6 @@
 /* Service worker — uygulama kabuğunu önbelleğe alır, çevrimdışı açılışı sağlar. */
 
-const CACHE = 'aliskanliklarim-v1';
+const CACHE = 'aliskanliklarim-v2';
 
 const SHELL = [
   './',
@@ -46,6 +46,10 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // Aynı sitedeki diğer uygulamalar bizim önbelleğimize girmesin.
+  // (Service worker kapsamı site kökü olduğu için bu ayrım gerekli.)
+  if (url.pathname.includes('/muhendislik/') || url.pathname.includes('/habits/')) return;
 
   // config.js kullanıcı tarafından düzenlenir: her zaman önce ağdan al,
   // böylece Firebase ayarları değişince anında geçerli olur.
