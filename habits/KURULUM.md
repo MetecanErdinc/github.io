@@ -264,6 +264,21 @@ Adım 4b'deki kuralları yapıştırıp **Publish** demeyi unutmuşsunuz.
 `config.js` içindeki değerler eksik ya da yanlış. Adım 5'teki bloğu yeniden
 kopyalayıp Adım 6'yı tekrarlayın.
 
+**Adres 404 veriyor: "There isn't a GitHub Pages site here"**
+Bu, dosyanın değil *sitenin* bulunamadığı anlamına gelir; neredeyse her zaman
+yayın (deployment) takılmıştır. Pages kaynak dalını değiştirdiğinizde iki yayın
+yarışırsa olur.
+
+1. **Actions** sekmesini açın
+2. "pages build and deployment" koşularına bakın; biri hâlâ dönüyorsa
+   (`deploy` adımı `updating_pages` satırını tekrarlıyorsa) onu açıp
+   sağ üstten **Cancel workflow** deyin
+3. Sonra en son başarısız koşuda **Re-run all jobs** deyin, ya da dala yeni
+   bir commit gönderin
+
+Takılı yayın diğer bütün yayınları
+`Deployment request failed … due to in progress deployment` hatasıyla reddettirir.
+
 **Sayfa eski hâlini gösteriyor**
 Service worker eski sürümü önbelleklemiş olabilir. Sayfayı kapatıp açın; Windows'ta
 `Ctrl + Shift + R` ile zorla yenileyin.
