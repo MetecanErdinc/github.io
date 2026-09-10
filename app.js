@@ -5,7 +5,7 @@
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
   dayLabel, isScheduled, targetOf, perWeekOf, scheduleLabel, streakInfo,
-  completionRate, dayProgress, esc, modeOf, formatDuration, formatClock, targetLabel,
+  completionRate, dayProgress, esc, modeOf, formatDuration, formatClock, targetLabel, uid,
 } from './util.js';
 
 import {
@@ -22,6 +22,8 @@ const state = {
   store: null,
   habits: [],
   entries: new Map(),
+  tasks: new Map(),
+  openTasks: new Set(),
   view: 'today',
   date: today(),
   prefs: getPrefs(),
@@ -101,6 +103,36 @@ function valuesOf(habitId) {
 const EMPTY_VALUES = new Map();
 
 const activeHabits = () => state.habits.filter((h) => !h.archived);
+
+/* ------------------------------------------------- yapılacaklar listesi -- */
+
+/** Belirli bir günün listesi. Her gün kendi kaydına sahiptir. */
+function tasksFor(habitId, d = state.date) {
+  return state.tasks.get(`${dateKey(d)}_${habitId}`)?.items || [];
+}
+
+/** Geriye doğru, listesi dolu olan en yakın günü bulur (kopyalama teklifi için). */
+function previousTaskDay(habitId, d = state.date) {
+  for (let i = 1; i <= 30; i++) {
+    const day = addDays(d, -i);
+    const items = state.tasks.get(`${dateKey(day)}_${habitId}`)?.items;
+    if (items && items.length) return { day, items };
+  }
+  return null;
+}
+
+async function writeTasks(habitId, items) {
+  const dk = dateKey(state.date);
+  const k = `${dk}_${habitId}`;
+  if (items.length) state.tasks.set(k, { habitId, date: dk, items });
+  else state.tasks.delete(k);
+  render();
+  try {
+    await state.store.setTasks(dk, habitId, items);
+  } catch (err) {
+    toast('Kaydedilemedi: ' + (err?.message || err));
+  }
+}
 
 /* ---------------------------------------------------------------- modal */
 
@@ -387,6 +419,7 @@ function attachStore(store) {
   state.store = store;
   state.habits = [];
   state.entries = new Map();
+  state.tasks = new Map();
   state.view = 'today';          // yeni oturum her zaman Bugün ile başlar
   state.date = today();
   invalidateIndex();
@@ -394,6 +427,7 @@ function attachStore(store) {
   store.start({
     habits: (list) => { state.habits = list; render(); },
     entries: (map)  => { state.entries = map; invalidateIndex(); render(); },
+    tasks:   (map)  => { state.tasks = map; render(); },
     status:  (s)    => { state.fromCache = !!s.fromCache; updateSyncBadge(); },
     error:   (err)  => {
       console.error(err);
@@ -496,15 +530,62 @@ function habitCardHtml(h, d) {
               aria-label="${done ? 'geri al' : 'tamamlandı işaretle'}">✓</button>`;
   }
 
+  const items = h.hasTasks ? tasksFor(h.id, d) : [];
+  const open = state.openTasks.has(h.id);
+  const doneCount = items.filter((i) => i.done).length;
+
+  const taskToggle = h.hasTasks ? `
+      <button class="task-toggle ${open ? 'on' : ''}" data-act="task-panel" data-id="${esc(h.id)}"
+              aria-expanded="${open}">
+        ☑ ${doneCount}/${items.length}<span class="tt-caret">${open ? '▴' : '▾'}</span>
+      </button>` : '';
+
   return `
-  <div class="habit-card ${done ? 'done' : ''}" data-habit="${esc(h.id)}">
-    <div class="h-emoji" style="background:${color}22;color:${color}">${esc(h.emoji || '✅')}</div>
-    <div class="grow">
-      <div class="h-name truncate">${esc(h.name)}</div>
-      <div class="h-meta">${meta.join('<span class="muted">·</span>')}</div>
-      ${bar}
+  <div class="habit-block">
+    <div class="habit-card ${done ? 'done' : ''} ${h.hasTasks && open ? 'has-panel' : ''}"
+         data-habit="${esc(h.id)}">
+      <div class="h-emoji" style="background:${color}22;color:${color}">${esc(h.emoji || '✅')}</div>
+      <div class="grow">
+        <div class="h-name truncate">${esc(h.name)}</div>
+        <div class="h-meta">${meta.join('<span class="muted">·</span>')}${taskToggle}</div>
+        ${bar}
+      </div>
+      ${control}
     </div>
-    ${control}
+    ${h.hasTasks && open ? taskPanelHtml(h, items, d) : ''}
+  </div>`;
+}
+
+function taskPanelHtml(h, items, d) {
+  const prev = items.length === 0 ? previousTaskDay(h.id, d) : null;
+
+  return `
+  <div class="task-panel">
+    ${items.length ? `<div class="task-list">${items.map((it) => `
+      <div class="task-item ${it.done ? 'done' : ''}">
+        <button class="task-check ${it.done ? 'on' : ''}" data-act="task-check"
+                data-id="${esc(h.id)}" data-tid="${esc(it.id)}"
+                aria-label="${it.done ? 'geri al' : 'tamamlandı'}">✓</button>
+        <input class="task-text" value="${esc(it.text)}" maxlength="140"
+               data-change="task-text" data-id="${esc(h.id)}" data-tid="${esc(it.id)}"
+               aria-label="madde metni" />
+        <button class="icon-btn task-del" data-act="task-del"
+                data-id="${esc(h.id)}" data-tid="${esc(it.id)}" aria-label="sil">✕</button>
+      </div>`).join('')}</div>` : ''}
+
+    <form class="task-add" data-hid="${esc(h.id)}">
+      <input class="input" placeholder="Yeni madde…" maxlength="140" aria-label="yeni madde" />
+      <button class="btn btn-sm btn-primary" type="submit">Ekle</button>
+    </form>
+
+    ${prev ? `
+      <button class="btn btn-sm btn-ghost btn-block" style="margin-top:8px"
+              data-act="task-copy" data-id="${esc(h.id)}">
+        ${esc(dayLabel(prev.day))} listesini kopyala (${prev.items.length} madde)
+      </button>` : ''}
+
+    ${items.length ? `<p class="tiny muted center" style="margin-top:8px">
+      Bu liste yalnızca ${esc(dayLabel(d).toLowerCase())} için. Diğer günler olduğu gibi kalır.</p>` : ''}
   </div>`;
 }
 
@@ -1069,6 +1150,15 @@ function openHabitEditor(habit) {
                   placeholder="Kendinize küçük bir hatırlatma">${esc(h.note || '')}</textarea>
       </div>
 
+      <label class="check-row" for="hb-tasks">
+        <input id="hb-tasks" type="checkbox" ${h.hasTasks ? 'checked' : ''} />
+        <span>
+          <b>Yapılacaklar listesi</b>
+          <em>Kartın altında her gün için ayrı bir liste açılır. Geçmiş günlerin
+              listeleri olduğu gibi kalır, sıfırlanmaz.</em>
+        </span>
+      </label>
+
       <div id="hb-err" class="error-box hidden"></div>
     </div>
 
@@ -1172,6 +1262,7 @@ function openHabitEditor(habit) {
         target,
         schedule,
         note: $('#hb-note', m).value.trim(),
+        hasTasks: $('#hb-tasks', m).checked,
         archived: !!h.archived,
       };
       if (isNew) payload.order = state.habits.length;
@@ -1257,6 +1348,29 @@ function handleAction(act, el) {
     case 'new-habit':  return openHabitEditor(null);
     case 'edit-habit': return habit && openHabitEditor(habit);
     case 'time-edit':  return habit && timeDialog(habit);
+
+    case 'task-panel': {
+      if (state.openTasks.has(id)) state.openTasks.delete(id);
+      else state.openTasks.add(id);
+      return render();
+    }
+    case 'task-check': {
+      const items = tasksFor(id).map((it) =>
+        it.id === el.dataset.tid ? { ...it, done: !it.done } : it);
+      navigator.vibrate?.(8);
+      return writeTasks(id, items);
+    }
+    case 'task-del':
+      return writeTasks(id, tasksFor(id).filter((it) => it.id !== el.dataset.tid));
+
+    case 'task-copy': {
+      const prev = previousTaskDay(id);
+      if (!prev) return;
+      // Metinler kopyalanır, işaretler sıfırlanır — yeni bir gün başlıyor.
+      const items = prev.items.map((it) => ({ id: uid('t'), text: it.text, done: false }));
+      toast(`${items.length} madde kopyalandı`);
+      return writeTasks(id, items);
+    }
 
     case 'toggle': {
       if (!habit) return;
@@ -1378,6 +1492,7 @@ function buildBackup() {
     exportedAt: new Date().toISOString(),
     habits: state.habits.map((h) => ({ ...h })),
     entries: [...state.entries.values()].map(({ habitId, date, value }) => ({ habitId, date, value })),
+    tasks: [...state.tasks.values()].map(({ habitId, date, items }) => ({ habitId, date, items })),
   };
 }
 
@@ -1388,7 +1503,8 @@ function exportDialog() {
   openModal(`
     <div class="modal-head"><h3>Yedek al</h3>
       <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button></div>
-    <p class="small muted">${state.habits.length} alışkanlık, ${state.entries.size} kayıt.</p>
+    <p class="small muted">${state.habits.length} alışkanlık, ${state.entries.size} kayıt,
+       ${state.tasks.size} günlük liste.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" data-x="copy">Panoya kopyala</button>
       <button class="btn btn-primary" data-x="download">Dosyayı indir</button>
@@ -1446,7 +1562,9 @@ function importDialog() {
         return;
       }
       try {
-        await state.store.importData({ habits: data.habits, entries: data.entries || [] });
+        await state.store.importData({
+          habits: data.habits, entries: data.entries || [], tasks: data.tasks || [],
+        });
         closeModal();
         toast(`${data.habits.length} alışkanlık geri yüklendi`);
       } catch (e2) {
@@ -1686,6 +1804,30 @@ function bindGlobal() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
+  });
+
+  // Madde metni düzenleme (odak kaybında veya Enter'da tetiklenir)
+  document.addEventListener('change', (e) => {
+    const el = e.target.closest('[data-change="task-text"]');
+    if (!el) return;
+    const text = el.value.trim();
+    const items = tasksFor(el.dataset.id)
+      .map((it) => (it.id === el.dataset.tid ? { ...it, text } : it))
+      .filter((it) => it.text);              // boşaltılan madde silinir
+    writeTasks(el.dataset.id, items);
+  });
+
+  // Yeni madde ekleme
+  document.addEventListener('submit', (e) => {
+    const form = e.target.closest('form.task-add');
+    if (!form) return;
+    e.preventDefault();
+    const input = form.querySelector('input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    writeTasks(form.dataset.hid, [...tasksFor(form.dataset.hid),
+                                  { id: uid('t'), text, done: false }]);
   });
 
   const onResize = () => detectDevice();

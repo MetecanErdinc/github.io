@@ -297,6 +297,25 @@ Giriş ekranında **Şifremi unuttum** → e-postanıza sıfırlama bağlantıs�
 
 ---
 
+## Günlük yapılacaklar listesi
+
+Bir alışkanlığı düzenlerken **Yapılacaklar listesi** kutusunu işaretlerseniz kartın
+altında o alışkanlığa ait bir liste açılır.
+
+- **Her günün listesi ayrıdır.** Bugün yazdığınız maddeler yalnızca bugüne aittir;
+  yarın kart boş bir listeyle açılır ve **dünkü liste dünde olduğu gibi durur** —
+  işaretleriyle birlikte.
+- Geçmiş bir güne gitmek için Bugün ekranındaki `‹` `›` oklarını veya hafta
+  şeridindeki günü kullanın.
+- Liste boş olan bir günde, daha önceki en yakın dolu günün listesini tek
+  dokunuşla kopyalayabilirsiniz. Metinler gelir, işaretler sıfırlanır.
+- Maddenin üstüne dokunup metnini değiştirebilir, metni tamamen silerseniz madde
+  listeden kalkar.
+
+Listeler de yedeklemeye dahildir ve cihazlar arasında senkronlanır.
+
+---
+
 ## Uygulamayı başkasıyla paylaşma
 
 Kurulum bir kez yapıldı; **paylaştığınız kişinin Firebase ile hiçbir işi yok.**

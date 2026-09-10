@@ -16,6 +16,7 @@ const LS = {
   prefs:   'habits.prefs',
   habits:  'habits.local.habits',
   entries: 'habits.local.entries',
+  tasks:   'habits.local.tasks',
 };
 
 /** Giriş ekranına kadar geriye dönük yüklenecek gün sayısı. */
@@ -252,6 +253,22 @@ export class CloudStore {
       },
       (err) => handlers.error?.(err)
     ));
+
+    // Günlük yapılacaklar listeleri — her gün için ayrı belge, geçmiş korunur
+    this.unsubs.push(S.onSnapshot(
+      S.query(this._col('tasks'), S.where('date', '>=', cutoff)),
+      (snap) => {
+        const map = new Map();
+        snap.forEach((d) => {
+          const v = d.data();
+          if (v && v.date && v.habitId) {
+            map.set(`${v.date}_${v.habitId}`, { ...v, items: Array.isArray(v.items) ? v.items : [] });
+          }
+        });
+        handlers.tasks?.(map);
+      },
+      (err) => handlers.error?.(err)
+    ));
   }
 
   stop() {
@@ -271,15 +288,17 @@ export class CloudStore {
   async deleteHabit(id) {
     const S = this.S;
     await S.deleteDoc(this._doc('habits', id));
-    // İlgili günlük kayıtları da temizle
+    // İlgili günlük kayıtları ve yapılacak listelerini de temizle
     try {
-      const snap = await S.getDocs(S.query(this._col('entries'), S.where('habitId', '==', id)));
-      const refs = [];
-      snap.forEach((d) => refs.push(d.ref));
-      for (let i = 0; i < refs.length; i += 400) {
-        const batch = S.writeBatch(this.db);
-        refs.slice(i, i + 400).forEach((r) => batch.delete(r));
-        await batch.commit();
+      for (const name of ['entries', 'tasks']) {
+        const snap = await S.getDocs(S.query(this._col(name), S.where('habitId', '==', id)));
+        const refs = [];
+        snap.forEach((d) => refs.push(d.ref));
+        for (let i = 0; i < refs.length; i += 400) {
+          const batch = S.writeBatch(this.db);
+          refs.slice(i, i + 400).forEach((r) => batch.delete(r));
+          await batch.commit();
+        }
       }
     } catch { /* çevrimdışıysa kayıtlar kalabilir, alışkanlık yine de silinir */ }
   }
@@ -296,6 +315,17 @@ export class CloudStore {
     });
   }
 
+  async setTasks(dk, habitId, items) {
+    const ref = this._doc('tasks', `${dk}_${habitId}`);
+    if (!items || items.length === 0) {
+      await this.S.deleteDoc(ref);
+      return;
+    }
+    await this.S.setDoc(ref, {
+      habitId, date: dk, items, updatedAt: new Date().toISOString(),
+    });
+  }
+
   async saveOrder(list) {
     const S = this.S;
     const batch = S.writeBatch(this.db);
@@ -303,7 +333,7 @@ export class CloudStore {
     await batch.commit();
   }
 
-  async importData({ habits = [], entries = [] }) {
+  async importData({ habits = [], entries = [], tasks = [] }) {
     const S = this.S;
     const ops = [];
     habits.forEach((h) => {
@@ -315,6 +345,11 @@ export class CloudStore {
       ops.push([this._doc('entries', `${e.date}_${e.habitId}`),
                 { habitId: e.habitId, date: e.date, value: Number(e.value) || 0 }]);
     });
+    tasks.forEach((t) => {
+      if (!t?.date || !t?.habitId || !Array.isArray(t.items) || !t.items.length) return;
+      ops.push([this._doc('tasks', `${t.date}_${t.habitId}`),
+                { habitId: t.habitId, date: t.date, items: t.items }]);
+    });
     for (let i = 0; i < ops.length; i += 400) {
       const batch = S.writeBatch(this.db);
       ops.slice(i, i + 400).forEach(([ref, data]) => batch.set(ref, data, { merge: true }));
@@ -324,7 +359,7 @@ export class CloudStore {
 
   async wipe() {
     const S = this.S;
-    for (const name of ['entries', 'habits']) {
+    for (const name of ['tasks', 'entries', 'habits']) {
       const snap = await S.getDocs(this._col(name));
       const refs = [];
       snap.forEach((d) => refs.push(d.ref));
@@ -355,8 +390,13 @@ export class LocalStore {
     try { return JSON.parse(localStorage.getItem(LS.entries) || '{}'); } catch { return {}; }
   }
 
+  _readTasks() {
+    try { return JSON.parse(localStorage.getItem(LS.tasks) || '{}'); } catch { return {}; }
+  }
+
   _writeHabits(list) { localStorage.setItem(LS.habits, JSON.stringify(list)); }
   _writeEntries(obj) { localStorage.setItem(LS.entries, JSON.stringify(obj)); }
+  _writeTasks(obj)   { localStorage.setItem(LS.tasks, JSON.stringify(obj)); }
 
   _emit() {
     const list = this._readHabits()
@@ -367,14 +407,22 @@ export class LocalStore {
     for (const [k, v] of Object.entries(raw)) {
       if (v && v.date && v.habitId) map.set(k, v);
     }
+    const tmap = new Map();
+    for (const [k, v] of Object.entries(this._readTasks())) {
+      if (v && v.date && v.habitId) tmap.set(k, { ...v, items: Array.isArray(v.items) ? v.items : [] });
+    }
+
     this.handlers.habits?.(list);
     this.handlers.entries?.(map);
+    this.handlers.tasks?.(tmap);
     this.handlers.status?.({ fromCache: true });
   }
 
   start(handlers) {
     this.handlers = handlers;
-    this._onStorage = (e) => { if (e.key === LS.habits || e.key === LS.entries) this._emit(); };
+    this._onStorage = (e) => {
+      if (e.key === LS.habits || e.key === LS.entries || e.key === LS.tasks) this._emit();
+    };
     window.addEventListener('storage', this._onStorage);
     this._emit();
   }
@@ -398,9 +446,15 @@ export class LocalStore {
 
   async deleteHabit(id) {
     this._writeHabits(this._readHabits().filter((h) => h.id !== id));
+
     const raw = this._readEntries();
     for (const k of Object.keys(raw)) if (raw[k]?.habitId === id) delete raw[k];
     this._writeEntries(raw);
+
+    const tsk = this._readTasks();
+    for (const k of Object.keys(tsk)) if (tsk[k]?.habitId === id) delete tsk[k];
+    this._writeTasks(tsk);
+
     this._emit();
   }
 
@@ -413,6 +467,15 @@ export class LocalStore {
     this._emit();
   }
 
+  async setTasks(dk, habitId, items) {
+    const raw = this._readTasks();
+    const k = `${dk}_${habitId}`;
+    if (!items || items.length === 0) delete raw[k];
+    else raw[k] = { habitId, date: dk, items, updatedAt: new Date().toISOString() };
+    this._writeTasks(raw);
+    this._emit();
+  }
+
   async saveOrder(list) {
     const byId = new Map(this._readHabits().map((h) => [h.id, h]));
     list.forEach((h, i) => { const t = byId.get(h.id); if (t) t.order = i; });
@@ -420,7 +483,7 @@ export class LocalStore {
     this._emit();
   }
 
-  async importData({ habits = [], entries = [] }) {
+  async importData({ habits = [], entries = [], tasks = [] }) {
     const cur = new Map(this._readHabits().map((h) => [h.id, h]));
     habits.forEach((h) => { if (h?.id) cur.set(h.id, { ...cur.get(h.id), ...h }); });
     this._writeHabits([...cur.values()]);
@@ -431,12 +494,21 @@ export class LocalStore {
       raw[`${e.date}_${e.habitId}`] = { habitId: e.habitId, date: e.date, value: Number(e.value) || 0 };
     });
     this._writeEntries(raw);
+
+    const tsk = this._readTasks();
+    tasks.forEach((t) => {
+      if (!t?.date || !t?.habitId || !Array.isArray(t.items) || !t.items.length) return;
+      tsk[`${t.date}_${t.habitId}`] = { habitId: t.habitId, date: t.date, items: t.items };
+    });
+    this._writeTasks(tsk);
+
     this._emit();
   }
 
   async wipe() {
     localStorage.removeItem(LS.habits);
     localStorage.removeItem(LS.entries);
+    localStorage.removeItem(LS.tasks);
     this._emit();
   }
 }

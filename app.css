@@ -575,3 +575,64 @@ html[data-standalone="true"] .topbar { padding-bottom: 8px; }
   .time-btn { min-width: 62px; min-height: 48px; }
   .time-display .td-big { font-size: 27px; }
 }
+
+/* ==========================================================================
+   Günlük yapılacaklar listesi
+   ========================================================================== */
+
+.habit-block { display: flex; flex-direction: column; }
+
+.habit-card.has-panel { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+.task-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; margin-left: 2px;
+  border-radius: 999px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text2); font-size: 11.5px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.task-toggle.on { background: rgba(79, 142, 247, .16); border-color: var(--accent); color: var(--accent); }
+.task-toggle .tt-caret { font-size: 9px; opacity: .8; }
+
+.task-panel {
+  margin-top: -1px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 1px dashed var(--border);
+  border-radius: 0 0 var(--radius) var(--radius);
+  padding: 12px 13px 13px;
+}
+
+.task-list { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+
+.task-item { display: flex; align-items: center; gap: 9px; }
+
+.task-check {
+  flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px;
+  border: 2px solid var(--border2); color: transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; transition: all .15s;
+}
+.task-check.on { background: var(--success); border-color: var(--success); color: #06210f; }
+
+.task-text {
+  flex: 1; min-width: 0;
+  background: transparent; border: none; border-bottom: 1px solid transparent;
+  padding: 7px 2px; font-size: 14px; outline: none;
+}
+.task-text:focus { border-bottom-color: var(--accent); }
+.task-item.done .task-text { color: var(--text3); text-decoration: line-through; }
+
+.task-del { width: 30px; height: 30px; flex: 0 0 30px; font-size: 13px; opacity: .55; }
+.task-del:hover { opacity: 1; color: var(--danger); }
+
+.task-add { display: flex; gap: 8px; }
+.task-add .input { padding: 9px 12px; min-height: 40px; font-size: 14px; }
+.task-add .btn { flex: 0 0 auto; }
+
+@media (pointer: coarse), (max-width: 899px) {
+  .task-add .input { font-size: 16px; }
+  .task-text { font-size: 16px; }
+  .task-check { flex-basis: 30px; width: 30px; height: 30px; }
+}

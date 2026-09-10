@@ -23,6 +23,9 @@ Bu depoda iki uygulama var:
   - *sayaç* — günde 8 bardak su gibi adet
   - *süre* — günde 3 saat ders gibi; hızlı düğmelerle (+15dk, +30dk, +1sa) ya da
     saat/dakika yazarak girilir, istatistikte toplam saat olarak da görünür
+- Alışkanlık başına **günlük yapılacaklar listesi**: her günün listesi ayrı tutulur,
+  geçmiş günler sıfırlanmaz; boş bir günde önceki günün listesini tek dokunuşla
+  kopyalayabilirsiniz (işaretler sıfırlanmış olarak)
 - Üç plan tipi: her gün, belirli günler, haftada N kez
 - Seri (streak) ve rekor takibi, 30 günlük başarı oranı, 13 haftalık ısı haritası
 - Geçmiş günleri geriye dönük işaretleme
