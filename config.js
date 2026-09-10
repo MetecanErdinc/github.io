@@ -1,21 +1,22 @@
 /* ==========================================================================
    config.js — Firebase yapılandırması
    --------------------------------------------------------------------------
-   Firebase konsolundan aldığınız bilgileri buraya yapıştırın; böylece TÜM
-   cihazlarınız (iPhone, Android tablet, Windows) aynı ayarla açılır.
+   Proje: aliskanliklarim-3349e  (Firebase Spark planı — ücretsiz)
 
-   Adım adım anlatım için: KURULUM.md
+   NOT: Bu değerler gizli bilgi DEĞİLDİR; tarayıcıda görünmek üzere
+   tasarlanmışlardır ve herkese açık olmaları normaldir. Verilerinizi koruyan
+   şey firestore.rules dosyasındaki güvenlik kurallarıdır — her hesap yalnızca
+   kendi users/<uid> klasörüne erişebilir.
 
-   NOT: Bu değerler gizli bilgi DEĞİLDİR, herkese açık olacak şekilde
-   tasarlanmışlardır. Verilerinizi koruyan şey firestore.rules dosyasındaki
-   güvenlik kurallarıdır — o kuralları mutlaka yükleyin.
+   Değiştirmeniz gerekirse: Firebase konsolu → Proje ayarları (⚙️) → Your apps
+   Ayrıntılı anlatım: KURULUM.md
    ========================================================================== */
 
 export const firebaseConfig = {
-  apiKey:            "BURAYA_APIKEY",
-  authDomain:        "BURAYA_PROJE.firebaseapp.com",
-  projectId:         "BURAYA_PROJE",
-  storageBucket:     "BURAYA_PROJE.appspot.com",
-  messagingSenderId: "BURAYA_SENDER_ID",
-  appId:             "BURAYA_APP_ID",
+  apiKey:            "AIzaSyDCGH0Supk31PNeSo22G5IHl6PevNKzHNc",
+  authDomain:        "aliskanliklarim-3349e.firebaseapp.com",
+  projectId:         "aliskanliklarim-3349e",
+  storageBucket:     "aliskanliklarim-3349e.firebasestorage.app",
+  messagingSenderId: "298272683665",
+  appId:             "1:298272683665:web:e55adfe5e7ec938566f130",
 };
