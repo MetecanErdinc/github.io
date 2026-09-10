@@ -219,6 +219,32 @@ function renderSetup(errorMsg) {
 }
 
 /* ==========================================================================
+   Çevrimdışı açılış ekranı
+   ========================================================================== */
+
+function renderOffline() {
+  showScreen('screen-setup');
+  $('#screen-setup').innerHTML = `
+    <div class="card-panel center">
+      <div class="brand">
+        <img src="./icons/icon-192.png" alt="" />
+        <h1>Çevrimdışısınız</h1>
+        <p>Uygulama açıldı ama hesabınıza bağlanmak için internet gerekiyor.
+           Bağlantı gelince kendiliğinden devam edecek.</p>
+      </div>
+      <button class="btn btn-primary btn-block" data-x="retry">Yeniden dene</button>
+      <p class="tiny muted" style="margin-top:14px">
+        Daha önce giriş yaptıysanız bağlantı gelir gelmez alışkanlıklarınız yerine gelir.
+      </p>
+    </div>`;
+
+  $('#screen-setup').onclick = (e) => {
+    if (e.target.closest('[data-x]')?.dataset.x === 'retry') location.reload();
+  };
+  window.addEventListener('online', () => location.reload(), { once: true });
+}
+
+/* ==========================================================================
    Giriş / kayıt ekranı
    ========================================================================== */
 
@@ -1694,17 +1720,26 @@ function bindGlobal() {
 
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
+
+  const hadController = !!navigator.serviceWorker.controller;
+  const startedAt = Date.now();
+  let handled = false;
+
+  /*  Yeni bir service worker devri aldığında sayfa eski kodla kalmasın.
+      Açılıştan hemen sonraysa kendiliğinden yenilenir; kullanıcı bir süredir
+      uygulamanın içindeyse yenilemeyi ona bırakırız — bir kipi doldururken
+      sayfanın ayağının altından çekilmesi iyi olmaz. */
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || handled) return;      // ilk kurulumda yenilemeye gerek yok
+    handled = true;
+    if (Date.now() - startedAt < 10000) location.reload();
+    else toast('Yeni sürüm hazır — sayfayı yenileyin.', 6000);
+  });
+
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then((reg) => {
-      reg.addEventListener('updatefound', () => {
-        const sw = reg.installing;
-        sw?.addEventListener('statechange', () => {
-          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-            toast('Yeni sürüm hazır — sayfayı yenileyin.', 5000);
-          }
-        });
-      });
-    }).catch(() => {});
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => reg.update?.().catch(() => {}))
+      .catch(() => {});
   });
 }
 
@@ -1728,6 +1763,9 @@ async function boot() {
   try {
     state.fb = await initFirebase(config);
   } catch (err) {
+    // Çevrimdışıyken kurulum sihirbazını göstermek yanıltıcı olur:
+    // kurulumda bir sorun yok, sadece kütüphane indirilemedi.
+    if (!navigator.onLine) { renderOffline(); return; }
     renderSetup('Firebase başlatılamadı: ' + (err?.message || err));
     return;
   }
