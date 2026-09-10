@@ -18,7 +18,11 @@ Bu depoda iki uygulama var:
 - E-posta + şifreyle hesap; her hesap yalnızca kendi alışkanlıklarını görür
 - Cihazlar arası anlık senkron (bir cihazdaki değişiklik diğerlerine düşer)
 - Çevrimdışı çalışma; bağlantı gelince kendiliğinden gönderim
-- İki takip şekli: *yaptım / yapmadım* ve *sayaç* (ör. günde 8 bardak su)
+- Üç takip şekli:
+  - *yaptım / yapmadım* — tek dokunuş
+  - *sayaç* — günde 8 bardak su gibi adet
+  - *süre* — günde 3 saat ders gibi; hızlı düğmelerle (+15dk, +30dk, +1sa) ya da
+    saat/dakika yazarak girilir, istatistikte toplam saat olarak da görünür
 - Üç plan tipi: her gün, belirli günler, haftada N kez
 - Seri (streak) ve rekor takibi, 30 günlük başarı oranı, 13 haftalık ısı haritası
 - Geçmiş günleri geriye dönük işaretleme

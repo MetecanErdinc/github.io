@@ -5,7 +5,7 @@
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
   dayLabel, isScheduled, targetOf, perWeekOf, scheduleLabel, streakInfo,
-  completionRate, dayProgress, esc,
+  completionRate, dayProgress, esc, modeOf, formatDuration, formatClock, targetLabel,
 } from './util.js';
 
 import {
@@ -106,6 +106,8 @@ const activeHabits = () => state.habits.filter((h) => !h.archived);
 
 function openModal(html, bind) {
   closeModal();
+  // Açık bir bildirim kipin üstüne binip alanları kapatabiliyor.
+  $$('.toast').forEach((t) => t.remove());
   const wrap = document.createElement('div');
   wrap.className = 'modal-backdrop';
   wrap.innerHTML = `<div class="modal" role="dialog" aria-modal="true">${html}</div>`;
@@ -433,8 +435,8 @@ function ringHtml(pct, size = 58, stroke = 6, color = 'var(--success)') {
 function habitCardHtml(h, d) {
   const val = entryValue(h.id, d);
   const target = targetOf(h);
+  const mode = modeOf(h);
   const done = val >= target;
-  const counter = target > 1;
   const color = h.color || COLORS[0];
   const st = streakInfo(h, valuesOf(h.id));
 
@@ -442,24 +444,129 @@ function habitCardHtml(h, d) {
   if (st.current > 0) meta.push(`<span class="flame">🔥 ${st.current} ${st.unit}</span>`);
   meta.push(esc(scheduleLabel(h)));
 
+  const bar = mode === 'check' ? '' : `
+      <div class="progress-line">
+        <i style="width:${Math.min(100, (val / target) * 100)}%;background:${done ? 'var(--success)' : color}"></i>
+      </div>`;
+
+  let control;
+  if (mode === 'time') {
+    control = `
+      <button class="time-btn ${done ? 'on' : ''}" data-act="time-edit" data-id="${esc(h.id)}"
+              aria-label="süre gir — ${formatDuration(val)} / ${formatDuration(target)}">
+        <span class="tb-val">${val ? formatClock(val) : '+'}</span>
+        <span class="tb-tgt">${formatClock(target)}</span>
+      </button>`;
+  } else if (mode === 'count') {
+    control = `
+      <div class="counter">
+        <button data-act="dec" data-id="${esc(h.id)}" aria-label="azalt">−</button>
+        <span class="cval ${done ? 'full' : ''}">${val} / ${target}</span>
+        <button data-act="inc" data-id="${esc(h.id)}" aria-label="artır">+</button>
+      </div>`;
+  } else {
+    control = `
+      <button class="check-btn ${done ? 'on' : ''}" data-act="toggle" data-id="${esc(h.id)}"
+              aria-label="${done ? 'geri al' : 'tamamlandı işaretle'}">✓</button>`;
+  }
+
   return `
   <div class="habit-card ${done ? 'done' : ''}" data-habit="${esc(h.id)}">
     <div class="h-emoji" style="background:${color}22;color:${color}">${esc(h.emoji || '✅')}</div>
     <div class="grow">
       <div class="h-name truncate">${esc(h.name)}</div>
       <div class="h-meta">${meta.join('<span class="muted">·</span>')}</div>
-      ${counter ? `<div class="progress-line"><i style="width:${Math.min(100, (val / target) * 100)}%;background:${color}"></i></div>` : ''}
+      ${bar}
     </div>
-    ${counter ? `
-      <div class="counter">
-        <button data-act="dec" data-id="${esc(h.id)}" aria-label="azalt">−</button>
-        <span class="cval ${done ? 'full' : ''}">${val} / ${target}</span>
-        <button data-act="inc" data-id="${esc(h.id)}" aria-label="artır">+</button>
-      </div>`
-    : `
-      <button class="check-btn ${done ? 'on' : ''}" data-act="toggle" data-id="${esc(h.id)}"
-              aria-label="${done ? 'geri al' : 'tamamlandı işaretle'}">✓</button>`}
+    ${control}
   </div>`;
+}
+
+/* ---------------------------------------------------- süre giriş kipi --- */
+
+function timeDialog(habit) {
+  const d = state.date;
+  const target = targetOf(habit);
+  let minutes = entryValue(habit.id, d);
+
+  openModal(`
+    <div class="modal-head">
+      <h3>${esc(habit.emoji || '⏱')} ${esc(habit.name)}</h3>
+      <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button>
+    </div>
+    <p class="small muted center" style="margin-bottom:14px">
+      ${esc(dayLabel(d))} · hedef ${formatDuration(target)}
+    </p>
+
+    <div class="time-display">
+      <div class="td-big" id="td-big">${formatDuration(minutes)}</div>
+      <div class="progress-line" style="margin-top:10px">
+        <i id="td-bar" style="width:${Math.min(100, (minutes / target) * 100)}%;
+           background:${habit.color || COLORS[0]}"></i>
+      </div>
+      <div class="tiny muted" id="td-note" style="margin-top:8px">&nbsp;</div>
+    </div>
+
+    <div class="chips" style="justify-content:center;margin:16px 0 6px">
+      <button type="button" class="chip" data-add="15">+15dk</button>
+      <button type="button" class="chip" data-add="30">+30dk</button>
+      <button type="button" class="chip" data-add="60">+1sa</button>
+      <button type="button" class="chip" data-add="-15">−15dk</button>
+    </div>
+
+    <div class="row" style="gap:8px;align-items:flex-end">
+      <div class="field grow">
+        <label for="td-h">Saat</label>
+        <input id="td-h" class="input" type="number" min="0" max="23" step="1"
+               inputmode="numeric" value="${Math.floor(minutes / 60)}" />
+      </div>
+      <div class="field grow">
+        <label for="td-m">Dakika</label>
+        <input id="td-m" class="input" type="number" min="0" max="59" step="5"
+               inputmode="numeric" value="${minutes % 60}" />
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-x="clear">Temizle</button>
+      <button class="btn btn-primary" data-x="save">Kaydet</button>
+    </div>`, (m) => {
+
+    const hIn = $('#td-h', m), mIn = $('#td-m', m);
+
+    const read = () => (Number(hIn.value) || 0) * 60 + (Number(mIn.value) || 0);
+
+    const paint = () => {
+      minutes = Math.max(0, Math.min(24 * 60, read()));
+      $('#td-big', m).textContent = formatDuration(minutes);
+      $('#td-bar', m).style.width = Math.min(100, (minutes / target) * 100) + '%';
+      const left = target - minutes;
+      $('#td-note', m).textContent = minutes === 0 ? '\u00a0'
+        : left > 0 ? `${formatDuration(left)} kaldı`
+        : left === 0 ? 'Hedef tamamlandı 🎉'
+        : `Hedefi ${formatDuration(-left)} aştınız 💪`;
+    };
+
+    const write = (total) => {
+      const t = Math.max(0, Math.min(24 * 60, total));
+      hIn.value = Math.floor(t / 60);
+      mIn.value = t % 60;
+      paint();
+    };
+
+    hIn.addEventListener('input', paint);
+    mIn.addEventListener('input', paint);
+    paint();
+
+    m.addEventListener('click', (e) => {
+      const add = e.target.closest('[data-add]');
+      if (add) { write(read() + Number(add.dataset.add)); return; }
+
+      const x = e.target.closest('[data-x]')?.dataset.x;
+      if (x === 'clear') { closeModal(); setValue(habit.id, 0); return; }
+      if (x === 'save')  { closeModal(); setValue(habit.id, Math.max(0, Math.min(24 * 60, read()))); }
+    });
+  });
 }
 
 /* ==========================================================================
@@ -551,7 +658,7 @@ function viewHabits() {
         <div class="h-name truncate">${esc(h.name)}</div>
         <div class="h-meta">
           ${esc(scheduleLabel(h))}
-          ${targetOf(h) > 1 ? `<span class="muted">·</span>günde ${targetOf(h)}` : ''}
+          ${targetLabel(h) ? `<span class="muted">·</span>${esc(targetLabel(h))}` : ''}
           ${st.best > 0 ? `<span class="muted">·</span>rekor ${st.best} ${st.unit}` : ''}
         </div>
       </div>
@@ -648,6 +755,13 @@ function viewStats() {
     const r30 = completionRate(h, vals, 30);
     const color = h.color || COLORS[0];
     const target = targetOf(h);
+    const isTime = modeOf(h) === 'time';
+
+    // Süre alışkanlıklarında toplam, oran kadar anlamlı: "30 günde kaç saat?"
+    let total30 = 0;
+    if (isTime) {
+      for (let i = 0; i < 30; i++) total30 += vals.get(dateKey(addDays(t, -i))) || 0;
+    }
     return `
       <div class="panel" style="margin-top:10px">
         <div class="row" style="margin-bottom:12px">
@@ -662,6 +776,9 @@ function viewStats() {
           <div class="stat-box"><div class="sv" style="color:${color}">${st.current}</div><div class="sl">seri (${st.unit})</div></div>
           <div class="stat-box"><div class="sv">${st.best}</div><div class="sl">rekor (${st.unit})</div></div>
           <div class="stat-box"><div class="sv">${r30}%</div><div class="sl">son 30 gün</div></div>
+          ${isTime ? `<div class="stat-box">
+            <div class="sv">${(total30 / 60).toFixed(1).replace('.', ',')}</div>
+            <div class="sl">saat · 30 gün</div></div>` : ''}
         </div>
         ${heatHtml((d) => {
           if (!isScheduled(h, d)) return 0;
@@ -832,7 +949,8 @@ function openHabitEditor(habit) {
   };
   const kind = h.schedule?.kind || 'daily';
   const days = Array.isArray(h.schedule?.days) ? h.schedule.days : [1, 2, 3, 4, 5];
-  const isCounter = targetOf(h) > 1;
+  const hMode = modeOf(h);
+  const timeTarget = hMode === 'time' ? targetOf(h) : 180;   // varsayılan 3 saat
 
   const dayOrder = [1, 2, 3, 4, 5, 6, 0];
 
@@ -868,15 +986,32 @@ function openHabitEditor(habit) {
       <div class="field">
         <label>Takip şekli</label>
         <div class="chips" id="hb-type">
-          <button type="button" class="chip" data-t="check" aria-pressed="${!isCounter}">Yaptım / yapmadım</button>
-          <button type="button" class="chip" data-t="count" aria-pressed="${isCounter}">Sayaç</button>
+          <button type="button" class="chip" data-t="check" aria-pressed="${hMode === 'check'}">Yaptım / yapmadım</button>
+          <button type="button" class="chip" data-t="count" aria-pressed="${hMode === 'count'}">Sayaç</button>
+          <button type="button" class="chip" data-t="time"  aria-pressed="${hMode === 'time'}">Süre</button>
         </div>
+        <p class="tiny muted" style="margin-top:6px">
+          <b>Sayaç:</b> günde 8 bardak su gibi adet sayarsınız.
+          <b>Süre:</b> günde 3 saat ders gibi süre girersiniz.
+        </p>
       </div>
 
-      <div class="field ${isCounter ? '' : 'hidden'}" id="hb-target-wrap">
+      <div class="field ${hMode === 'count' ? '' : 'hidden'}" id="hb-target-wrap">
         <label for="hb-target">Günlük hedef (kaç kez?)</label>
         <input id="hb-target" class="input" type="number" min="2" max="99" inputmode="numeric"
-               value="${isCounter ? targetOf(h) : 8}" />
+               value="${hMode === 'count' ? targetOf(h) : 8}" />
+      </div>
+
+      <div class="field ${hMode === 'time' ? '' : 'hidden'}" id="hb-time-wrap">
+        <label>Günlük hedef süre</label>
+        <div class="row" style="gap:8px">
+          <input id="hb-th" class="input grow" type="number" min="0" max="23" step="1"
+                 inputmode="numeric" aria-label="saat" value="${Math.floor(timeTarget / 60)}" />
+          <span class="small muted">saat</span>
+          <input id="hb-tm" class="input grow" type="number" min="0" max="59" step="5"
+                 inputmode="numeric" aria-label="dakika" value="${timeTarget % 60}" />
+          <span class="small muted">dakika</span>
+        </div>
       </div>
 
       <div class="field">
@@ -936,6 +1071,7 @@ function openHabitEditor(habit) {
         }
         if (attr === 't') {
           $('#hb-target-wrap', m).classList.toggle('hidden', b.dataset.t !== 'count');
+          $('#hb-time-wrap', m).classList.toggle('hidden', b.dataset.t !== 'time');
         }
         if (attr === 'k') {
           $('#hb-days-wrap', m).classList.toggle('hidden', b.dataset.k !== 'days');
@@ -987,9 +1123,13 @@ function openHabitEditor(habit) {
       const kindSel = sel('#hb-kind', 'k') || 'daily';
       const chosenDays = $$('#hb-days [aria-pressed="true"]', m).map((b) => Number(b.dataset.d));
 
-      const target = type === 'count'
-        ? Math.max(2, Math.min(99, Number($('#hb-target', m).value) || 2))
-        : 1;
+      let target = 1;
+      if (type === 'count') {
+        target = Math.max(2, Math.min(99, Number($('#hb-target', m).value) || 2));
+      } else if (type === 'time') {
+        const mins = (Number($('#hb-th', m).value) || 0) * 60 + (Number($('#hb-tm', m).value) || 0);
+        target = Math.max(5, Math.min(24 * 60, mins || 180));   // en az 5dk, boşsa 3 saat
+      }
 
       const schedule = { kind: kindSel };
       if (kindSel === 'days') schedule.days = chosenDays.length ? chosenDays : [1, 2, 3, 4, 5];
@@ -1002,6 +1142,7 @@ function openHabitEditor(habit) {
         name,
         emoji: sel('#hb-emoji', 'e') || '✅',
         color: sel('#hb-color', 'c') || COLORS[0],
+        mode: type,
         target,
         schedule,
         note: $('#hb-note', m).value.trim(),
@@ -1089,6 +1230,7 @@ function handleAction(act, el) {
 
     case 'new-habit':  return openHabitEditor(null);
     case 'edit-habit': return habit && openHabitEditor(habit);
+    case 'time-edit':  return habit && timeDialog(habit);
 
     case 'toggle': {
       if (!habit) return;

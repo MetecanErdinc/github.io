@@ -67,10 +67,37 @@ export function dayLabel(d, ref = today()) {
 
 /* ---------- alışkanlık planlaması ---------- */
 
-/** Günlük hedef sayısı (işaretlemeli alışkanlıklarda 1). */
+/** Günlük hedef (işaretlemeli: 1, sayaç: adet, süre: dakika). */
 export function targetOf(habit) {
   const t = Number(habit?.target);
   return Number.isFinite(t) && t > 0 ? Math.round(t) : 1;
+}
+
+/**
+ * Takip şekli: 'check' (yaptım/yapmadım), 'count' (adet), 'time' (dakika).
+ * Alan yoksa eski kayıtlardan çıkarılır — süre kipi sonradan eklendiği için
+ * o kayıtlarda hedefi 1'den büyük olan her şey sayaçtır.
+ */
+export function modeOf(habit) {
+  const m = habit?.mode;
+  if (m === 'check' || m === 'count' || m === 'time') return m;
+  return targetOf(habit) > 1 ? 'count' : 'check';
+}
+
+/** Dakikayı okunur süreye çevirir: 90 -> "1sa 30dk" */
+export function formatDuration(minutes) {
+  const total = Math.max(0, Math.round(Number(minutes) || 0));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m}dk`;
+  if (m === 0) return `${h}sa`;
+  return `${h}sa ${m}dk`;
+}
+
+/** Kart üzerinde yer dar olduğunda kullanılan kısa biçim: 90 -> "1:30" */
+export function formatClock(minutes) {
+  const total = Math.max(0, Math.round(Number(minutes) || 0));
+  return `${Math.floor(total / 60)}:${pad2(total % 60)}`;
 }
 
 /** Bu alışkanlık verilen günde yapılması gerekiyor mu? */
@@ -88,6 +115,14 @@ export function isScheduled(habit, d) {
 export function perWeekOf(habit) {
   const n = Number(habit?.schedule?.perWeek);
   return Number.isFinite(n) && n > 0 ? Math.round(n) : 3;
+}
+
+/** Hedefin insan diliyle özeti: "günde 8" / "günde 3sa" */
+export function targetLabel(habit) {
+  const mode = modeOf(habit);
+  if (mode === 'check') return '';
+  if (mode === 'time') return `günde ${formatDuration(targetOf(habit))}`;
+  return `günde ${targetOf(habit)}`;
 }
 
 export function isDone(habit, value) {
