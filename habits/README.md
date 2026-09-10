@@ -18,6 +18,7 @@ uygulama olarak kurulur ve çevrimdışı çalışır.
 - Koyu / açık / sistem teması
 - JSON olarak yedek alma ve geri yükleme
 - Firebase kurmadan denemek için yerel mod
+- Kurulum kontrolü: eksik Firebase ayarlarını tespit edip konsolda tam sayfaya bağlantı verir
 
 ## Dosyalar
 

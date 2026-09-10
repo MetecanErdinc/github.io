@@ -254,7 +254,9 @@ function renderAuth(msg) {
           : '<p class="tiny muted">Hesabı oluşturduğunuzda diğer cihazlarınızda aynı e-posta ve şifreyle girin.</p>'}
       </div>
 
-      <div class="center" style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">
+      <div class="center row" style="margin-top:18px;border-top:1px solid var(--border);
+                  padding-top:14px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-ghost btn-sm" data-act="diagnose">Kurulum kontrolü</button>
         <button class="btn btn-ghost btn-sm" data-x="setup">Bulut ayarlarını değiştir</button>
       </div>
     </div>`;
@@ -323,6 +325,8 @@ function attachStore(store) {
   state.store = store;
   state.habits = [];
   state.entries = new Map();
+  state.view = 'today';          // yeni oturum her zaman Bugün ile başlar
+  state.date = today();
   invalidateIndex();
 
   store.start({
@@ -758,6 +762,11 @@ function viewSettings() {
         <button class="btn btn-sm btn-ghost" data-act="reset-config">Değiştir</button>
       </div>
       <div class="list-row">
+        <div class="grow"><div class="h-name">Kurulum kontrolü</div>
+          <div class="h-meta">Giriş, kurallar ve gizlilik ayarlarını test eder.</div></div>
+        <button class="btn btn-sm btn-ghost" data-act="diagnose">Çalıştır</button>
+      </div>
+      <div class="list-row">
         <div class="grow small muted">Son ${WINDOW_DAYS} günün kayıtları yüklenir; eski kayıtlar bulutta korunur.</div>
       </div>
     </div>`}
@@ -1078,6 +1087,8 @@ function handleAction(act, el) {
 
     case 'install': return doInstall();
 
+    case 'diagnose': return diagnosticsDialog();
+
     case 'logout': return confirmDialog('Çıkış yapılsın mı?',
       'Verileriniz hesabınızda kalır; tekrar giriş yaptığınızda geri gelir.',
       'Çıkış yap', false).then((ok) => ok && state.fb.sdk.auth.signOut(state.fb.auth));
@@ -1255,6 +1266,178 @@ function maybeOfferMigration() {
   });
 }
 
+/* ==========================================================================
+   Kurulum kontrolü — neyin eksik olduğunu tespit eder ve konsolda tam
+   sayfaya bağlantı verir.
+   ========================================================================== */
+
+const CHECK_ICON = { ok: '✅', fail: '❌', warn: '⚠️', info: 'ℹ️' };
+
+function consoleLinks(pid) {
+  const base = `https://console.firebase.google.com/project/${encodeURIComponent(pid)}`;
+  return {
+    providers:    `${base}/authentication/providers`,
+    authSettings: `${base}/authentication/settings`,
+    rules:        `${base}/firestore/rules`,
+    data:         `${base}/firestore/data`,
+    general:      `${base}/settings/general`,
+  };
+}
+
+/**
+ * Var olmayan bir hesapla giriş denemesi yapar; dönen hata koduna bakarak
+ * "E-posta/Şifre yöntemi açık mı?" sorusunu yanıtlar. Hiçbir hesap oluşturmaz.
+ */
+async function probeAuth(fb) {
+  const rnd = Math.random().toString(36).slice(2, 10);
+  try {
+    await fb.sdk.auth.signInWithEmailAndPassword(
+      fb.auth, `kurulum-testi-${rnd}@example.com`, `pw-${rnd}-${rnd}`);
+    return 'unexpected-success';
+  } catch (e) {
+    return e?.code || 'bilinmeyen';
+  }
+}
+
+async function runDiagnostics() {
+  const out = [];
+  const fb = state.fb;
+  const pid = fb?.app?.options?.projectId;
+
+  if (!fb || !pid) {
+    out.push({ s: 'fail', t: 'Firebase ayarları',
+               d: 'Yapılandırma yok. config.js dosyasını doldurun ya da kurulum ekranından yapıştırın.' });
+    return out;
+  }
+
+  out.push({ s: 'ok', t: 'Firebase ayarları', d: `Proje: ${pid}`, link: consoleLinks(pid).general,
+             linkText: 'Proje ayarları' });
+
+  const L = consoleLinks(pid);
+
+  /* --- 1. E-posta/Şifre yöntemi ------------------------------------------ */
+  if (state.user) {
+    out.push({ s: 'ok', t: 'E-posta/Şifre girişi', d: 'Çalışıyor — şu an giriş yapmış durumdasınız.' });
+  } else {
+    const code = await probeAuth(fb);
+    if (code === 'auth/operation-not-allowed' || code === 'auth/configuration-not-found') {
+      out.push({ s: 'fail', t: 'E-posta/Şifre girişi',
+                 d: 'Kapalı. Açmadan hesap oluşturamazsınız.',
+                 link: L.providers, linkText: 'Authentication → Sign-in method' });
+    } else if (code === 'auth/api-key-not-valid' || code === 'auth/invalid-api-key') {
+      out.push({ s: 'fail', t: 'E-posta/Şifre girişi',
+                 d: 'apiKey değeri geçersiz. Yapılandırmayı yeniden kopyalayın.',
+                 link: L.general, linkText: 'Proje ayarları' });
+    } else if (code === 'auth/unauthorized-domain') {
+      out.push({ s: 'fail', t: 'E-posta/Şifre girişi',
+                 d: `Bu adres (${location.hostname}) yetkili alan adları listesinde değil.`,
+                 link: L.authSettings, linkText: 'Authentication → Settings' });
+    } else if (code === 'auth/network-request-failed') {
+      out.push({ s: 'warn', t: 'E-posta/Şifre girişi', d: 'İnternet bağlantısı kurulamadı, kontrol edilemedi.' });
+    } else if (code === 'auth/too-many-requests') {
+      out.push({ s: 'warn', t: 'E-posta/Şifre girişi',
+                 d: 'Çok fazla deneme yapıldı; birkaç dakika sonra tekrar kontrol edin.' });
+    } else {
+      out.push({ s: 'ok', t: 'E-posta/Şifre girişi', d: 'Açık — hesap oluşturabilirsiniz.' });
+    }
+  }
+
+  /* --- 2. Yetkili alan adı ----------------------------------------------- */
+  out.push({ s: 'info', t: 'Yetkili alan adı',
+             d: `Şifre sıfırlama bağlantılarının çalışması için "${location.hostname}" ` +
+                'listede olmalı. Eklediğinizden emin olun.',
+             link: L.authSettings, linkText: 'Authorized domains' });
+
+  /* --- 3. Firestore ve güvenlik kuralları -------------------------------- */
+  if (!state.user) {
+    out.push({ s: 'info', t: 'Firestore kuralları',
+               d: 'Giriş yaptıktan sonra kontrol edilebilir.' });
+    return out;
+  }
+
+  const S = fb.sdk.store;
+  const fetchOne = (path) => {
+    const q = S.query(S.collection(fb.db, ...path), S.limit(1));
+    return (S.getDocsFromServer || S.getDocs)(q);
+  };
+
+  try {
+    await fetchOne(['users', state.user.uid, 'habits']);
+    out.push({ s: 'ok', t: 'Kendi verinize erişim', d: 'Okuma/yazma çalışıyor.' });
+  } catch (e) {
+    if (e?.code === 'permission-denied') {
+      out.push({ s: 'fail', t: 'Kendi verinize erişim',
+                 d: 'Firestore kuralları engelliyor. firestore.rules içeriğini yapıştırıp Publish deyin.',
+                 link: L.rules, linkText: 'Firestore → Rules' });
+    } else if (String(e?.code).includes('unavailable')) {
+      out.push({ s: 'warn', t: 'Kendi verinize erişim', d: 'Sunucuya ulaşılamadı (çevrimdışı olabilirsiniz).' });
+    } else {
+      out.push({ s: 'fail', t: 'Kendi verinize erişim',
+                 d: e?.message || String(e), link: L.rules, linkText: 'Firestore → Rules' });
+    }
+  }
+
+  try {
+    await fetchOne(['users', '__kurulum_testi__', 'habits']);
+    out.push({ s: 'warn', t: 'Başkasının verisi kapalı mı?',
+               d: 'DİKKAT: Kurallar fazla açık — başka bir hesabın klasörü okunabiliyor. ' +
+                  'Muhtemelen "test mode" kuralları duruyor. firestore.rules içeriğiyle değiştirin.',
+               link: L.rules, linkText: 'Firestore → Rules' });
+  } catch (e) {
+    if (e?.code === 'permission-denied') {
+      out.push({ s: 'ok', t: 'Başkasının verisi kapalı mı?',
+                 d: 'Evet — başka hesapların verisi size kapalı. Kurallar doğru.' });
+    } else if (String(e?.code).includes('unavailable')) {
+      out.push({ s: 'warn', t: 'Başkasının verisi kapalı mı?', d: 'Sunucuya ulaşılamadı.' });
+    } else {
+      out.push({ s: 'warn', t: 'Başkasının verisi kapalı mı?', d: e?.message || String(e) });
+    }
+  }
+
+  return out;
+}
+
+function diagnosticsDialog() {
+  const body = (rows, busy) => `
+    <div class="modal-head"><h3>Kurulum kontrolü</h3>
+      <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button></div>
+    ${busy ? '<div class="stack center" style="padding:24px 0"><div class="spinner"></div>' +
+             '<p class="small muted">Firebase kontrol ediliyor…</p></div>' : ''}
+    <div class="panel ${busy ? 'hidden' : ''}">
+      ${rows.map((r) => `
+        <div class="list-row" style="align-items:flex-start">
+          <span style="font-size:17px;line-height:1.3">${CHECK_ICON[r.s] || 'ℹ️'}</span>
+          <div class="grow">
+            <div class="h-name" style="font-size:14px">${esc(r.t)}</div>
+            <div class="h-meta" style="display:block">${esc(r.d)}</div>
+            ${r.link ? `<a class="small" href="${esc(r.link)}" target="_blank" rel="noopener"
+                          style="display:inline-block;margin-top:6px">${esc(r.linkText || 'Konsolu aç')} ↗</a>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>
+    ${busy ? '' : `<div class="modal-actions">
+      <button class="btn btn-ghost" data-act="close-modal">Kapat</button>
+      <button class="btn btn-primary" data-x="again">Tekrar kontrol et</button>
+    </div>`}`;
+
+  const wrap = openModal(body([], true), (m) => {
+    m.addEventListener('click', (e) => {
+      if (e.target.closest('[data-x]')?.dataset.x === 'again') diagnosticsDialog();
+    });
+  });
+
+  runDiagnostics()
+    .then((rows) => {
+      const m = $('.modal', wrap);
+      if (!m) return;                       // kip bu arada kapatılmışsa
+      m.innerHTML = body(rows, false);
+    })
+    .catch((err) => {
+      const m = $('.modal', wrap);
+      if (m) m.innerHTML = body([{ s: 'fail', t: 'Kontrol yapılamadı', d: err?.message || String(err) }], false);
+    });
+}
+
 /* ------------------------------------------------------------- kurulum -- */
 
 async function doInstall() {
@@ -1356,6 +1539,7 @@ async function boot() {
       state.store?.stop();
       state.store = null;
       state.user = null;
+      authTab = 'login';
       closeModal();
       renderAuth();
     }

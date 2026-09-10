@@ -25,29 +25,25 @@ sadece giriş yapmanız yeter.
 
 ---
 
-## Adım 1 — Siteyi yayına alın (GitHub Pages)
+## Adım 1 — Siteyi yayına alın (GitHub Pages) ✅ yapıldı
 
-1. GitHub'da bu depoyu açın: `MetecanErdinc/github.io`
-2. Üstteki **Settings** sekmesi → sol menüden **Pages**
-3. **Source** kısmında **Deploy from a branch** seçin
-4. **Branch** olarak `main` (veya `master`) ve klasör olarak `/ (root)` seçip **Save**
-5. Birkaç dakika sonra sayfanın üstünde adresiniz görünür.
-
-**Pages ekranının üstünde yazan adresi esas alın.** Depo adı `github.io` olduğu
-için adres büyük ihtimalle şudur:
+Bu adım tamamlandı. Pages, `claude/funny-dirac-j59wrx` dalından yayın yapacak
+şekilde ayarlandı; uygulamanın adresi:
 
 ```
 https://metecanerdinc.github.io/github.io/habits/
 ```
 
-Depo bir "kullanıcı sitesi" olarak tanınmışsa adres şu olur:
+> İlk yayın birkaç dakika sürebilir. Settings → Pages ekranının üstünde
+> "Your site is live at …" yazısı çıkınca hazırdır.
+>
+> Bu dala her yeni değişiklik gönderildiğinde site kendiliğinden güncellenir.
+> İleride çalışmayı `main` dalına birleştirirseniz Pages kaynağını da `main`
+> olarak geri değiştirebilirsiniz — zorunlu değil.
 
-```
-https://metecanerdinc.github.io/habits/
-```
-
-> Hangisi olduğunu Settings → Pages ekranı size söyler. Sonundaki `habits/`
-> kısmını siz ekleyeceksiniz. Bu adresi not edin — üç cihazda da bunu açacaksınız.
+Depodaki mevcut siteniz (Mühendislik Analiz Yorumlayıcı) etkilenmez; o da aynı
+dalda duruyor ve `https://metecanerdinc.github.io/github.io/` adresinde çalışmaya
+devam eder.
 
 ---
 
@@ -68,10 +64,10 @@ https://metecanerdinc.github.io/habits/
 3. Üstteki **Enable** anahtarını açın (alttaki "Email link" kapalı kalsın)
 4. **Save**
 
-### 3b — Alan adınızı yetkilendirin ⚠️ (bu adımı atlamayın)
+### 3b — Alan adınızı yetkilendirin
 
-Firebase, varsayılan olarak yalnızca kendi adreslerinden gelen girişlere izin verir.
-GitHub Pages adresinizi listeye eklemeniz gerekir:
+Firebase, kendi adresleri dışındaki alan adlarını "yetkili" listesinde tutar.
+GitHub Pages adresinizi eklemeniz gerekir:
 
 1. **Authentication → Settings** sekmesi → **Authorized domains**
 2. **Add domain** → şunu yazın (yol kısmı olmadan, sadece alan adı):
@@ -82,8 +78,9 @@ metecanerdinc.github.io
 
 3. **Add**
 
-> Bu adımı atlarsanız giriş sırasında "Bu adres Firebase projesinde yetkili değil"
-> hatası alırsınız.
+> E-posta/şifre ile normal giriş bu adım olmadan da genelde çalışır; ancak
+> **şifre sıfırlama bağlantıları** ve ileride ekleyebileceğiniz Google ile giriş
+> bu liste olmadan çalışmaz. 30 saniyelik iş, atlamayın.
 
 ---
 
@@ -189,6 +186,32 @@ hesaplar birbirinin verisini göremez.
 
 ---
 
+## Adım 7b — Kurulum kontrolü ile doğrulayın
+
+Uygulamada **Ayarlar → Bulut bağlantısı → Kurulum kontrolü → Çalıştır** deyin
+(giriş yapmadan önce, giriş ekranının altındaki **Kurulum kontrolü** düğmesiyle
+de çalışır).
+
+Şunları tek tek test edip sonucu listeler:
+
+| Kontrol | Ne anlama gelir |
+|---|---|
+| Firebase ayarları | `config.js` doğru okunuyor mu |
+| E-posta/Şifre girişi | Adım 3'ü yaptınız mı |
+| Yetkili alan adı | Adım 3b hatırlatması |
+| Kendi verinize erişim | Adım 4b'deki kurallar yayınlandı mı |
+| Başkasının verisi kapalı mı? | Kurallar gerçekten koruyor mu |
+
+Eksik olan her satırın altında **Firebase konsolundaki tam sayfaya doğrudan
+bağlantı** çıkar — menülerde gezinmenize gerek kalmaz. Hepsi ✅ olduğunda
+kurulum bitmiştir.
+
+> Son satır özellikle önemli: eğer "Kurallar fazla açık" uyarısı çıkarsa
+> Firestore'u *test mode* ile kurmuşsunuz demektir ve o hâlde **başkaları
+> verinizi okuyabilir**. Adım 4b'yi mutlaka yapın.
+
+---
+
 ## Adım 8 — Üç cihaza da uygulama olarak kurun
 
 ### 📱 iPhone
@@ -223,6 +246,9 @@ Uygulama olarak kurulduğunda tam ekran açılır, çevrimdışı da çalışır
 ---
 
 ## Sorun giderme
+
+> Önce **Kurulum kontrolü**'nü çalıştırın (Adım 7b) — çoğu sorunu adıyla söyler
+> ve düzeltme bağlantısını verir.
 
 **"Bu adres Firebase projesinde yetkili değil"**
 Adım 3b'yi yapmadınız. Authentication → Settings → Authorized domains →
