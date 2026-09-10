@@ -107,9 +107,28 @@ const activeHabits = () => state.habits.filter((h) => !h.archived);
 
 /* ------------------------------------------------- yapılacaklar listesi -- */
 
-/** Belirli bir günün listesi. Her gün kendi kaydına sahiptir. */
+/**
+ * Belirli bir günün listesi.
+ *
+ * Günlük listelerde her gün kendi kaydına sahiptir. Sabit listelerde ise o gün
+ * için henüz kayıt yoksa alışkanlığın şablonu boş (işaretsiz) olarak gösterilir;
+ * ilk dokunuşta o güne kopyalanır. Böylece maddeler her gün gelir ama işaretler
+ * güne özel kalır ve geçmiş günler bozulmaz.
+ */
 function tasksFor(habitId, d = state.date) {
-  return state.tasks.get(`${dateKey(d)}_${habitId}`)?.items || [];
+  const stored = state.tasks.get(`${dateKey(d)}_${habitId}`)?.items;
+  if (stored) return stored;
+
+  const h = state.habits.find((x) => x.id === habitId);
+  if (h?.hasTasks && h.taskMode === 'fixed' && Array.isArray(h.taskTemplate)) {
+    return h.taskTemplate.map((t) => ({ id: t.id, text: t.text, done: false }));
+  }
+  return [];
+}
+
+/** Sabit listelerde madde metinleri alışkanlıkta saklanır. */
+function templateOf(items) {
+  return items.map(({ id, text }) => ({ id, text }));
 }
 
 /** Geriye doğru, listesi dolu olan en yakın günü bulur (kopyalama teklifi için). */
@@ -128,8 +147,21 @@ async function writeTasks(habitId, items) {
   if (items.length) state.tasks.set(k, { habitId, date: dk, items });
   else state.tasks.delete(k);
 
-  // Liste alışkanlığı besliyorsa günün değeri buradan yeniden doğar.
   const habit = state.habits.find((h) => h.id === habitId);
+
+  /*  Sabit listede maddeler alışkanlığa aittir: metin eklendiğinde,
+      düzenlendiğinde veya silindiğinde şablon da güncellenir ki ertesi gün
+      aynı liste gelsin. İşaretler şablona yazılmaz, güne özeldir. */
+  if (habit?.taskMode === 'fixed') {
+    const tpl = templateOf(items);
+    if (JSON.stringify(tpl) !== JSON.stringify(habit.taskTemplate || [])) {
+      const next = { ...habit, taskTemplate: tpl };
+      state.habits = state.habits.map((h) => (h.id === habitId ? next : h));
+      state.store.saveHabit(next).catch(() => toast('Sabit liste kaydedilemedi'));
+    }
+  }
+
+  // Liste alışkanlığı besliyorsa günün değeri buradan yeniden doğar.
   const derived = habit?.hasTasks && habit?.driveFromTasks
     ? derivedValue(habit, items)
     : null;
@@ -632,7 +664,9 @@ function taskPanelHtml(h, items, d) {
       <span class="muted">/ hedef ${esc(formatDuration(targetOf(h)))}</span></p>` : ''}
 
     ${items.length ? `<p class="tiny muted center" style="margin-top:8px">
-      Bu liste yalnızca ${esc(dayLabel(d).toLowerCase())} için. Diğer günler olduğu gibi kalır.</p>` : ''}
+      ${h.taskMode === 'fixed'
+        ? 'Sabit liste — maddeler her gün gelir, işaretler yalnızca ' + esc(dayLabel(d).toLowerCase()) + ' için.'
+        : 'Bu liste yalnızca ' + esc(dayLabel(d).toLowerCase()) + ' için. Diğer günler olduğu gibi kalır.'}</p>` : ''}
   </div>`;
 }
 
@@ -1235,6 +1269,21 @@ function openHabitEditor(habit) {
         </span>
       </label>
 
+      <div class="field ${h.hasTasks ? '' : 'hidden'}" id="hb-tasktype-row" style="margin-top:2px">
+        <label>Liste türü</label>
+        <div class="chips" id="hb-tasktype">
+          <button type="button" class="chip" data-tm="daily"
+                  aria-pressed="${(h.taskMode || 'daily') !== 'fixed'}">Her gün yeni liste</button>
+          <button type="button" class="chip" data-tm="fixed"
+                  aria-pressed="${h.taskMode === 'fixed'}">Sabit liste</button>
+        </div>
+        <p class="tiny muted" style="margin-top:6px">
+          <b>Her gün yeni:</b> gün boş başlar; istersen dünkünü tek dokunuşla kopyalarsın.<br />
+          <b>Sabit:</b> aynı maddeler her gün gelir. İşaretler yine güne özeldir —
+          bugün işaretlemen dünü değiştirmez.
+        </p>
+      </div>
+
       <label class="check-row ${h.hasTasks ? '' : 'hidden'}" id="hb-drive-row" for="hb-drive">
         <input id="hb-drive" type="checkbox" ${h.driveFromTasks ? 'checked' : ''} />
         <span>
@@ -1288,9 +1337,11 @@ function openHabitEditor(habit) {
     pressGroup('#hb-type', 't');
     pressGroup('#hb-kind', 'k');
     pressGroup('#hb-days', 'd', true);
+    pressGroup('#hb-tasktype', 'tm');
 
     $('#hb-tasks', m).addEventListener('change', (e) => {
       $('#hb-drive-row', m).classList.toggle('hidden', !e.target.checked);
+      $('#hb-tasktype-row', m).classList.toggle('hidden', !e.target.checked);
     });
 
     setTimeout(() => { if (isNew) $('#hb-name', m)?.focus(); }, 60);
@@ -1355,10 +1406,19 @@ function openHabitEditor(habit) {
         schedule,
         note: $('#hb-note', m).value.trim(),
         hasTasks: $('#hb-tasks', m).checked,
+        taskMode: sel('#hb-tasktype', 'tm') || 'daily',
         driveFromTasks: $('#hb-tasks', m).checked && $('#hb-drive', m).checked,
         archived: !!h.archived,
       };
       if (isNew) payload.order = state.habits.length;
+
+      // Sabit listeye geçiliyorsa ve şablon boşsa bugünkü listeyi temel al.
+      if (payload.hasTasks && payload.taskMode === 'fixed') {
+        const existing = Array.isArray(h.taskTemplate) ? h.taskTemplate : [];
+        payload.taskTemplate = existing.length
+          ? existing
+          : templateOf(h.id ? tasksFor(h.id, state.date) : []);
+      }
 
       try {
         const savedId = await state.store.saveHabit(payload);

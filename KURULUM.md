@@ -312,6 +312,24 @@ altında o alışkanlığa ait bir liste açılır.
 - Maddenin üstüne dokunup metnini değiştirebilir, metni tamamen silerseniz madde
   listeden kalkar.
 
+### İki liste türü
+
+Düzenleyicide **Liste türü** ile seçersiniz:
+
+**Her gün yeni liste** (varsayılan) — Gün boş başlar, o güne ne yazarsanız orada
+kalır. Boş bir günde önceki günün listesini tek dokunuşla kopyalayabilirsiniz.
+Ders planı gibi her gün değişen listeler için.
+
+**Sabit liste** — Maddeler her gün aynı gelir; yeniden yazmanız gerekmez.
+Vitaminler, sabah rutini gibi tekrar eden listeler için.
+
+> Sabit listede de **işaretler güne özeldir**: bugün hepsini işaretlemeniz dünü
+> değiştirmez, yarın liste yeniden işaretsiz gelir.
+
+Sabit listede madde ekler, adını değiştirir veya silerseniz bu değişiklik
+alışkanlığa yazılır ve sonraki günlere yansır. Daha önce işaretlediğiniz günler
+o günkü hâliyle kalır — geçmiş kaydınız bozulmaz.
+
 ### Liste alışkanlığı besleyebilir
 
 Düzenleyicide **İlerlemeyi liste belirlesin** seçeneğini açarsanız listedeki

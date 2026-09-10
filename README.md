@@ -23,9 +23,10 @@ Bu depoda iki uygulama var:
   - *sayaç* — günde 8 bardak su gibi adet
   - *süre* — günde 3 saat ders gibi; hızlı düğmelerle (+15dk, +30dk, +1sa) ya da
     saat/dakika yazarak girilir, istatistikte toplam saat olarak da görünür
-- Alışkanlık başına **günlük yapılacaklar listesi**: her günün listesi ayrı tutulur,
-  geçmiş günler sıfırlanmaz; boş bir günde önceki günün listesini tek dokunuşla
-  kopyalayabilirsiniz (işaretler sıfırlanmış olarak)
+- Alışkanlık başına **yapılacaklar listesi**, iki türde:
+  - *her gün yeni* — gün boş başlar, önceki günün listesi tek dokunuşla kopyalanır
+  - *sabit* — maddeler her gün aynı gelir (vitaminler, sabah rutini gibi)
+  - her iki türde de işaretler güne özeldir; geçmiş günler sıfırlanmaz
 - Liste alışkanlığı besleyebilir (isteğe bağlı), takip şekline göre:
   sayaçta tikler sayacı ilerletir, sürede madde süreleri toplanır,
   işaretlemelide hepsi bitince tamamlanır
