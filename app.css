@@ -267,7 +267,7 @@ main {
   .topbar { display: none; }
   .navbar {
     position: sticky; top: 0; left: auto; right: auto;
-    flex-direction: column; height: 100vh; width: 216px; flex: 0 0 216px;
+    flex-direction: column; height: 100vh; height: 100dvh; width: 216px; flex: 0 0 216px;
     border-top: none; border-right: 1px solid var(--border);
     padding: 20px 12px; gap: 4px; background: var(--surface);
   }
@@ -411,13 +411,14 @@ main {
   background: var(--surface);
   border: 1px solid var(--border); border-bottom: none;
   border-radius: 20px 20px 0 0;
-  max-height: 92vh; overflow-y: auto;
+  max-height: 92vh; max-height: 92dvh; overflow-y: auto;
   padding: 18px 18px calc(20px + env(safe-area-inset-bottom));
   animation: slideUp .2s ease;
 }
 @media (min-width: 620px) {
   .modal-backdrop { align-items: center; }
-  .modal { border-radius: 18px; border-bottom: 1px solid var(--border); max-height: 88vh; }
+  .modal { border-radius: 18px; border-bottom: 1px solid var(--border);
+           max-height: 88vh; max-height: 88dvh; }
 }
 .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .modal-head h3 { font-size: 17px; font-weight: 700; }
@@ -434,3 +435,99 @@ main {
   animation: fade .16s ease; max-width: 90vw; text-align: center;
 }
 @media (min-width: 900px) { .toast { bottom: 26px; } }
+
+/* ==========================================================================
+   Beni hatırla satırı
+   ========================================================================== */
+
+.check-row {
+  display: flex; align-items: flex-start; gap: 11px;
+  padding: 12px 13px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.check-row input[type="checkbox"] {
+  width: 20px; height: 20px; flex: 0 0 20px; margin-top: 1px;
+  accent-color: var(--accent); cursor: pointer;
+}
+.check-row b  { display: block; font-size: 14px; font-weight: 600; }
+.check-row em { display: block; font-size: 12px; color: var(--text2); font-style: normal; margin-top: 2px; }
+
+/* ==========================================================================
+   Mobil
+   ========================================================================== */
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* Çift dokunuşla yakınlaştırmayı ve 300ms gecikmeyi kaldırır */
+button, .chip, .swatch, .check-btn, .counter button, .navbar button,
+.week-strip button, .icon-btn, .emoji-grid button, label.check-row {
+  touch-action: manipulation;
+}
+
+/* Denetimlerde metin seçimi kazara tetiklenmesin (içerik seçilebilir kalır) */
+button, .navbar, .week-strip, .tabs, .chips, .swatches, .emoji-grid {
+  -webkit-user-select: none; user-select: none;
+}
+
+/*  iOS Safari, yazı boyutu 16px'in altında olan bir alana dokunulduğunda
+    sayfayı otomatik yakınlaştırır ve geri çıkmaz. Dokunmatik cihazlarda
+    form alanlarını 16px'e sabitleyerek bunu engelliyoruz. */
+@media (pointer: coarse), (max-width: 899px) {
+  .input, select.input, textarea.input { font-size: 16px; }
+}
+
+/* --- telefon --- */
+@media (max-width: 480px) {
+  :root { --nav-h: 60px; }
+
+  main { padding-left: 14px; padding-right: 14px; }
+
+  .habit-card { padding: 11px 12px; gap: 11px; }
+  .h-emoji { flex: 0 0 40px; width: 40px; height: 40px; font-size: 20px; }
+
+  /* Parmakla rahat vurulabilir hedefler */
+  .check-btn { flex: 0 0 46px; width: 46px; height: 46px; font-size: 21px; }
+  .counter button { width: 42px; height: 42px; font-size: 20px; border-radius: 11px; }
+  .counter .cval { min-width: 44px; }
+
+  .day-head .dh-title { font-size: 18px; }
+  .ring { flex-basis: 52px; width: 52px; height: 52px; }
+
+  .card-panel { padding: 22px 18px; border-radius: 18px; }
+  .modal { padding: 16px 15px calc(18px + env(safe-area-inset-bottom)); }
+  .btn { min-height: 46px; }
+}
+
+/* --- dar telefon (iPhone SE vb.) --- */
+@media (max-width: 360px) {
+  .week-strip { gap: 4px; }
+  .week-strip button { padding: 7px 0 8px; border-radius: 10px; }
+  .week-strip .ws-num { font-size: 14px; }
+  .week-strip .ws-day { font-size: 9.5px; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .h-name { font-size: 14.5px; }
+  main { padding-left: 12px; padding-right: 12px; }
+}
+
+/* --- telefon yatay: dikey alan kıymetli --- */
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  :root { --nav-h: 50px; }
+  .navbar button { font-size: 10px; }
+  .navbar button .ico { font-size: 17px; }
+  .week-strip { margin-bottom: 12px; }
+  .brand { margin-bottom: 14px; }
+  .brand img { width: 46px; height: 46px; }
+  .modal { max-height: 96dvh; }
+}
+
+/* --- tablet: masaüstü yerleşimine geçmeden önce biraz daha ferah --- */
+@media (min-width: 600px) and (max-width: 899px) {
+  main { max-width: 620px; padding-left: 22px; padding-right: 22px; }
+  .habit-card { padding: 14px 15px; }
+}
+
+/* Ana ekrandan açıldığında adres çubuğu yok; üst boşluğu biraz azalt */
+html[data-standalone="true"] .topbar { padding-bottom: 8px; }

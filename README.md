@@ -22,6 +22,11 @@ Bu depoda iki uygulama var:
 - Üç plan tipi: her gün, belirli günler, haftada N kez
 - Seri (streak) ve rekor takibi, 30 günlük başarı oranı, 13 haftalık ısı haritası
 - Geçmiş günleri geriye dönük işaretleme
+- "Beni hatırla": oturum cihazda açık kalır, e-posta bir sonraki girişte hazır gelir
+- Telefona göre ayarlanmış yerleşim: dokunmatik hedefler büyütülür, iOS'un form
+  alanına dokununca yakınlaştırma davranışı engellenir, yatay mod ve çentik
+  boşlukları gözetilir
+- Paylaşıma hazır: yeni kullanıcının Firebase ile hiçbir işi olmaz, sadece hesap açar
 - Koyu / açık / sistem teması
 - JSON olarak yedek alma ve geri yükleme
 - Firebase kurmadan denemek için yerel mod

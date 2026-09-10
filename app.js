@@ -10,7 +10,7 @@ import {
 
 import {
   resolveConfig, isUsableConfig, storeConfig, clearStoredConfig, parseConfigText,
-  getPrefs, setPrefs, getMode, setMode, initFirebase, authErrorMessage,
+  getPrefs, setPrefs, getMode, setMode, initFirebase, authErrorMessage, setAuthPersistence,
   CloudStore, LocalStore, WINDOW_DAYS,
 } from './data.js';
 
@@ -28,6 +28,7 @@ const state = {
   online: navigator.onLine,
   fromCache: false,
   installPrompt: null,
+  configSource: null,
 };
 
 const COLORS = ['#4f8ef7', '#6c63ff', '#4fcf8e', '#f7b24f', '#f75f5f',
@@ -55,6 +56,22 @@ function toast(msg, ms = 2600) {
   el.textContent = msg;
   document.body.appendChild(el);
   setTimeout(() => el.remove(), ms);
+}
+
+/**
+ * Cihaz türünü kök öğeye yazar: data-device="phone|tablet|desktop".
+ * CSS medya sorguları genişliğe bakar; bu ise dokunmatik olup olmadığını da
+ * ayırt eder — tablet ile dar pencere açılmış masaüstü aynı şey değildir.
+ */
+function detectDevice() {
+  const root = document.documentElement;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
+  const shortSide = Math.min(window.innerWidth, window.innerHeight);
+
+  root.dataset.device = !coarse ? 'desktop' : (shortSide < 600 ? 'phone' : 'tablet');
+  root.dataset.standalone = String(
+    window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+  );
 }
 
 function applyTheme() {
@@ -231,7 +248,8 @@ function renderAuth(msg) {
         <div class="field">
           <label for="au-mail">E-posta</label>
           <input id="au-mail" class="input" type="email" required autocomplete="email"
-                 inputmode="email" placeholder="ornek@eposta.com" />
+                 inputmode="email" autocapitalize="none" spellcheck="false"
+                 value="${esc(state.prefs.lastEmail || '')}" placeholder="ornek@eposta.com" />
         </div>
         <div class="field">
           <label for="au-pass">Şifre</label>
@@ -239,6 +257,14 @@ function renderAuth(msg) {
                  autocomplete="${isLogin ? 'current-password' : 'new-password'}"
                  placeholder="En az 6 karakter" />
         </div>
+
+        <label class="check-row" for="au-remember">
+          <input id="au-remember" type="checkbox" ${state.prefs.remember === false ? '' : 'checked'} />
+          <span>
+            <b>Beni hatırla</b>
+            <em>Bir daha e-posta ve şifre sormayalım; bu cihazda açık kalsın.</em>
+          </span>
+        </label>
 
         <div id="auth-err" class="error-box hidden"></div>
         ${msg ? `<div class="info-box">${esc(msg)}</div>` : ''}
@@ -251,13 +277,15 @@ function renderAuth(msg) {
       <div class="center mt">
         ${isLogin
           ? '<button class="btn btn-ghost btn-sm" data-x="reset">Şifremi unuttum</button>'
-          : '<p class="tiny muted">Hesabı oluşturduğunuzda diğer cihazlarınızda aynı e-posta ve şifreyle girin.</p>'}
+          : `<p class="tiny muted">Kurulum gerektirmez — e-posta ve şifre yeter. Alışkanlıklarınız yalnızca
+             sizin hesabınızda görünür; aynı bilgilerle diğer cihazlarınızdan da girebilirsiniz.</p>`}
       </div>
 
       <div class="center row" style="margin-top:18px;border-top:1px solid var(--border);
                   padding-top:14px;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" data-act="diagnose">Kurulum kontrolü</button>
-        <button class="btn btn-ghost btn-sm" data-x="setup">Bulut ayarlarını değiştir</button>
+        ${state.configSource === 'file' ? '' :
+          '<button class="btn btn-ghost btn-sm" data-x="setup">Bulut ayarlarını değiştir</button>'}
       </div>
     </div>`;
 
@@ -291,6 +319,7 @@ function renderAuth(msg) {
     const mail = $('#au-mail').value.trim();
     const pass = $('#au-pass').value;
     const name = $('#au-name')?.value.trim();
+    const remember = $('#au-remember')?.checked !== false;
     const btn = $('#auth-submit');
 
     if (!mail) return fail('E-posta adresi gerekli.');
@@ -299,6 +328,11 @@ function renderAuth(msg) {
     btn.disabled = true;
     btn.textContent = 'Lütfen bekleyin…';
     errBox.classList.add('hidden');
+
+    // Tercihi giriş denemesinden ÖNCE uygula, yoksa bu oturuma yansımaz.
+    state.prefs = { ...state.prefs, remember, lastEmail: remember ? mail : '' };
+    setPrefs(state.prefs);
+    await setAuthPersistence(state.fb, remember);
 
     try {
       if (authTab === 'login') {
@@ -699,6 +733,14 @@ function viewSettings() {
           <div class="grow small muted">Aynı e-posta ve şifreyle diğer cihazlarınızdan da girebilirsiniz.</div>
         </div>
         <div class="list-row">
+          <div class="grow"><div class="h-name">Beni hatırla</div>
+            <div class="h-meta">${state.prefs.remember === false
+              ? 'Tarayıcı kapanınca çıkış yapılır.'
+              : 'Oturum bu cihazda açık kalır, tekrar şifre sorulmaz.'}</div></div>
+          <button class="btn btn-sm ${state.prefs.remember === false ? 'btn-ghost' : 'btn-primary'}"
+                  data-act="toggle-remember">${state.prefs.remember === false ? 'Kapalı' : 'Açık'}</button>
+        </div>
+        <div class="list-row">
           <button class="btn btn-sm btn-ghost" data-act="pass-reset">Şifreyi değiştir</button>
           <span class="grow"></span>
           <button class="btn btn-sm btn-danger" data-act="logout">Çıkış yap</button>
@@ -759,7 +801,8 @@ function viewSettings() {
         <div class="grow"><div class="h-name">Firebase projesi</div>
           <div class="h-meta truncate">${esc(state.fb?.app?.options?.projectId || '—')}
             · SDK ${esc(state.fb?.sdk?.version || '')}</div></div>
-        <button class="btn btn-sm btn-ghost" data-act="reset-config">Değiştir</button>
+        ${state.configSource === 'file' ? ''
+          : '<button class="btn btn-sm btn-ghost" data-act="reset-config">Değiştir</button>'}
       </div>
       <div class="list-row">
         <div class="grow"><div class="h-name">Kurulum kontrolü</div>
@@ -1082,6 +1125,17 @@ function handleAction(act, el) {
       state.prefs = { ...state.prefs, theme: el.dataset.v };
       setPrefs(state.prefs);
       applyTheme();
+      return render();
+    }
+
+    case 'toggle-remember': {
+      const remember = state.prefs.remember === false;      // tersine çevir
+      state.prefs = { ...state.prefs, remember };
+      if (!remember) state.prefs.lastEmail = '';
+      setPrefs(state.prefs);
+      setAuthPersistence(state.fb, remember);
+      toast(remember ? 'Oturum bu cihazda açık kalacak'
+                     : 'Tarayıcı kapanınca çıkış yapılacak');
       return render();
     }
 
@@ -1466,6 +1520,10 @@ function bindGlobal() {
     if (e.key === 'Escape') closeModal();
   });
 
+  const onResize = () => detectDevice();
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
+
   const sync = () => { state.online = navigator.onLine; updateSyncBadge(); };
   window.addEventListener('online', sync);
   window.addEventListener('offline', sync);
@@ -1509,6 +1567,7 @@ function registerSW() {
 }
 
 async function boot() {
+  detectDevice();
   applyTheme();
   bindGlobal();
   registerSW();
@@ -1520,8 +1579,9 @@ async function boot() {
 
   $('#loading-text').textContent = 'Bulut bağlantısı hazırlanıyor…';
 
-  const { config } = await resolveConfig();
+  const { config, source } = await resolveConfig();
   if (!config) { renderSetup(); return; }
+  state.configSource = source;
 
   try {
     state.fb = await initFirebase(config);
@@ -1540,6 +1600,7 @@ async function boot() {
       state.store = null;
       state.user = null;
       authTab = 'login';
+      state.prefs = getPrefs();      // e-posta ön dolgusu için tazele
       closeModal();
       renderAuth();
     }

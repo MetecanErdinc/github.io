@@ -78,9 +78,11 @@ export function parseConfigText(text) {
 
 /* ------------------------------------------------------- tercihler ------- */
 
+const DEFAULT_PREFS = { theme: 'system', remember: true, lastEmail: '' };
+
 export function getPrefs() {
-  try { return { theme: 'system', ...JSON.parse(localStorage.getItem(LS.prefs) || '{}') }; }
-  catch { return { theme: 'system' }; }
+  try { return { ...DEFAULT_PREFS, ...JSON.parse(localStorage.getItem(LS.prefs) || '{}') }; }
+  catch { return { ...DEFAULT_PREFS }; }
 }
 
 export function setPrefs(p) {
@@ -150,6 +152,19 @@ export async function initFirebase(config) {
   } catch { /* bazı gizli sekmelerde desteklenmez */ }
 
   return { sdk, app, auth, db };
+}
+
+/**
+ * Oturumun ne kadar hatırlanacağını belirler.
+ *   remember = true  -> tarayıcı kapatılsa da açık kalır (varsayılan)
+ *   remember = false -> yalnızca bu sekme kapanana kadar
+ * Giriş denemesinden hemen ÖNCE çağrılmalıdır.
+ */
+export async function setAuthPersistence(fb, remember) {
+  const A = fb.sdk.auth;
+  const mode = remember ? A.browserLocalPersistence : A.browserSessionPersistence;
+  if (!mode) return;
+  try { await A.setPersistence(fb.auth, mode); } catch { /* gizli sekmede desteklenmeyebilir */ }
 }
 
 /* --------------------------------------------------- hata mesajları ------ */

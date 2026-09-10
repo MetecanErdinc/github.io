@@ -184,6 +184,12 @@ ayrı** yapmanız gerekir.
 2. **Hesap oluştur** sekmesi → e-posta + şifre (en az 6 karakter) → **Hesabı oluştur**
 3. Diğer cihazlarınızda **aynı e-posta ve şifreyle** *Giriş yap* deyin.
 
+Giriş ekranındaki **Beni hatırla** açık olduğu sürece (varsayılan) o cihazda bir
+daha şifre sorulmaz — tarayıcıyı veya uygulamayı kapatıp açsanız da oturum
+açık kalır. Kapatmak isterseniz: **Ayarlar → Hesap → Beni hatırla**. Ortak
+kullanılan bir bilgisayarda bu kutuyu işaretlemeyin; o zaman oturum yalnızca
+sekme kapanana kadar sürer.
+
 Farklı bir e-postayla giriş yaparsanız o hesabın kendi alışkanlıkları görünür;
 hesaplar birbirinin verisini göremez.
 
@@ -288,6 +294,32 @@ Service worker eski sürümü önbelleklemiş olabilir. Sayfayı kapatıp açın
 
 **Şifremi unuttum**
 Giriş ekranında **Şifremi unuttum** → e-postanıza sıfırlama bağlantısı gelir.
+
+---
+
+## Uygulamayı başkasıyla paylaşma
+
+Kurulum bir kez yapıldı; **paylaştığınız kişinin Firebase ile hiçbir işi yok.**
+Yapmaları gereken tek şey adresi açıp kendi hesaplarını oluşturmak:
+
+```
+https://metecanerdinc.github.io/github.io/
+```
+
+- Firebase ayarları `config.js` içinde depoda durduğu için herkes hazır bağlantıyla açar
+- Herkes kendi e-postası ve şifresiyle kendi hesabını açar
+- `firestore.rules` her hesabı kendi `users/<uid>` klasörüne hapseder; **kimse
+  başkasının alışkanlıklarını göremez** — bu, arayüzde değil sunucuda zorunlu
+- Firebase'e ait ayar düğmeleri, yapılandırma depodan geldiğinde uygulamada
+  görünmez; paylaştığınız kişi bir kurulum ekranıyla karşılaşmaz
+
+Ücretsiz sınırlar (günde 50.000 okuma / 20.000 yazma) birkaç kişilik kullanımın
+çok üzerindedir; kişi ekledikçe ücretli plana geçme riski yoktur.
+
+### Sizin için tek ek adım yok
+
+Yeni kişi eklediğinizde Firebase konsolunda bir şey yapmanız gerekmez. Hesaplar
+kendiliğinden oluşur; **Authentication → Users** listesinde görünürler.
 
 ---
 
