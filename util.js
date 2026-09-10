@@ -117,6 +117,52 @@ export function perWeekOf(habit) {
   return Number.isFinite(n) && n > 0 ? Math.round(n) : 3;
 }
 
+/**
+ * Listeye bağlı alışkanlıklarda günün değerini listeden hesaplar.
+ * Her takip şeklinin kendi düzeneği vardır:
+ *
+ *   check : bütün maddeler işaretlenince alışkanlık tamamlanır
+ *   count : işaretlenen madde oranı hedefe ölçeklenir; hepsi işaretlenince
+ *           değer hedefe ulaşır (4 madde / 4 hedef durumunda birebir örtüşür)
+ *   time  : maddelerin yanına girilen süreler toplanır
+ *
+ * Liste boşsa null döner — o gün elle girişe dokunulmaz.
+ */
+export function derivedValue(habit, items) {
+  if (!Array.isArray(items) || items.length === 0) return null;
+
+  const mode = modeOf(habit);
+  const target = targetOf(habit);
+
+  if (mode === 'time') {
+    return items.reduce((sum, it) => sum + (Number(it.minutes) || 0), 0);
+  }
+
+  const checked = items.filter((it) => it.done).length;
+  if (mode === 'check') return checked === items.length ? 1 : 0;
+  return Math.round((target * checked) / items.length);
+}
+
+/** Listeye bağlı alışkanlık kartında gösterilecek ilerleme metni. */
+export function derivedLabel(habit, items) {
+  const mode = modeOf(habit);
+  const checked = items.filter((it) => it.done).length;
+  if (mode === 'time') {
+    return formatClock(items.reduce((s, it) => s + (Number(it.minutes) || 0), 0));
+  }
+  return `${checked}/${items.length}`;
+}
+
+/** Listeye bağlı bir alışkanlık o gün tamamlanmış mı? */
+export function derivedDone(habit, items) {
+  if (!Array.isArray(items) || items.length === 0) return false;
+  const mode = modeOf(habit);
+  if (mode === 'time') {
+    return items.reduce((s, it) => s + (Number(it.minutes) || 0), 0) >= targetOf(habit);
+  }
+  return items.every((it) => it.done);
+}
+
 /** Hedefin insan diliyle özeti: "günde 8" / "günde 3sa" */
 export function targetLabel(habit) {
   const mode = modeOf(habit);

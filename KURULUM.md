@@ -312,6 +312,20 @@ altında o alışkanlığa ait bir liste açılır.
 - Maddenin üstüne dokunup metnini değiştirebilir, metni tamamen silerseniz madde
   listeden kalkar.
 
+### Liste alışkanlığı besleyebilir
+
+Düzenleyicide **İlerlemeyi liste belirlesin** seçeneğini açarsanız listedeki
+hareketler doğrudan alışkanlığa işlenir. Takip şekline göre düzenek değişir:
+
+| Takip şekli | Düzenek |
+|---|---|
+| **Sayaç** | İşaretledikçe sayaç ilerler. Örn. 4 maddelik vitamin listesinde her tik sayacı bir artırır, dördü de işaretlenince alışkanlık tamamlanır. |
+| **Süre** | Her maddenin yanında bir süre düğmesi çıkar. Girdiğiniz süreler toplanıp alışkanlığa yazılır. Örn. Matematik 1sa 30dk + Fizik 1sa + Kimya 30dk = 3sa, hedef 3 saatse alışkanlık tamamlanır. |
+| **Yaptım / yapmadım** | Bütün maddeler işaretlenince tamamlanmış sayılır. |
+
+Seçenek kapalıyken liste yalnızca bir not defteridir; alışkanlığı elle
+işaretlersiniz. Listesi boş olan günlerde elle giriş yine açıktır.
+
 Listeler de yedeklemeye dahildir ve cihazlar arasında senkronlanır.
 
 ---

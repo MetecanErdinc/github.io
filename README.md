@@ -26,6 +26,9 @@ Bu depoda iki uygulama var:
 - Alışkanlık başına **günlük yapılacaklar listesi**: her günün listesi ayrı tutulur,
   geçmiş günler sıfırlanmaz; boş bir günde önceki günün listesini tek dokunuşla
   kopyalayabilirsiniz (işaretler sıfırlanmış olarak)
+- Liste alışkanlığı besleyebilir (isteğe bağlı), takip şekline göre:
+  sayaçta tikler sayacı ilerletir, sürede madde süreleri toplanır,
+  işaretlemelide hepsi bitince tamamlanır
 - Üç plan tipi: her gün, belirli günler, haftada N kez
 - Seri (streak) ve rekor takibi, 30 günlük başarı oranı, 13 haftalık ısı haritası
 - Geçmiş günleri geriye dönük işaretleme

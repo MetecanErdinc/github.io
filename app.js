@@ -6,6 +6,7 @@ import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
   dayLabel, isScheduled, targetOf, perWeekOf, scheduleLabel, streakInfo,
   completionRate, dayProgress, esc, modeOf, formatDuration, formatClock, targetLabel, uid,
+  derivedValue, derivedLabel, derivedDone,
 } from './util.js';
 
 import {
@@ -126,12 +127,34 @@ async function writeTasks(habitId, items) {
   const k = `${dk}_${habitId}`;
   if (items.length) state.tasks.set(k, { habitId, date: dk, items });
   else state.tasks.delete(k);
+
+  // Liste alışkanlığı besliyorsa günün değeri buradan yeniden doğar.
+  const habit = state.habits.find((h) => h.id === habitId);
+  const derived = habit?.hasTasks && habit?.driveFromTasks
+    ? derivedValue(habit, items)
+    : null;
+
+  if (derived !== null) {
+    if (derived) state.entries.set(k, { habitId, date: dk, value: derived });
+    else state.entries.delete(k);
+    invalidateIndex();
+  }
+
   render();
+
   try {
     await state.store.setTasks(dk, habitId, items);
+    if (derived !== null) await state.store.setEntry(dk, habitId, derived);
   } catch (err) {
     toast('Kaydedilemedi: ' + (err?.message || err));
   }
+}
+
+/** Listeye bağlı bir alışkanlığın bugünkü değerini listeden tazeler. */
+async function syncDerived(habit) {
+  if (!habit?.hasTasks || !habit?.driveFromTasks) return;
+  const v = derivedValue(habit, tasksFor(habit.id));
+  if (v !== null) await setValue(habit.id, v);
 }
 
 /* ---------------------------------------------------------------- modal */
@@ -504,13 +527,31 @@ function habitCardHtml(h, d) {
   if (st.current > 0) meta.push(`<span class="flame">🔥 ${st.current} ${st.unit}</span>`);
   meta.push(esc(scheduleLabel(h)));
 
+  const items = h.hasTasks ? tasksFor(h.id, d) : [];
+  const open = state.openTasks.has(h.id);
+  const doneCount = items.filter((i) => i.done).length;
+  const driven = !!(h.hasTasks && h.driveFromTasks && items.length);
+
+  const shown = driven ? (derivedValue(h, items) ?? 0) : val;
+  const barDone = driven ? derivedDone(h, items) : done;
   const bar = mode === 'check' ? '' : `
       <div class="progress-line">
-        <i style="width:${Math.min(100, (val / target) * 100)}%;background:${done ? 'var(--success)' : color}"></i>
+        <i style="width:${Math.min(100, (shown / target) * 100)}%;background:${barDone ? 'var(--success)' : color}"></i>
       </div>`;
 
   let control;
-  if (mode === 'time') {
+  if (driven) {
+    // Değer listeden gelir; elle giriş yerine denetim listeyi açar.
+    const dDone = derivedDone(h, items);
+    control = `
+      <button class="time-btn ${dDone ? 'on' : ''}" data-act="task-panel" data-id="${esc(h.id)}"
+              aria-label="listeyi aç">
+        <span class="tb-val">${esc(derivedLabel(h, items))}</span>
+        ${mode === 'time'
+          ? `<span class="tb-tgt">${formatClock(target)}</span>`
+          : '<span class="tb-sub">listeden</span>'}
+      </button>`;
+  } else if (mode === 'time') {
     control = `
       <button class="time-btn ${done ? 'on' : ''}" data-act="time-edit" data-id="${esc(h.id)}"
               aria-label="süre gir — ${formatDuration(val)} / ${formatDuration(target)}">
@@ -530,10 +571,6 @@ function habitCardHtml(h, d) {
               aria-label="${done ? 'geri al' : 'tamamlandı işaretle'}">✓</button>`;
   }
 
-  const items = h.hasTasks ? tasksFor(h.id, d) : [];
-  const open = state.openTasks.has(h.id);
-  const doneCount = items.filter((i) => i.done).length;
-
   const taskToggle = h.hasTasks ? `
       <button class="task-toggle ${open ? 'on' : ''}" data-act="task-panel" data-id="${esc(h.id)}"
               aria-expanded="${open}">
@@ -542,7 +579,7 @@ function habitCardHtml(h, d) {
 
   return `
   <div class="habit-block">
-    <div class="habit-card ${done ? 'done' : ''} ${h.hasTasks && open ? 'has-panel' : ''}"
+    <div class="habit-card ${(driven ? derivedDone(h, items) : done) ? 'done' : ''} ${h.hasTasks && open ? 'has-panel' : ''}"
          data-habit="${esc(h.id)}">
       <div class="h-emoji" style="background:${color}22;color:${color}">${esc(h.emoji || '✅')}</div>
       <div class="grow">
@@ -558,6 +595,8 @@ function habitCardHtml(h, d) {
 
 function taskPanelHtml(h, items, d) {
   const prev = items.length === 0 ? previousTaskDay(h.id, d) : null;
+  const timeDriven = h.driveFromTasks && modeOf(h) === 'time';
+  const total = items.reduce((sum, it) => sum + (Number(it.minutes) || 0), 0);
 
   return `
   <div class="task-panel">
@@ -569,6 +608,10 @@ function taskPanelHtml(h, items, d) {
         <input class="task-text" value="${esc(it.text)}" maxlength="140"
                data-change="task-text" data-id="${esc(h.id)}" data-tid="${esc(it.id)}"
                aria-label="madde metni" />
+        ${timeDriven ? `
+          <button class="task-min ${it.minutes ? 'has' : ''}" data-act="task-time"
+                  data-id="${esc(h.id)}" data-tid="${esc(it.id)}"
+                  aria-label="süre gir">${it.minutes ? formatDuration(it.minutes) : '+ süre'}</button>` : ''}
         <button class="icon-btn task-del" data-act="task-del"
                 data-id="${esc(h.id)}" data-tid="${esc(it.id)}" aria-label="sil">✕</button>
       </div>`).join('')}</div>` : ''}
@@ -584,6 +627,10 @@ function taskPanelHtml(h, items, d) {
         ${esc(dayLabel(prev.day))} listesini kopyala (${prev.items.length} madde)
       </button>` : ''}
 
+    ${items.length && timeDriven ? `<p class="tiny center" style="margin-top:10px">
+      <b>Toplam ${esc(formatDuration(total))}</b>
+      <span class="muted">/ hedef ${esc(formatDuration(targetOf(h)))}</span></p>` : ''}
+
     ${items.length ? `<p class="tiny muted center" style="margin-top:8px">
       Bu liste yalnızca ${esc(dayLabel(d).toLowerCase())} için. Diğer günler olduğu gibi kalır.</p>` : ''}
   </div>`;
@@ -591,27 +638,30 @@ function taskPanelHtml(h, items, d) {
 
 /* ---------------------------------------------------- süre giriş kipi --- */
 
-function timeDialog(habit) {
-  const d = state.date;
-  const target = targetOf(habit);
-  let minutes = entryValue(habit.id, d);
+/**
+ * Süre girme penceresi. Hem bir alışkanlığın günlük toplamı hem de listedeki
+ * tek bir madde için kullanılır.
+ * target verilmezse ilerleme çubuğu ve "kaldı" notu gösterilmez.
+ */
+function durationDialog({ title, subtitle, minutes: initial, target = 0, color, onSave }) {
+  let minutes = Number(initial) || 0;
+  const bar = target > 0;
 
   openModal(`
     <div class="modal-head">
-      <h3>${esc(habit.emoji || '⏱')} ${esc(habit.name)}</h3>
+      <h3 class="truncate">${esc(title)}</h3>
       <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button>
     </div>
-    <p class="small muted center" style="margin-bottom:14px">
-      ${esc(dayLabel(d))} · hedef ${formatDuration(target)}
-    </p>
+    ${subtitle ? `<p class="small muted center" style="margin-bottom:14px">${esc(subtitle)}</p>` : ''}
 
     <div class="time-display">
       <div class="td-big" id="td-big">${formatDuration(minutes)}</div>
-      <div class="progress-line" style="margin-top:10px">
-        <i id="td-bar" style="width:${Math.min(100, (minutes / target) * 100)}%;
-           background:${habit.color || COLORS[0]}"></i>
-      </div>
-      <div class="tiny muted" id="td-note" style="margin-top:8px">&nbsp;</div>
+      ${bar ? `
+        <div class="progress-line" style="margin-top:10px">
+          <i id="td-bar" style="width:${Math.min(100, (minutes / target) * 100)}%;
+             background:${color || COLORS[0]}"></i>
+        </div>
+        <div class="tiny muted" id="td-note" style="margin-top:8px">&nbsp;</div>` : ''}
     </div>
 
     <div class="chips" style="justify-content:center;margin:16px 0 6px">
@@ -640,12 +690,12 @@ function timeDialog(habit) {
     </div>`, (m) => {
 
     const hIn = $('#td-h', m), mIn = $('#td-m', m);
-
     const read = () => (Number(hIn.value) || 0) * 60 + (Number(mIn.value) || 0);
 
     const paint = () => {
       minutes = Math.max(0, Math.min(24 * 60, read()));
       $('#td-big', m).textContent = formatDuration(minutes);
+      if (!bar) return;
       $('#td-bar', m).style.width = Math.min(100, (minutes / target) * 100) + '%';
       const left = target - minutes;
       $('#td-note', m).textContent = minutes === 0 ? '\u00a0'
@@ -670,9 +720,35 @@ function timeDialog(habit) {
       if (add) { write(read() + Number(add.dataset.add)); return; }
 
       const x = e.target.closest('[data-x]')?.dataset.x;
-      if (x === 'clear') { closeModal(); setValue(habit.id, 0); return; }
-      if (x === 'save')  { closeModal(); setValue(habit.id, Math.max(0, Math.min(24 * 60, read()))); }
+      if (x === 'clear') { closeModal(); onSave(0); return; }
+      if (x === 'save')  { closeModal(); onSave(Math.max(0, Math.min(24 * 60, read()))); }
     });
+  });
+}
+
+/** Alışkanlığın günlük süresini elle girme. */
+function timeDialog(habit) {
+  durationDialog({
+    title: `${habit.emoji || '⏱'} ${habit.name}`,
+    subtitle: `${dayLabel(state.date)} · hedef ${formatDuration(targetOf(habit))}`,
+    minutes: entryValue(habit.id, state.date),
+    target: targetOf(habit),
+    color: habit.color || COLORS[0],
+    onSave: (mins) => setValue(habit.id, mins),
+  });
+}
+
+/** Listedeki tek bir maddeye harcanan süre. */
+function taskTimeDialog(habit, item) {
+  durationDialog({
+    title: item.text,
+    subtitle: 'Bu maddeye ne kadar süre ayırdınız?',
+    minutes: Number(item.minutes) || 0,
+    onSave: (mins) => {
+      const items = tasksFor(habit.id).map((it) =>
+        it.id === item.id ? { ...it, minutes: mins } : it);
+      writeTasks(habit.id, items);
+    },
   });
 }
 
@@ -1159,6 +1235,18 @@ function openHabitEditor(habit) {
         </span>
       </label>
 
+      <label class="check-row ${h.hasTasks ? '' : 'hidden'}" id="hb-drive-row" for="hb-drive">
+        <input id="hb-drive" type="checkbox" ${h.driveFromTasks ? 'checked' : ''} />
+        <span>
+          <b>İlerlemeyi liste belirlesin</b>
+          <em>
+            <b>Sayaç:</b> işaretledikçe sayaç ilerler, hepsi bitince alışkanlık tamamlanır.<br />
+            <b>Süre:</b> her maddenin yanına çalıştığınız süreyi girersiniz, toplam alışkanlığa işlenir.<br />
+            <b>Yaptım/yapmadım:</b> bütün maddeler bitince tamamlanmış sayılır.
+          </em>
+        </span>
+      </label>
+
       <div id="hb-err" class="error-box hidden"></div>
     </div>
 
@@ -1200,6 +1288,10 @@ function openHabitEditor(habit) {
     pressGroup('#hb-type', 't');
     pressGroup('#hb-kind', 'k');
     pressGroup('#hb-days', 'd', true);
+
+    $('#hb-tasks', m).addEventListener('change', (e) => {
+      $('#hb-drive-row', m).classList.toggle('hidden', !e.target.checked);
+    });
 
     setTimeout(() => { if (isNew) $('#hb-name', m)?.focus(); }, 60);
 
@@ -1263,14 +1355,17 @@ function openHabitEditor(habit) {
         schedule,
         note: $('#hb-note', m).value.trim(),
         hasTasks: $('#hb-tasks', m).checked,
+        driveFromTasks: $('#hb-tasks', m).checked && $('#hb-drive', m).checked,
         archived: !!h.archived,
       };
       if (isNew) payload.order = state.habits.length;
 
       try {
-        await state.store.saveHabit(payload);
+        const savedId = await state.store.saveHabit(payload);
         closeModal();
         toast(isNew ? 'Alışkanlık eklendi 🎉' : 'Kaydedildi');
+        // Seçenek yeni açıldıysa bugünün değeri listeden hemen doğsun.
+        await syncDerived({ ...payload, id: payload.id || savedId });
       } catch (err) {
         const box = $('#hb-err', m);
         box.textContent = 'Kaydedilemedi: ' + (err?.message || err);
@@ -1362,6 +1457,11 @@ function handleAction(act, el) {
     }
     case 'task-del':
       return writeTasks(id, tasksFor(id).filter((it) => it.id !== el.dataset.tid));
+
+    case 'task-time': {
+      const item = tasksFor(id).find((it) => it.id === el.dataset.tid);
+      return habit && item && taskTimeDialog(habit, item);
+    }
 
     case 'task-copy': {
       const prev = previousTaskDay(id);

@@ -636,3 +636,26 @@ html[data-standalone="true"] .topbar { padding-bottom: 8px; }
   .task-text { font-size: 16px; }
   .task-check { flex-basis: 30px; width: 30px; height: 30px; }
 }
+
+/* Listeye bağlı ilerleme */
+
+.time-btn .tb-sub {
+  font-size: 10px; color: var(--text3); line-height: 1; letter-spacing: .2px;
+}
+
+.task-min {
+  flex: 0 0 auto; min-width: 56px;
+  padding: 5px 9px; border-radius: 8px;
+  background: var(--surface2); border: 1px dashed var(--border2);
+  color: var(--text3); font-size: 11.5px; font-weight: 700;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.task-min.has {
+  border-style: solid; border-color: var(--accent);
+  background: rgba(79, 142, 247, .14); color: var(--accent);
+}
+
+@media (max-width: 360px) {
+  .task-min { min-width: 48px; padding: 5px 6px; font-size: 11px; }
+  .task-text { font-size: 15px; }
+}
