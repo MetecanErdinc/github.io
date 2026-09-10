@@ -30,6 +30,9 @@ Bu depoda iki uygulama var:
 - Liste alışkanlığı besleyebilir (isteğe bağlı), takip şekline göre:
   sayaçta tikler sayacı ilerletir, sürede madde süreleri toplanır,
   işaretlemelide hepsi bitince tamamlanır
+- **Listeler sekmesi**: alışkanlıklardan ve tarihten bağımsız listeler — market
+  alışverişi, gün içinde halledilecek tek seferlik işler. İstediğiniz kadar liste
+  açar, tamamlananları tek dokunuşla temizlersiniz
 - Üç plan tipi: her gün, belirli günler, haftada N kez
 - Seri (streak) ve rekor takibi, 30 günlük başarı oranı, 13 haftalık ısı haritası
 - Geçmiş günleri geriye dönük işaretleme

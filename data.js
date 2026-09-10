@@ -17,6 +17,7 @@ const LS = {
   habits:  'habits.local.habits',
   entries: 'habits.local.entries',
   tasks:   'habits.local.tasks',
+  lists:   'habits.local.lists',
 };
 
 /** Giriş ekranına kadar geriye dönük yüklenecek gün sayısı. */
@@ -254,6 +255,19 @@ export class CloudStore {
       (err) => handlers.error?.(err)
     ));
 
+    // Alışkanlıklardan bağımsız listeler (market, tek seferlik işler…)
+    this.unsubs.push(S.onSnapshot(
+      this._col('lists'),
+      (snap) => {
+        const rows = [];
+        snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
+        rows.sort((a, b) => (a.order ?? 0) - (b.order ?? 0) ||
+                            String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+        handlers.lists?.(rows);
+      },
+      (err) => handlers.error?.(err)
+    ));
+
     // Günlük yapılacaklar listeleri — her gün için ayrı belge, geçmiş korunur
     this.unsubs.push(S.onSnapshot(
       S.query(this._col('tasks'), S.where('date', '>=', cutoff)),
@@ -315,6 +329,19 @@ export class CloudStore {
     });
   }
 
+  async saveList(list) {
+    const id = list.id || uid('l');
+    const data = { ...list, updatedAt: new Date().toISOString() };
+    delete data.id;
+    if (!data.createdAt) data.createdAt = data.updatedAt;
+    await this.S.setDoc(this._doc('lists', id), data);
+    return id;
+  }
+
+  async deleteList(id) {
+    await this.S.deleteDoc(this._doc('lists', id));
+  }
+
   async setTasks(dk, habitId, items) {
     const ref = this._doc('tasks', `${dk}_${habitId}`);
     if (!items || items.length === 0) {
@@ -333,7 +360,7 @@ export class CloudStore {
     await batch.commit();
   }
 
-  async importData({ habits = [], entries = [], tasks = [] }) {
+  async importData({ habits = [], entries = [], tasks = [], lists = [] }) {
     const S = this.S;
     const ops = [];
     habits.forEach((h) => {
@@ -350,6 +377,11 @@ export class CloudStore {
       ops.push([this._doc('tasks', `${t.date}_${t.habitId}`),
                 { habitId: t.habitId, date: t.date, items: t.items }]);
     });
+    lists.forEach((l) => {
+      if (!l?.name) return;
+      const { id, ...rest } = l;
+      ops.push([this._doc('lists', id || uid('l')), rest]);
+    });
     for (let i = 0; i < ops.length; i += 400) {
       const batch = S.writeBatch(this.db);
       ops.slice(i, i + 400).forEach(([ref, data]) => batch.set(ref, data, { merge: true }));
@@ -359,7 +391,7 @@ export class CloudStore {
 
   async wipe() {
     const S = this.S;
-    for (const name of ['tasks', 'entries', 'habits']) {
+    for (const name of ['tasks', 'entries', 'habits', 'lists']) {
       const snap = await S.getDocs(this._col(name));
       const refs = [];
       snap.forEach((d) => refs.push(d.ref));
@@ -394,9 +426,14 @@ export class LocalStore {
     try { return JSON.parse(localStorage.getItem(LS.tasks) || '{}'); } catch { return {}; }
   }
 
+  _readLists() {
+    try { return JSON.parse(localStorage.getItem(LS.lists) || '[]'); } catch { return []; }
+  }
+
   _writeHabits(list) { localStorage.setItem(LS.habits, JSON.stringify(list)); }
   _writeEntries(obj) { localStorage.setItem(LS.entries, JSON.stringify(obj)); }
   _writeTasks(obj)   { localStorage.setItem(LS.tasks, JSON.stringify(obj)); }
+  _writeLists(list)  { localStorage.setItem(LS.lists, JSON.stringify(list)); }
 
   _emit() {
     const list = this._readHabits()
@@ -415,13 +452,14 @@ export class LocalStore {
     this.handlers.habits?.(list);
     this.handlers.entries?.(map);
     this.handlers.tasks?.(tmap);
+    this.handlers.lists?.(this._readLists().slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
     this.handlers.status?.({ fromCache: true });
   }
 
   start(handlers) {
     this.handlers = handlers;
     this._onStorage = (e) => {
-      if (e.key === LS.habits || e.key === LS.entries || e.key === LS.tasks) this._emit();
+      if ([LS.habits, LS.entries, LS.tasks, LS.lists].includes(e.key)) this._emit();
     };
     window.addEventListener('storage', this._onStorage);
     this._emit();
@@ -467,6 +505,37 @@ export class LocalStore {
     this._emit();
   }
 
+  async saveList(list) {
+    const id = list.id || uid('l');
+    const data = { ...list, updatedAt: new Date().toISOString() };
+    delete data.id;
+    if (!data.createdAt) data.createdAt = data.updatedAt;
+    await this.S.setDoc(this._doc('lists', id), data);
+    return id;
+  }
+
+  async deleteList(id) {
+    await this.S.deleteDoc(this._doc('lists', id));
+  }
+
+  async saveList(list) {
+    const rows = this._readLists();
+    const id = list.id || uid('l');
+    const now = new Date().toISOString();
+    const i = rows.findIndex((l) => l.id === id);
+    const next = { ...(i >= 0 ? rows[i] : {}), ...list, id, updatedAt: now };
+    if (!next.createdAt) next.createdAt = now;
+    if (i >= 0) rows[i] = next; else rows.push(next);
+    this._writeLists(rows);
+    this._emit();
+    return id;
+  }
+
+  async deleteList(id) {
+    this._writeLists(this._readLists().filter((l) => l.id !== id));
+    this._emit();
+  }
+
   async setTasks(dk, habitId, items) {
     const raw = this._readTasks();
     const k = `${dk}_${habitId}`;
@@ -483,7 +552,7 @@ export class LocalStore {
     this._emit();
   }
 
-  async importData({ habits = [], entries = [], tasks = [] }) {
+  async importData({ habits = [], entries = [], tasks = [], lists = [] }) {
     const cur = new Map(this._readHabits().map((h) => [h.id, h]));
     habits.forEach((h) => { if (h?.id) cur.set(h.id, { ...cur.get(h.id), ...h }); });
     this._writeHabits([...cur.values()]);
@@ -502,6 +571,10 @@ export class LocalStore {
     });
     this._writeTasks(tsk);
 
+    const curLists = new Map(this._readLists().map((l) => [l.id, l]));
+    lists.forEach((l) => { if (l?.id) curLists.set(l.id, { ...curLists.get(l.id), ...l }); });
+    this._writeLists([...curLists.values()]);
+
     this._emit();
   }
 
@@ -509,6 +582,7 @@ export class LocalStore {
     localStorage.removeItem(LS.habits);
     localStorage.removeItem(LS.entries);
     localStorage.removeItem(LS.tasks);
+    localStorage.removeItem(LS.lists);
     this._emit();
   }
 }

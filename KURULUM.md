@@ -297,6 +297,24 @@ Giriş ekranında **Şifremi unuttum** → e-postanıza sıfırlama bağlantıs�
 
 ---
 
+## Listeler sekmesi
+
+Alt menüdeki **Listeler**, alışkanlıklarla hiç ilgisi olmayan serbest listeler
+içindir: market alışverişi, bugün halletmeniz gereken tek seferlik işler,
+unutmamanız gerekenler.
+
+- İstediğiniz kadar liste açarsınız (Market, Bugün, Tamir edilecekler…)
+- Her listenin kendi simgesi ve adı vardır
+- **Tarihe bağlı değildir.** Alışkanlık listeleri günden güne değişir; buradakiler
+  siz silene kadar olduğu gibi durur. Günü değiştirmek bunları etkilemez.
+- Tamamladığınız maddeleri **Tamamlanan N maddeyi temizle** ile toplu silersiniz
+- Maddenin üstüne dokunup metnini değiştirebilirsiniz
+
+Bu listeler de hesabınıza kaydedilir, cihazlar arasında senkronlanır ve
+yedeklemeye dahildir.
+
+---
+
 ## Günlük yapılacaklar listesi
 
 Bir alışkanlığı düzenlerken **Yapılacaklar listesi** kutusunu işaretlerseniz kartın

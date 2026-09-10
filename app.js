@@ -25,6 +25,8 @@ const state = {
   entries: new Map(),
   tasks: new Map(),
   openTasks: new Set(),
+  lists: [],
+  openList: null,
   view: 'today',
   date: today(),
   prefs: getPrefs(),
@@ -40,7 +42,11 @@ const COLORS = ['#4f8ef7', '#6c63ff', '#4fcf8e', '#f7b24f', '#f75f5f',
 const EMOJIS = ['✅', '💪', '📚', '🏃', '💧', '🧘', '🥗', '😴', '🦷', '💊', '🚭', '✍️',
                 '🎯', '🧹', '🌱', '🎸', '🧠', '☀️', '🙏', '💰', '📵', '🚶', '🏋️', '🎨'];
 
-const VIEW_TITLES = { today: 'Bugün', habits: 'Alışkanlıklar', stats: 'İstatistik', settings: 'Ayarlar' };
+const VIEW_TITLES = { today: 'Bugün', habits: 'Alışkanlıklar', lists: 'Listeler',
+                      stats: 'İstatistik', settings: 'Ayarlar' };
+
+const LIST_EMOJIS = ['📝', '🛒', '🧺', '📦', '🏠', '🚗', '💼', '🎁', '🧹', '🍽️',
+                     '💊', '🔧', '📞', '💡', '✈️', '🎬'];
 
 /* -------------------------------------------------------------- yardımcı */
 
@@ -475,6 +481,8 @@ function attachStore(store) {
   state.habits = [];
   state.entries = new Map();
   state.tasks = new Map();
+  state.lists = [];
+  state.openList = null;
   state.view = 'today';          // yeni oturum her zaman Bugün ile başlar
   state.date = today();
   invalidateIndex();
@@ -483,6 +491,7 @@ function attachStore(store) {
     habits: (list) => { state.habits = list; render(); },
     entries: (map)  => { state.entries = map; invalidateIndex(); render(); },
     tasks:   (map)  => { state.tasks = map; render(); },
+    lists:   (rows) => { state.lists = rows; render(); },
     status:  (s)    => { state.fromCache = !!s.fromCache; updateSyncBadge(); },
     error:   (err)  => {
       console.error(err);
@@ -901,6 +910,177 @@ function viewHabits() {
     ${archived.length ? `
       <div class="section-title">Arşiv (${archived.length})</div>
       <div class="panel" style="opacity:.75">${archived.map((h) => rowHtml(h, 0, 1, true)).join('')}</div>` : ''}`;
+}
+
+/* ==========================================================================
+   Görünüm: Listeler — alışkanlıklardan bağımsız, tarihe bağlı değil
+   ========================================================================== */
+
+async function writeListItems(listId, items) {
+  const list = state.lists.find((l) => l.id === listId);
+  if (!list) return;
+  const next = { ...list, items };
+  state.lists = state.lists.map((l) => (l.id === listId ? next : l));
+  render();
+  try {
+    await state.store.saveList(next);
+  } catch (err) {
+    toast('Kaydedilemedi: ' + (err?.message || err));
+  }
+}
+
+function listEditor(list) {
+  const isNew = !list;
+  const l = list || { name: '', emoji: '📝', items: [] };
+
+  openModal(`
+    <div class="modal-head">
+      <h3>${isNew ? 'Yeni liste' : 'Listeyi düzenle'}</h3>
+      <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button>
+    </div>
+    <div class="stack">
+      <div class="field">
+        <label for="ls-name">Liste adı</label>
+        <input id="ls-name" class="input" type="text" maxlength="50" value="${esc(l.name)}"
+               placeholder="Örn. Market, Bugün yapılacaklar" />
+      </div>
+      <div class="field">
+        <label>Simge</label>
+        <div class="emoji-grid" id="ls-emoji">
+          ${LIST_EMOJIS.map((e) => `<button type="button" data-e="${e}"
+             aria-pressed="${e === (l.emoji || '📝')}">${e}</button>`).join('')}
+        </div>
+      </div>
+      <div id="ls-err" class="error-box hidden"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-act="close-modal">Vazgeç</button>
+      <button class="btn btn-primary" data-x="save">${isNew ? 'Oluştur' : 'Kaydet'}</button>
+    </div>`, (m) => {
+    $('#ls-emoji', m).addEventListener('click', (e) => {
+      const b = e.target.closest('[data-e]');
+      if (!b) return;
+      $$('[data-e]', $('#ls-emoji', m)).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    });
+    setTimeout(() => $('#ls-name', m)?.focus(), 60);
+
+    m.addEventListener('click', async (e) => {
+      if (e.target.closest('[data-x]')?.dataset.x !== 'save') return;
+      const name = $('#ls-name', m).value.trim();
+      if (!name) {
+        const err = $('#ls-err', m);
+        err.textContent = 'Listeye bir ad verin.';
+        err.classList.remove('hidden');
+        return;
+      }
+      const payload = {
+        ...(list || {}),
+        name,
+        emoji: $('#ls-emoji [aria-pressed="true"]', m)?.dataset.e || '📝',
+        items: l.items || [],
+      };
+      if (isNew) payload.order = state.lists.length;
+      try {
+        const id = await state.store.saveList(payload);
+        closeModal();
+        if (isNew) { state.openList = payload.id || id; render(); }
+        toast(isNew ? 'Liste oluşturuldu' : 'Kaydedildi');
+      } catch (err) {
+        const box = $('#ls-err', m);
+        box.textContent = 'Kaydedilemedi: ' + (err?.message || err);
+        box.classList.remove('hidden');
+      }
+    });
+  });
+}
+
+function viewLists() {
+  const open = state.openList ? state.lists.find((l) => l.id === state.openList) : null;
+  return open ? listDetailHtml(open) : listIndexHtml();
+}
+
+function listIndexHtml() {
+  if (state.lists.length === 0) {
+    return `
+      <div class="empty">
+        <div class="big">📝</div>
+        <h3>Henüz liste yok</h3>
+        <p class="small">Market alışverişi ya da bugün halletmen gereken işler için
+           bir liste aç. Bunlar alışkanlıklardan bağımsızdır, günlere bağlı değildir.</p>
+        <button class="btn btn-primary mt" data-act="new-list">İlk listeyi oluştur</button>
+      </div>`;
+  }
+
+  return `
+    <button class="btn btn-primary btn-block" data-act="new-list">+ Yeni liste</button>
+    <div class="section-title">Listelerim (${state.lists.length})</div>
+    <div class="habit-list">
+      ${state.lists.map((l) => {
+        const items = l.items || [];
+        const done = items.filter((i) => i.done).length;
+        const all = items.length > 0 && done === items.length;
+        return `
+        <button class="habit-card list-card ${all ? 'done' : ''}" data-act="open-list" data-id="${esc(l.id)}">
+          <div class="h-emoji" style="background:var(--surface3)">${esc(l.emoji || '📝')}</div>
+          <div class="grow" style="text-align:left;min-width:0">
+            <div class="h-name truncate">${esc(l.name)}</div>
+            <div class="h-meta">${items.length
+              ? `${done}/${items.length} tamamlandı`
+              : 'boş liste'}</div>
+            ${items.length ? `<div class="progress-line">
+              <i style="width:${(done / items.length) * 100}%;background:var(--accent)"></i></div>` : ''}
+          </div>
+          <span class="list-caret">›</span>
+        </button>`;
+      }).join('')}
+    </div>`;
+}
+
+function listDetailHtml(l) {
+  const items = l.items || [];
+  const done = items.filter((i) => i.done).length;
+
+  return `
+    <div class="list-head">
+      <button class="icon-btn" data-act="close-list" aria-label="geri">‹</button>
+      <div class="h-emoji" style="background:var(--surface3)">${esc(l.emoji || '📝')}</div>
+      <div class="grow" style="min-width:0">
+        <div class="h-name truncate">${esc(l.name)}</div>
+        <div class="h-meta">${items.length ? `${done}/${items.length} tamamlandı` : 'boş liste'}</div>
+      </div>
+      <button class="icon-btn" data-act="edit-list" data-id="${esc(l.id)}" aria-label="düzenle">✏️</button>
+      <button class="icon-btn" data-act="del-list" data-id="${esc(l.id)}" aria-label="sil">🗑</button>
+    </div>
+
+    <form class="task-add list-add" data-lid="${esc(l.id)}" style="margin-bottom:14px">
+      <input class="input" id="list-add-input" placeholder="Yeni madde…" maxlength="140"
+             autocomplete="off" aria-label="yeni madde" />
+      <button class="btn btn-primary" type="submit">Ekle</button>
+    </form>
+
+    ${items.length ? `
+      <div class="panel">
+        <div class="task-list" style="margin-bottom:0">
+          ${items.map((it) => `
+            <div class="task-item ${it.done ? 'done' : ''}">
+              <button class="task-check ${it.done ? 'on' : ''}" data-act="li-check"
+                      data-id="${esc(l.id)}" data-tid="${esc(it.id)}"
+                      aria-label="${it.done ? 'geri al' : 'tamamlandı'}">✓</button>
+              <input class="task-text" value="${esc(it.text)}" maxlength="140"
+                     data-change="li-text" data-id="${esc(l.id)}" data-tid="${esc(it.id)}"
+                     aria-label="madde metni" />
+              <button class="icon-btn task-del" data-act="li-del"
+                      data-id="${esc(l.id)}" data-tid="${esc(it.id)}" aria-label="sil">✕</button>
+            </div>`).join('')}
+        </div>
+      </div>
+      ${done ? `<button class="btn btn-ghost btn-block mt" data-act="li-clear" data-id="${esc(l.id)}">
+        Tamamlanan ${done} maddeyi temizle</button>` : ''}`
+    : `<div class="empty" style="padding:32px 16px">
+         <div class="big">🧾</div>
+         <h3>Liste boş</h3>
+         <p class="small">Yukarıdaki kutuya yazıp Ekle deyin.</p>
+       </div>`}`;
 }
 
 /* ==========================================================================
@@ -1443,7 +1623,8 @@ function render() {
   if (!state.store) return;
   const y = window.scrollY;
 
-  const html = state.view === 'habits'   ? viewHabits()
+  const html = state.view === 'lists'    ? viewLists()
+             : state.view === 'habits'   ? viewHabits()
              : state.view === 'stats'    ? viewStats()
              : state.view === 'settings' ? viewSettings()
              :                             viewToday();
@@ -1517,6 +1698,44 @@ function handleAction(act, el) {
     }
     case 'task-del':
       return writeTasks(id, tasksFor(id).filter((it) => it.id !== el.dataset.tid));
+
+    case 'new-list':   return listEditor(null);
+    case 'open-list':  { state.openList = id; window.scrollTo(0, 0); return render(); }
+    case 'close-list': { state.openList = null; window.scrollTo(0, 0); return render(); }
+    case 'edit-list':  return listEditor(state.lists.find((l) => l.id === id));
+
+    case 'del-list': {
+      const l = state.lists.find((x) => x.id === id);
+      if (!l) return;
+      return confirmDialog('Liste silinsin mi?',
+        `<b>${esc(l.name)}</b> ve içindeki ${(l.items || []).length} madde silinecek.`)
+        .then(async (ok) => {
+          if (!ok) return;
+          state.openList = null;
+          await state.store.deleteList(id);
+          toast('Liste silindi');
+        });
+    }
+
+    case 'li-check': {
+      const l = state.lists.find((x) => x.id === id);
+      if (!l) return;
+      navigator.vibrate?.(8);
+      return writeListItems(id, (l.items || []).map((it) =>
+        it.id === el.dataset.tid ? { ...it, done: !it.done } : it));
+    }
+    case 'li-del': {
+      const l = state.lists.find((x) => x.id === id);
+      if (!l) return;
+      return writeListItems(id, (l.items || []).filter((it) => it.id !== el.dataset.tid));
+    }
+    case 'li-clear': {
+      const l = state.lists.find((x) => x.id === id);
+      if (!l) return;
+      const kept = (l.items || []).filter((it) => !it.done);
+      toast(`${(l.items || []).length - kept.length} madde temizlendi`);
+      return writeListItems(id, kept);
+    }
 
     case 'task-time': {
       const item = tasksFor(id).find((it) => it.id === el.dataset.tid);
@@ -1653,6 +1872,7 @@ function buildBackup() {
     habits: state.habits.map((h) => ({ ...h })),
     entries: [...state.entries.values()].map(({ habitId, date, value }) => ({ habitId, date, value })),
     tasks: [...state.tasks.values()].map(({ habitId, date, items }) => ({ habitId, date, items })),
+    lists: state.lists.map((l) => ({ ...l })),
   };
 }
 
@@ -1664,7 +1884,7 @@ function exportDialog() {
     <div class="modal-head"><h3>Yedek al</h3>
       <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button></div>
     <p class="small muted">${state.habits.length} alışkanlık, ${state.entries.size} kayıt,
-       ${state.tasks.size} günlük liste.</p>
+       ${state.tasks.size} günlük liste, ${state.lists.length} bağımsız liste.</p>
     <div class="modal-actions">
       <button class="btn btn-ghost" data-x="copy">Panoya kopyala</button>
       <button class="btn btn-primary" data-x="download">Dosyayı indir</button>
@@ -1723,7 +1943,8 @@ function importDialog() {
       }
       try {
         await state.store.importData({
-          habits: data.habits, entries: data.entries || [], tasks: data.tasks || [],
+          habits: data.habits, entries: data.entries || [],
+          tasks: data.tasks || [], lists: data.lists || [],
         });
         closeModal();
         toast(`${data.habits.length} alışkanlık geri yüklendi`);
@@ -1977,7 +2198,19 @@ function bindGlobal() {
     writeTasks(el.dataset.id, items);
   });
 
-  // Yeni madde ekleme
+  // Bağımsız liste maddesinin metnini düzenleme
+  document.addEventListener('change', (e) => {
+    const el = e.target.closest('[data-change="li-text"]');
+    if (!el) return;
+    const l = state.lists.find((x) => x.id === el.dataset.id);
+    if (!l) return;
+    const text = el.value.trim();
+    writeListItems(l.id, (l.items || [])
+      .map((it) => (it.id === el.dataset.tid ? { ...it, text } : it))
+      .filter((it) => it.text));
+  });
+
+  // Yeni madde ekleme (hem alışkanlık listeleri hem bağımsız listeler)
   document.addEventListener('submit', (e) => {
     const form = e.target.closest('form.task-add');
     if (!form) return;
@@ -1986,6 +2219,16 @@ function bindGlobal() {
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
+
+    if (form.dataset.lid) {
+      const l = state.lists.find((x) => x.id === form.dataset.lid);
+      if (!l) return;
+      writeListItems(l.id, [...(l.items || []), { id: uid('i'), text, done: false }]);
+      // Art arda madde girmek yaygın; odak kutuda kalsın.
+      $('#list-add-input')?.focus();
+      return;
+    }
+
     writeTasks(form.dataset.hid, [...tasksFor(form.dataset.hid),
                                   { id: uid('t'), text, done: false }]);
   });
