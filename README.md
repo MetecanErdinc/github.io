@@ -51,6 +51,11 @@ Bu depoda iki uygulama var:
 - **Günlük kalori sayacı**: Program sekmesinin başında o gün kalan kalori
   yazar. Öğün maddeleri işaretlendikçe her kalem kendi payınca düşer; hedef
   aşılırsa sayaç kırmızıya döner
+- **Barkod ve ürün arama**: Program sekmesinden yiyecek eklenir. Barkod
+  kamerayla okutulur (ya da elle yazılır), ürün adıyla aranır, kalorisi
+  bilinmeyen bir şey için 100 gramdaki değer elle girilir. Gramaj yazılınca
+  kalori hesaplanır ve günün sayacına eklenir. Ürün bilgisi Open Food
+  Facts'ten gelir; ağ ya da kamera çalışmasa da elle giriş hep açıktır
 - Program alışkanlıkları **Bugün ekranında görünmez ve günlük tamamlama
   oranına katılmaz** — öğün, su ve adım takibi Program sekmesinde yaşar,
   Bugün kişinin kendi kurduğu alışkanlıklara ayrılmıştır. Alışkanlıklar
@@ -83,6 +88,7 @@ Bu depoda iki uygulama var:
 | `photo.js` | Görsel küçültme/sıkıştırma ve zaman damgası biçimi |
 | `app.css` | Stiller (koyu/açık tema, mobil + masaüstü) |
 | `plan.js` | Kalori, makro, öğün ve antrenman hesabı |
+| `foods.js` | Barkod okuma ve Open Food Facts sorguları |
 | `program.js` | Planı alışkanlık ve listelere çeviren katman |
 | `config.js` | **Firebase ayarlarınızı buraya yazın** |
 | `firestore.rules` | Firestore güvenlik kuralları — konsola yapıştırın |
