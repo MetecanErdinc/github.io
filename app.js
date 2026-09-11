@@ -30,6 +30,7 @@ const state = {
   lists: [],
   openList: null,
   albums: new Map(),
+  buildAt: null,
   photoCache: new Map(),
   view: 'today',
   date: today(),
@@ -1529,7 +1530,20 @@ function viewSettings() {
       </div>
     </div>
 
-    <div class="section-title">Uygulama olarak kur</div>
+    <div class="section-title">Uygulama</div>
+    <div class="panel">
+      <div class="list-row">
+        <div class="grow"><div class="h-name">Yüklü sürüm</div>
+          <div class="h-meta" id="build-stamp">${state.buildAt ? esc(stampLabel(state.buildAt)) : 'okunuyor…'}</div></div>
+        <button class="btn btn-sm btn-primary" data-act="check-update">Güncelle</button>
+      </div>
+      <div class="list-row">
+        <div class="grow small muted">Yeni bir özellik görünmüyorsa bu düğme önbelleği
+          temizleyip uygulamayı yeniden yükler.</div>
+      </div>
+    </div>
+
+    <div class="section-title">Ana ekrana ekle</div>
     <div class="panel">
       ${installed ? '<div class="small muted">✅ Uygulama olarak kurulu.</div>' : (
         iOS ? `<div class="small muted">
@@ -2079,6 +2093,7 @@ function handleAction(act, el) {
     }
 
     case 'install': return doInstall();
+    case 'check-update': return forceUpdate();
 
     case 'diagnose': return diagnosticsDialog();
 
@@ -2444,6 +2459,41 @@ function diagnosticsDialog() {
     });
 }
 
+/* ------------------------------------------------- sürüm ve güncelleme -- */
+
+/*  Hangi sürümün çalıştığını görebilmek için app.js dosyasının sunucudaki
+    değiştirilme zamanını okuyoruz. Elle sürüm numarası tutmaktan daha güvenilir:
+    yayınlanan dosya neyse tarih odur. HEAD isteği olduğu için service worker
+    araya girmez, doğrudan ağa gider. */
+async function loadBuildStamp() {
+  try {
+    const res = await fetch('./app.js', { method: 'HEAD', cache: 'no-store' });
+    const lm = res.headers.get('last-modified');
+    if (!lm || isNaN(new Date(lm))) return;
+    state.buildAt = new Date(lm).toISOString();
+    if (state.view === 'settings') render();
+  } catch { /* çevrimdışıysa sürüm gösterilmez */ }
+}
+
+/*  Tarayıcı menülerine gitmeden zorla tazeleme. Eski bir service worker
+    "önce önbellek" kuralıyla takılı kaldıysa tek dokunuşla çıkış yolu. */
+async function forceUpdate() {
+  toast('Güncelleme denetleniyor…');
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter((k) => k.startsWith('aliskanliklarim')).map((k) => caches.delete(k))
+      );
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.update().catch(() => {})));
+    }
+  } catch { /* yine de yeniliyoruz */ }
+  setTimeout(() => location.reload(), 400);
+}
+
 /* ------------------------------------------------------------- kurulum -- */
 
 async function doInstall() {
@@ -2576,6 +2626,7 @@ function registerSW() {
 
 async function boot() {
   detectDevice();
+  loadBuildStamp();
   applyTheme();
   bindGlobal();
   registerSW();

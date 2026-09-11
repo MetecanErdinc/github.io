@@ -288,6 +288,15 @@ yarışırsa olur.
 Takılı yayın diğer bütün yayınları
 `Deployment request failed … due to in progress deployment` hatasıyla reddettirir.
 
+**Yeni bir özellik görünmüyor / sayfa eski hâlinde**
+**Ayarlar → Uygulama → Güncelle** düğmesine basın. Önbelleği temizleyip uygulamayı
+yeniden yükler. Aynı bölümde **Yüklü sürüm** satırı, o an çalışan dosyanın tarihini
+gösterir; yeni bir değişiklik yayınlandıysa oradaki tarih güncellenmiş olmalıdır.
+
+Düğme henüz görünmüyorsa (eski sürümde olduğunuz için) sayfayı iki kez yenileyin:
+ilk yenileme yeni service worker'ı kurar, ikincisi yeni dosyaları getirir.
+Uygulama olarak kurduysanız uygulamayı tamamen kapatıp açın.
+
 **Sayfa eski hâlini gösteriyor**
 Service worker eski sürümü önbelleklemiş olabilir. Sayfayı kapatıp açın; Windows'ta
 `Ctrl + Shift + R` ile zorla yenileyin.
