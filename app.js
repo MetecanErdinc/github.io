@@ -22,7 +22,7 @@ import * as PlanNS from './plan.js';
 import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
 
-const BUILD = '2026-09-11f';
+const BUILD = '2026-09-11g';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -38,7 +38,7 @@ import {
 } from './plan.js';
 
 import {
-  lookupBarcode, searchFoods, kcalFor, startScanner, kameraVar,
+  lookupBarcode, searchFoods, kcalFor, startScanner, kameraVar, testConnection,
 } from './foods.js';
 
 import {
@@ -1108,7 +1108,7 @@ function viewToday() {
       <div class="section-title">Bugün planlı değil</div>
       <div class="habit-list" style="opacity:.72">${other.map((h) => habitCardHtml(h, d)).join('')}</div>` : ''}
 
-    <button class="btn btn-ghost btn-block mt" data-act="new-habit">+ Yeni alışkanlık</button>`;
+    <button class="btn btn-ghost btn-block mt push-bottom" data-act="new-habit">+ Yeni alışkanlık</button>`;
 }
 
 function weekStripHtml(d) {
@@ -1163,9 +1163,10 @@ function viewHabits() {
     </div>`;
   };
 
+  /*  Ekleme düğmesi Bugün'deki gibi en altta: hem iki ekran aynı deseni
+      izliyor hem de kısa listede içerik alt menüye kadar iniyor, ortada
+      yüzlerce piksel ölü alan kalmıyor. */
   return `
-    <button class="btn btn-primary btn-block" data-act="new-habit">+ Yeni alışkanlık</button>
-
     ${list.length
       ? byGroup(list).map((sec) => `
           <div class="section-title">${sec.name ? esc(sec.name) : 'Aktif'} (${sec.items.length})</div>
@@ -1176,7 +1177,10 @@ function viewHabits() {
 
     ${archived.length ? `
       <div class="section-title">Arşiv (${archived.length})</div>
-      <div class="panel" style="opacity:.75">${archived.map((h) => rowHtml(h, 0, 1, true)).join('')}</div>` : ''}`;
+      <div class="panel" style="opacity:.75">${archived.map((h) => rowHtml(h, 0, 1, true)).join('')}</div>` : ''}
+
+    <button class="btn btn-primary btn-block mt push-bottom"
+            data-act="new-habit">+ Yeni alışkanlık</button>`;
 }
 
 /* ==========================================================================
@@ -1348,7 +1352,7 @@ function listIndexHtml() {
   }
 
   return `
-    <button class="btn btn-primary btn-block" data-act="new-list">+ Yeni liste</button>
+    <button class="btn btn-primary btn-block push-bottom" data-act="new-list">+ Yeni liste</button>
     <div class="section-title">Listelerim (${state.lists.length})</div>
     <div class="habit-list">
       ${state.lists.map((l) => {
@@ -2172,9 +2176,10 @@ function viewProgram() {
         · açık ${(t.tdee - t.kcal).toLocaleString('tr-TR')} kcal · BKİ ${t.bki}</div>
     </div>
 
-    ${kal ? `
-      <button class="btn btn-primary btn-block" data-act="add-food"
-              style="margin-bottom:4px">＋ Yiyecek ekle (barkod / arama)</button>` : ''}
+    <!-- Program alışkanlıkları henüz kurulmamış olsa da yiyecek eklenebilmeli:
+         plan varsa hedef bellidir, sayaç da eklenenlerle çalışmaya başlar. -->
+    <button class="btn btn-primary btn-block" data-act="add-food"
+            style="margin-bottom:4px">＋ Yiyecek ekle (barkod / arama)</button>
 
     ${yiyecekler.length ? `
       <div class="section-title">Gün içinde eklediklerin
@@ -2366,6 +2371,9 @@ function foodDialog() {
       </div>
 
       <div id="fd-err" class="error-box hidden"></div>
+      <div id="fd-tani" class="tiny muted hidden" style="white-space:pre-line"></div>
+      <button class="btn btn-sm btn-ghost" data-x="tani" style="align-self:flex-start">
+        Bağlantıyı sına</button>
     </div>
 
     ${gunluk.length ? `
@@ -2472,8 +2480,10 @@ function foodDialog() {
         }
         urunSec(u);
       } catch (err) {
-        hata('Ürün bilgisi alınamadı: ' + (err?.message || err)
-           + '. İnternet yoksa "Elle" sekmesini kullan.');
+        /* Sebep neyse onu yaz: her hatayı "internet yok" diye göstermek
+           kullanıcıyı olmayan bir sorunu aramaya yolluyor. */
+        hata('Ürün bilgisi alınamadı — ' + (err?.message || err)
+           + '. "Elle" sekmesinden kendin girebilirsin.');
         $$$('#fd-cam-not').textContent = 'Barkodu çerçeveye getir.';
       }
     };
@@ -2502,7 +2512,8 @@ function foodDialog() {
         });
       } catch (err) {
         kutu.innerHTML = '';
-        hata('Arama yapılamadı: ' + (err?.message || err) + '. "Elle" sekmesini kullanabilirsin.');
+        hata('Arama yapılamadı — ' + (err?.message || err)
+           + '. "Elle" sekmesinden kendin girebilirsin.');
       }
     };
 
@@ -2511,6 +2522,15 @@ function foodDialog() {
       const b = e.target.closest('[data-x]');
       if (!b) return;
       const x = b.dataset.x;
+
+      if (x === 'tani') {
+        const kutu = $$$('#fd-tani');
+        kutu.classList.remove('hidden');
+        kutu.textContent = 'Sınanıyor…';
+        const r = await testConnection();
+        kutu.textContent = r.map((x2) => `${x2.ok ? '✅' : '❌'} ${x2.kok.replace('https://', '')}\n   ${x2.not}`).join('\n');
+        return;
+      }
 
       if (x === 'ara') return araYap();
       if (x === 'kod-bul') return barkoddanBul($$$('#fd-kod').value);

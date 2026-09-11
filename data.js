@@ -7,7 +7,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11f';
+export const BUILD = '2026-09-11g';
 
 
 import { dateKey, addDays, today, uid } from './util.js';
