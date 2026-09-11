@@ -23,7 +23,7 @@ import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
 import * as TrFoodsNS from './tr-foods.js';
 
-const BUILD = '2026-09-11l';
+const BUILD = '2026-09-11m';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -1223,8 +1223,9 @@ function viewHabits() {
     </div>`;
   };
 
-  /* Ekleme düğmesi listenin sonunda: Bugün ve Listeler ile aynı desen. */
   return `
+    <button class="btn btn-primary btn-block" data-act="new-habit">+ Yeni alışkanlık</button>
+
     ${list.length
       ? byGroup(list).map((sec) => `
           <div class="section-title">${sec.name ? esc(sec.name) : 'Aktif'} (${sec.items.length})</div>
@@ -1235,10 +1236,7 @@ function viewHabits() {
 
     ${archived.length ? `
       <div class="section-title">Arşiv (${archived.length})</div>
-      <div class="panel" style="opacity:.75">${archived.map((h) => rowHtml(h, 0, 1, true)).join('')}</div>` : ''}
-
-    <button class="btn btn-primary btn-block mt"
-            data-act="new-habit">+ Yeni alışkanlık</button>`;
+      <div class="panel" style="opacity:.75">${archived.map((h) => rowHtml(h, 0, 1, true)).join('')}</div>` : ''}`;
 }
 
 /* ==========================================================================
@@ -1409,10 +1407,14 @@ function listIndexHtml() {
       </div>`;
   }
 
-  /*  Ekleme düğmesi diğer ekranlardaki gibi en altta. Üstteyken
-      üstündeki bütün boşluğu emiyor ve liste aşağı kayıyor — yaslama ancak
-      son öğede işe yarar. */
+  /*  Ekleme düğmesi en üstte.
+      Bir ara alta taşımıştım; boşluk aynı kaldı ama kısa listede düğme
+      dibe yakın kalıp arkasından boş alan gelince "ortada kalmış" gibi
+      göründü. Üstteyken içerik yukarıdan akıyor ve altta kalan yer
+      listenin bittiği yer olarak okunuyor. */
   return `
+    <button class="btn btn-primary btn-block" data-act="new-list">+ Yeni liste</button>
+
     <div class="section-title">Listelerim (${state.lists.length})</div>
     <div class="habit-list">
       ${state.lists.map((l) => {
@@ -1446,10 +1448,7 @@ function listIndexHtml() {
           <span class="list-caret">›</span>
         </button>`;
       }).join('')}
-    </div>
-
-    <button class="btn btn-primary btn-block mt"
-            data-act="new-list">+ Yeni liste</button>`;
+    </div>`;
 }
 
 function listDetailHtml(l) {
