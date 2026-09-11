@@ -3,7 +3,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11d';
+export const BUILD = '2026-09-11e';
 
 
 export const DAY_SHORT = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
