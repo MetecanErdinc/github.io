@@ -11,6 +11,12 @@ import {
   derivedValue, derivedLabel, derivedDone, MONTHS as MONTH_NAMES, shortDate,
 } from './util.js';
 
+import { PROGRAM_GROUP, buildHabits, buildLists, eskiAdUyuyor } from './program.js';
+
+import {
+  buildPlan, fiberRamp, CINSIYET, HAREKET, HEDEF, HIZ, KACIN,
+} from './plan.js';
+
 import {
   resolveConfig, isUsableConfig, storeConfig, clearStoredConfig, parseConfigText,
   getPrefs, setPrefs, getMode, setMode, initFirebase, authErrorMessage, setAuthPersistence,
@@ -28,6 +34,7 @@ const state = {
   tasks: new Map(),
   openTasks: new Set(),
   lists: [],
+  profile: null,
   openList: null,
   albums: new Map(),
   buildAt: null,
@@ -45,10 +52,11 @@ const COLORS = ['#4f8ef7', '#6c63ff', '#4fcf8e', '#f7b24f', '#f75f5f',
                 '#ef6ec3', '#42c8d4', '#9b8cff', '#7ec24f', '#c98a5b'];
 
 const EMOJIS = ['✅', '💪', '📚', '🏃', '💧', '🧘', '🥗', '😴', '🦷', '💊', '🚭', '✍️',
-                '🎯', '🧹', '🌱', '🎸', '🧠', '☀️', '🙏', '💰', '📵', '🚶', '🏋️', '🎨'];
+                '🎯', '🧹', '🌱', '🎸', '🧠', '☀️', '🙏', '💰', '📵', '🚶', '🏋️', '🎨',
+                '⚖️', '🍳', '🍗', '🐟', '🍰', '📏', '📋', '🛒'];
 
-const VIEW_TITLES = { today: 'Bugün', habits: 'Alışkanlıklar', lists: 'Listeler',
-                      stats: 'İstatistik', settings: 'Ayarlar' };
+const VIEW_TITLES = { today: 'Bugün', program: 'Program', habits: 'Alışkanlıklar',
+                      lists: 'Listeler', stats: 'İstatistik', settings: 'Ayarlar' };
 
 const LIST_EMOJIS = ['📝', '🛒', '🧺', '📦', '🏠', '🚗', '💼', '🎁', '🧹', '🍽️',
                      '💊', '🔧', '📞', '💡', '✈️', '🎬'];
@@ -115,6 +123,33 @@ function valuesOf(habitId) {
 const EMPTY_VALUES = new Map();
 
 const activeHabits = () => state.habits.filter((h) => !h.archived);
+
+/** Kullanımdaki bölüm adları — editördeki öneri listesi için. */
+function groupNames() {
+  const seen = [];
+  for (const h of state.habits) {
+    const g = (h.group || '').trim();
+    if (g && !seen.includes(g)) seen.push(g);
+  }
+  return seen.sort((a, b) => a.localeCompare(b, 'tr'));
+}
+
+/**
+ * Alışkanlıkları bölümlere ayırır. Bölümsüzler her zaman başta ve başlıksız
+ * durur; bölümler sıralamayı ilk üyelerinin sırasından alır, böylece
+ * yukarı/aşağı düğmeleri bölümleri de taşır.
+ */
+function byGroup(list) {
+  const out = [{ name: '', items: [] }];
+  for (const h of list) {
+    const g = (h.group || '').trim();
+    if (!g) { out[0].items.push(h); continue; }
+    let bucket = out.find((x) => x.name === g);
+    if (!bucket) { bucket = { name: g, items: [] }; out.push(bucket); }
+    bucket.items.push(h);
+  }
+  return out.filter((x) => x.items.length);
+}
 
 /* ------------------------------------------------- yapılacaklar listesi -- */
 
@@ -641,6 +676,7 @@ function attachStore(store) {
   state.entries = new Map();
   state.tasks = new Map();
   state.lists = [];
+  state.profile = null;
   state.openList = null;
   state.albums = new Map();
   state.view = 'today';          // yeni oturum her zaman Bugün ile başlar
@@ -653,6 +689,7 @@ function attachStore(store) {
     tasks:   (map)  => { state.tasks = map; render(); },
     lists:   (rows) => { state.lists = rows; render(); },
     albums:  (map)  => { state.albums = map; render(); },
+    profile: (p)    => { state.profile = p; render(); },
     status:  (s)    => { state.fromCache = !!s.fromCache; updateSyncBadge(); },
     error:   (err)  => {
       console.error(err);
@@ -1014,7 +1051,9 @@ function viewToday() {
     ${future ? '<div class="info-box" style="margin-bottom:12px">Bu gün henüz gelmedi — ileri tarihe işaret koyabilirsiniz ama seriler bugüne göre hesaplanır.</div>' : ''}
 
     ${scheduled.length
-      ? `<div class="habit-list">${scheduled.map((h) => habitCardHtml(h, d)).join('')}</div>`
+      ? byGroup(scheduled).map((sec) => `
+          ${sec.name ? `<div class="section-title">${esc(sec.name)}</div>` : ''}
+          <div class="habit-list">${sec.items.map((h) => habitCardHtml(h, d)).join('')}</div>`).join('')
       : '<div class="empty"><div class="big">🎉</div><h3>Bugün planlı alışkanlık yok</h3><p class="small">Dinlenme günü.</p></div>'}
 
     ${other.length ? `
@@ -1079,10 +1118,12 @@ function viewHabits() {
   return `
     <button class="btn btn-primary btn-block" data-act="new-habit">+ Yeni alışkanlık</button>
 
-    ${list.length ? `
-      <div class="section-title">Aktif (${list.length})</div>
-      <div class="panel">${list.map((h, i) => rowHtml(h, i, list.length, false)).join('')}</div>`
-    : `<div class="empty"><div class="big">📋</div><h3>Liste boş</h3>
+    ${list.length
+      ? byGroup(list).map((sec) => `
+          <div class="section-title">${sec.name ? esc(sec.name) : 'Aktif'} (${sec.items.length})</div>
+          <div class="panel">${sec.items
+            .map((h) => rowHtml(h, list.indexOf(h), list.length, false)).join('')}</div>`).join('')
+      : `<div class="empty"><div class="big">📋</div><h3>Liste boş</h3>
          <p class="small">Yukarıdaki düğmeyle ilk alışkanlığınızı ekleyin.</p></div>`}
 
     ${archived.length ? `
@@ -1706,6 +1747,17 @@ function openHabitEditor(habit) {
       </div>
 
       <div class="field">
+        <label for="hb-group">Bölüm <span class="muted">(isteğe bağlı)</span></label>
+        <input id="hb-group" class="input" type="text" maxlength="40" list="hb-groups"
+               placeholder="örn. Spor ve Diyet" value="${esc(h.group || '')}" />
+        <datalist id="hb-groups">
+          ${groupNames().map((g) => `<option value="${esc(g)}"></option>`).join('')}
+        </datalist>
+        <div class="tiny muted" style="margin-top:6px">Aynı bölüm adını verdiğiniz
+          alışkanlıklar Bugün ve Alışkanlıklar ekranlarında birlikte görünür.</div>
+      </div>
+
+      <div class="field">
         <label for="hb-note">Not <span class="muted">(isteğe bağlı)</span></label>
         <textarea id="hb-note" class="input" maxlength="200"
                   placeholder="Kendinize küçük bir hatırlatma">${esc(h.note || '')}</textarea>
@@ -1856,6 +1908,7 @@ function openHabitEditor(habit) {
         target,
         schedule,
         note: $('#hb-note', m).value.trim(),
+        group: $('#hb-group', m).value.trim(),
         hasTasks: $('#hb-tasks', m).checked,
         taskMode: sel('#hb-tasktype', 'tm') || 'daily',
         driveFromTasks: $('#hb-tasks', m).checked && $('#hb-drive', m).checked,
@@ -1887,6 +1940,431 @@ function openHabitEditor(habit) {
 }
 
 /* ==========================================================================
+   Görünüm: Program — kişiye özel diyet ve spor planı
+   ========================================================================== */
+
+/** Profilden planı üretir; bozuk profilde çökmek yerine null döner. */
+function currentPlan() {
+  if (!state.profile?.kilo || !state.profile?.boy) return null;
+  try { return buildPlan(state.profile); } catch (err) { console.error(err); return null; }
+}
+
+function viewProgram() {
+  const plan = currentPlan();
+
+  if (!plan) {
+    return `
+      <div class="empty">
+        <div class="big">🥗</div>
+        <h3>Program henüz hazır değil</h3>
+        <p class="small">Birkaç soruya cevap ver; kalorini, makrolarını, gramajlı
+          öğünlerini ve antrenman bölünmeni hesaplayıp buraya yazayım.</p>
+        <button class="btn btn-primary mt" data-act="edit-profile">Bilgilerimi gir</button>
+      </div>
+
+      <div class="section-title">Neye göre hesaplanır</div>
+      <div class="panel">
+        <div class="list-row"><div class="grow small muted">
+          Bazal metabolizman Mifflin-St Jeor denklemiyle, günlük yakımın hareket
+          düzeyin ve antrenman günlerinle bulunur. Açık, hem haftalık kilo
+          yüzdesinden hem de günlük yakımının yüzdesinden hesaplanır; hangisi
+          daha güvenliyse o kazanır. Protein ve yağ, gerçek kilonla değil
+          boyuna denk gelen sağlıklı ağırlıkla çarpılır.
+        </div></div>
+      </div>`;
+  }
+
+  const t = plan.hedef;
+  const kurulu = state.habits.some((h) => (h.group || '').trim() === PROGRAM_GROUP);
+  const p = state.profile;
+  const hedefAd = (HEDEF.find((x) => x[0] === p.hedef) || [])[1] || '';
+
+  const ogunHtml = (o) => `
+    <div class="section-title">${o.emoji} ${esc(o.ad)}
+      <span class="muted" style="font-weight:500">· ${o.kcal} kcal · ${o.p} g protein</span></div>
+    <div class="panel">
+      ${o.satirlar.map((x) => `
+        <div class="list-row">
+          <div class="pg-gram">${x.g} g</div>
+          <div class="grow" style="min-width:0">
+            <div class="h-name">${esc(x.ad)}</div>
+            ${x.not ? `<div class="h-meta">${esc(x.not)}</div>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>`;
+
+  return `
+    <div class="panel pg-head">
+      <div class="pg-kcal">${t.kcal.toLocaleString('tr-TR')}<span>kcal / gün</span></div>
+      <div class="pg-sub">
+        ${esc(hedefAd)}${t.haftalikKg > 0
+          ? ` · haftada ~${t.haftalikKg.toLocaleString('tr-TR')} kg (ayda ~${t.aylikKg.toLocaleString('tr-TR')} kg)`
+          : t.haftalikKg < 0 ? ` · haftada ~${Math.abs(t.haftalikKg)} kg alım` : ''}
+      </div>
+      <div class="pg-tdee">Günlük yakımın ~${t.tdee.toLocaleString('tr-TR')} kcal
+        · açık ${(t.tdee - t.kcal).toLocaleString('tr-TR')} kcal · BKİ ${t.bki}</div>
+    </div>
+
+    <div class="stat-grid mt">
+      <div class="stat-box"><div class="sv" style="color:var(--success)">${t.protein}</div><div class="sl">protein (g)</div></div>
+      <div class="stat-box"><div class="sv">${t.karb}</div><div class="sl">karbonhidrat (g)</div></div>
+      <div class="stat-box"><div class="sv">${t.yag}</div><div class="sl">yağ (g)</div></div>
+      <div class="stat-box"><div class="sv">${t.lif}</div><div class="sl">lif (g)</div></div>
+      <div class="stat-box"><div class="sv">${t.suL.toLocaleString('tr-TR')}</div><div class="sl">su (litre)</div></div>
+      <div class="stat-box"><div class="sv">${(t.adimHedef / 1000)}b</div><div class="sl">adım</div></div>
+    </div>
+
+    ${t.uyarilar.map((u) => `<div class="info-box mt">${esc(u)}</div>`).join('')}
+
+    <div class="panel mt">
+      <div class="list-row">
+        <div class="h-emoji" style="background:rgba(79,207,142,.16);color:var(--success)">✅</div>
+        <div class="grow" style="min-width:0">
+          <div class="h-name">${kurulu ? 'Program alışkanlıklarında kurulu' : 'Alışkanlıklara kur'}</div>
+          <div class="h-meta">${kurulu
+            ? 'Bilgilerini değiştirdiysen yenile; işaretlerin ve geçmişin korunur.'
+            : 'Öğünler gramajlı liste, su ve adım sayaç olarak Bugün ekranına düşer.'}</div>
+        </div>
+        <button class="btn btn-sm ${kurulu ? 'btn-ghost' : 'btn-primary'}"
+                data-act="install-program">${kurulu ? 'Yenile' : 'Kur'}</button>
+      </div>
+      <div class="list-row">
+        <div class="grow"><div class="h-name">Bilgilerim</div>
+          <div class="h-meta">${esc(p.cinsiyet === 'kadin' ? 'Kadın' : 'Erkek')} ·
+            ${p.yas} yaş · ${p.boy} cm · ${p.kilo} kg ·
+            haftada ${t.antrenmanGun} gün spor</div></div>
+        <button class="btn btn-sm btn-ghost" data-act="edit-profile">Güncelle</button>
+      </div>
+    </div>
+
+    ${plan.ogunler.map(ogunHtml).join('')}
+
+    <div class="section-title">🔁 Akşam protein rotasyonu</div>
+    <div class="panel">
+      ${plan.rotasyon.map((r) => `
+        <div class="list-row">
+          <div class="pg-gun">${esc(r.kisa)}</div>
+          <div class="grow"><div class="h-name">${esc(r.ad)}</div></div>
+          <div class="pg-gram">${r.g} g</div>
+        </div>`).join('')}
+      <div class="list-row"><div class="grow tiny muted">Çiğ ağırlıklar. Akşam
+        yemeğindeki protein satırının yerine bu tablodaki günü koy.</div></div>
+    </div>
+
+    ${t.antrenmanGun > 0 ? `
+      <div class="section-title">🏋️ ${esc(plan.antrenman.ad)}</div>
+      <div class="panel">
+        ${plan.antrenman.gunler.map((g) => `
+          <div class="list-row" style="display:block">
+            <div class="h-name" style="margin-bottom:4px">${esc(g.ad)}</div>
+            <div class="h-meta">${g.hareketler.map(esc).join(' · ')}</div>
+          </div>`).join('')}
+        <div class="list-row"><div class="grow tiny muted">${esc(plan.antrenman.not)}
+          Her set 6-12 tekrar, son 2 tekrar zorlanacak şekilde.</div></div>
+      </div>` : `
+      <div class="info-box mt">Antrenman günü girmemişsin. Diyette kas kaybını
+        önleyen tek şey ağırlık antrenmanıdır — haftada 2-3 güne çıkarsan
+        verdiğin kilonun daha büyük kısmı yağ olur.</div>`}
+
+    <div class="section-title">🌱 Lifi kademeli artır</div>
+    <div class="panel">
+      <div class="list-row"><div class="grow small muted">${t.lif} grama bir günde
+        çıkmak şişkinlik ve kramp yapar. Sebzeyi haftalara yayarak artır,
+        suyu da birlikte artır.</div></div>
+      ${fiberRamp(t.lif).map(([h, v]) => `
+        <div class="list-row">
+          <div class="grow"><div class="h-name" style="font-weight:600">${esc(h)}</div>
+            <div class="h-meta">${esc(v)}</div></div>
+        </div>`).join('')}
+    </div>`;
+}
+
+/* --------------------------------------------------------- bilgi formu -- */
+
+/**
+ * Program için gereken bilgileri sorar.
+ *
+ * Sayısal alanlar inputmode="numeric" ile açılır — telefonda harf klavyesi
+ * gelmesi form doldurmayı bırakmanın en yaygın sebebi.
+ */
+function profileDialog() {
+  const p = state.profile || {
+    cinsiyet: 'erkek', yas: '', boy: '', kilo: '',
+    hareket: 'cokAz', antrenmanGun: 3, hedef: 'ver', hiz: 'normal', kacin: [],
+  };
+  const kacin = Array.isArray(p.kacin) ? p.kacin : [];
+
+  const chips = (id, secenekler, secili) => `
+    <div class="chips" id="${id}">
+      ${secenekler.map(([v, l]) => `<button type="button" class="chip" data-v="${v}"
+         aria-pressed="${String(v) === String(secili)}">${esc(l)}</button>`).join('')}
+    </div>`;
+
+  openModal(`
+    <div class="modal-head">
+      <h3>${state.profile ? 'Bilgilerimi güncelle' : 'Programı oluştur'}</h3>
+      <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button>
+    </div>
+    <div class="stack">
+      <div class="field">
+        <label>Cinsiyet</label>
+        ${chips('pf-cinsiyet', CINSIYET, p.cinsiyet)}
+      </div>
+
+      <div class="pg-3">
+        <div class="field">
+          <label for="pf-yas">Yaş</label>
+          <input id="pf-yas" class="input" type="number" inputmode="numeric"
+                 min="14" max="90" value="${esc(String(p.yas ?? ''))}" placeholder="24" />
+        </div>
+        <div class="field">
+          <label for="pf-boy">Boy (cm)</label>
+          <input id="pf-boy" class="input" type="number" inputmode="numeric"
+                 min="120" max="230" value="${esc(String(p.boy ?? ''))}" placeholder="178" />
+        </div>
+        <div class="field">
+          <label for="pf-kilo">Kilo (kg)</label>
+          <input id="pf-kilo" class="input" type="number" inputmode="decimal"
+                 min="35" max="300" step="0.1" value="${esc(String(p.kilo ?? ''))}" placeholder="85" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Spor dışında günlük hareketin</label>
+        ${chips('pf-hareket', HAREKET.map((h) => [h[0], h[1]]), p.hareket)}
+        <div class="tiny muted" id="pf-hareket-not">${esc(
+          (HAREKET.find((h) => h[0] === p.hareket) || HAREKET[0])[2])}</div>
+      </div>
+
+      <div class="field">
+        <label for="pf-gun">Haftada kaç gün ağırlık antrenmanı yapıyorsun?</label>
+        <input id="pf-gun" class="input" type="number" inputmode="numeric"
+               min="0" max="7" value="${esc(String(p.antrenmanGun ?? 3))}" />
+        <div class="tiny muted">Hiç yapmıyorsan 0 yaz — program yine çıkar ama
+          verdiğin kilonun daha büyük kısmı kas olur.</div>
+      </div>
+
+      <div class="field">
+        <label>Hedefin</label>
+        ${chips('pf-hedef', HEDEF, p.hedef)}
+      </div>
+
+      <div class="field" id="pf-hiz-alan">
+        <label>Hız</label>
+        ${chips('pf-hiz', HIZ.map((h) => [h[0], h[1]]), p.hiz)}
+        <div class="tiny muted" id="pf-hiz-not">${esc(
+          (HIZ.find((h) => h[0] === p.hiz) || HIZ[1])[2])}</div>
+      </div>
+
+      <div class="field">
+        <label>Yemediklerin <span class="muted">(isteğe bağlı)</span></label>
+        <div class="stack" id="pf-kacin" style="gap:8px">
+          ${KACIN.map(([v, l]) => `
+            <label class="check-row" style="margin:0">
+              <input type="checkbox" data-v="${v}" ${kacin.includes(v) ? 'checked' : ''} />
+              <span><b>${esc(l)}</b></span>
+            </label>`).join('')}
+        </div>
+      </div>
+
+      <div id="pf-err" class="error-box hidden"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-act="close-modal">Vazgeç</button>
+      <button class="btn btn-primary" data-x="save">Hesapla</button>
+    </div>`, (m) => {
+
+    /* Chip grupları: tek seçim, seçilen aria-pressed ile işaretlenir. */
+    const sec = (id) => $(`#${id} [aria-pressed="true"]`, m)?.dataset.v;
+    ['pf-cinsiyet', 'pf-hareket', 'pf-hedef', 'pf-hiz'].forEach((id) => {
+      $(`#${id}`, m).addEventListener('click', (e) => {
+        const b = e.target.closest('[data-v]');
+        if (!b) return;
+        $$('[data-v]', $(`#${id}`, m)).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+
+        /* Açıklama satırları seçimle birlikte güncellenir. */
+        if (id === 'pf-hareket') {
+          $('#pf-hareket-not', m).textContent = (HAREKET.find((h) => h[0] === b.dataset.v) || [])[2] || '';
+        }
+        if (id === 'pf-hiz') {
+          $('#pf-hiz-not', m).textContent = (HIZ.find((h) => h[0] === b.dataset.v) || [])[2] || '';
+        }
+        /* Hız yalnızca kilo verirken anlamlı. */
+        if (id === 'pf-hedef') {
+          $('#pf-hiz-alan', m).hidden = b.dataset.v !== 'ver';
+        }
+      });
+    });
+    $('#pf-hiz-alan', m).hidden = p.hedef !== 'ver';
+
+    /* Vejetaryen işaretlenince balık/kırmızı et zaten kapsanır. */
+    const kacinKutu = $('#pf-kacin', m);
+    kacinKutu.addEventListener('change', () => {
+      const vej = $('[data-v="vejeteryan"]', kacinKutu).checked;
+      ['balik', 'kirmizi'].forEach((v) => {
+        const el = $(`[data-v="${v}"]`, kacinKutu);
+        el.disabled = vej;
+        el.closest('.check-row').style.opacity = vej ? '.45' : '';
+      });
+    });
+    kacinKutu.dispatchEvent(new Event('change'));
+
+    setTimeout(() => $('#pf-yas', m)?.focus(), 60);
+
+    m.addEventListener('click', async (e) => {
+      if (e.target.closest('[data-x]')?.dataset.x !== 'save') return;
+
+      const yas = Number($('#pf-yas', m).value);
+      const boy = Number($('#pf-boy', m).value);
+      const kilo = Number($('#pf-kilo', m).value);
+      const gun = Number($('#pf-gun', m).value);
+
+      const hata = (msg) => {
+        const box = $('#pf-err', m);
+        box.textContent = msg;
+        box.classList.remove('hidden');
+      };
+
+      if (!(yas >= 14 && yas <= 90)) return hata('Yaşı 14 ile 90 arasında gir.');
+      if (!(boy >= 120 && boy <= 230)) return hata('Boyu santimetre olarak gir (120-230).');
+      if (!(kilo >= 35 && kilo <= 300)) return hata('Kiloyu kilogram olarak gir (35-300).');
+      if (!(gun >= 0 && gun <= 7)) return hata('Antrenman günü 0 ile 7 arasında olmalı.');
+
+      const profile = {
+        cinsiyet: sec('pf-cinsiyet') || 'erkek',
+        yas, boy, kilo,
+        hareket: sec('pf-hareket') || 'cokAz',
+        antrenmanGun: gun,
+        hedef: sec('pf-hedef') || 'ver',
+        hiz: sec('pf-hiz') || 'normal',
+        kacin: $$('input[type="checkbox"]', kacinKutu)
+          .filter((x) => x.checked && !x.disabled).map((x) => x.dataset.v),
+      };
+
+      try {
+        await state.store.saveProfile(profile);
+        closeModal();
+        go('program');
+        toast('Program hesaplandı 🎉');
+      } catch (err) {
+        hata('Kaydedilemedi: ' + (err?.message || err));
+      }
+    });
+  });
+}
+
+/* ==========================================================================
+   Hazır paket: Spor ve Diyet
+   ========================================================================== */
+
+/**
+ * Planı alışkanlıklara ve listelere yazar.
+ *
+ * Yeniden çalıştırıldığında kopya üretmez. Eşleştirme kalıcı anahtar üzerinden
+ * yapılır, ad üzerinden değil: kilo düşünce "Su — 4 litre" alışkanlığı
+ * "Su — 3,5 litre" olur, adla eşleştirseydik her güncellemede yeni bir
+ * alışkanlık doğar, eskisinin serisi ölürdü. Anahtar sabit kaldığı için
+ * kimlik de sabit kalır ve kayıtlar, seriler, ısı haritası yerinde durur.
+ *
+ * Sabit liste maddelerinde metni değişmeyenlerin kimliği korunur — yoksa o
+ * günün işaretleri şablonla eşleşmez ve tikler sessizce kaybolurdu.
+ *
+ * Listeler yalnızca yoksa oluşturulur; alışveriş listesindeki maddeler
+ * işaretlenmiş olabilir, üzerine yazmak o emeği siler.
+ */
+async function installProgram() {
+  const plan = currentPlan();
+  if (!plan) { toast('Önce bilgilerini gir'); return; }
+
+  const specs = buildHabits(plan);
+  const already = state.habits.some((h) => (h.group || '').trim() === PROGRAM_GROUP);
+
+  const ok = await confirmDialog(
+    already ? 'Program yenilensin mi?' : 'Program alışkanlıklara kurulsun mu?',
+    already
+      ? `${specs.length} alışkanlık yeni hesaba göre güncellenir. İşaretlerin, `
+        + 'serilerin ve geçmiş kayıtların korunur; kendi eklediğin alışkanlıklara '
+        + 'dokunulmaz.'
+      : `${specs.length} alışkanlık ve 2 liste "${PROGRAM_GROUP}" bölümüne eklenir. `
+        + 'Mevcut alışkanlıklarına dokunulmaz.',
+    already ? 'Yenile' : 'Kur', false);
+  if (!ok) return;
+
+  const bolumde = (h) => (h.group || '').trim() === PROGRAM_GROUP;
+  const bul = (spec) => state.habits.find((h) => bolumde(h) && h.progKey === spec.key)
+    || state.habits.find((h) => bolumde(h) && !h.progKey && eskiAdUyuyor(spec.key, h.name));
+
+  let base = state.habits.length;
+  let eklenen = 0, guncellenen = 0;
+
+  try {
+    for (const spec of specs) {
+      const mevcut = bul(spec);
+      const hasTasks = Array.isArray(spec.tasks) && spec.tasks.length > 0;
+
+      const payload = {
+        ...(mevcut || {}),
+        progKey: spec.key,
+        name: spec.name,
+        emoji: spec.emoji,
+        color: spec.color,
+        mode: spec.mode,
+        target: spec.target,
+        schedule: spec.schedule,
+        note: spec.note || '',
+        group: PROGRAM_GROUP,
+        hasTasks,
+        taskMode: hasTasks ? 'fixed' : 'daily',
+        driveFromTasks: hasTasks,
+        archived: false,
+      };
+
+      if (hasTasks) {
+        const eski = Array.isArray(mevcut?.taskTemplate) ? mevcut.taskTemplate : [];
+        payload.taskTemplate = spec.tasks.map((text) => ({
+          id: eski.find((t) => t.text === text)?.id || uid('t'),
+          text,
+        }));
+      } else {
+        delete payload.taskTemplate;
+      }
+
+      if (mevcut) guncellenen++;
+      else { payload.order = base++; eklenen++; }
+
+      const savedId = await state.store.saveHabit(payload);
+      await syncDerived({ ...payload, id: payload.id || savedId });
+    }
+
+    /* Program küçüldüyse (antrenman günü 0'a indi, hedef "koru" oldu) artık
+       üretilmeyen alışkanlıklar arşivlenir — silmiyoruz, geçmişi duruyor. */
+    const anahtarlar = new Set(specs.map((x) => x.key));
+    for (const h of state.habits) {
+      if ((h.group || '').trim() !== PROGRAM_GROUP || h.archived) continue;
+      if (h.progKey && !anahtarlar.has(h.progKey)) {
+        await state.store.saveHabit({ ...h, archived: true });
+      }
+    }
+
+    for (const spec of buildLists(plan)) {
+      if (state.lists.some((l) => l.name === spec.name)) continue;
+      await state.store.saveList({
+        name: spec.name,
+        emoji: spec.emoji,
+        order: state.lists.length,
+        items: spec.items.map((text) => ({ id: uid('i'), text, done: false })),
+      });
+    }
+
+    toast(eklenen && guncellenen ? `${eklenen} eklendi, ${guncellenen} güncellendi 🎉`
+        : eklenen ? 'Program kuruldu 🎉'
+        : `${guncellenen} alışkanlık güncellendi`);
+  } catch (err) {
+    toast('Program kurulamadı: ' + (err?.message || err));
+  }
+}
+
+/* ==========================================================================
    Çizim
    ========================================================================== */
 
@@ -1894,7 +2372,8 @@ function render() {
   if (!state.store) return;
   const y = window.scrollY;
 
-  const html = state.view === 'lists'    ? viewLists()
+  const html = state.view === 'program'  ? viewProgram()
+             : state.view === 'lists'    ? viewLists()
              : state.view === 'habits'   ? viewHabits()
              : state.view === 'stats'    ? viewStats()
              : state.view === 'settings' ? viewSettings()
@@ -2102,6 +2581,9 @@ function handleAction(act, el) {
       'Çıkış yap', false).then((ok) => ok && state.fb.sdk.auth.signOut(state.fb.auth));
 
     case 'pass-reset': return sendPasswordReset();
+
+    case 'install-program': return installProgram();
+    case 'edit-profile':    return profileDialog();
 
     case 'export': return exportDialog();
     case 'import': return importDialog();
