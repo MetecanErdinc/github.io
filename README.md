@@ -34,6 +34,20 @@ Bu depoda iki uygulama var:
   alışverişi, gün içinde halledilecek tek seferlik işler. İstediğiniz kadar liste
   açar, tamamlananları tek dokunuşla temizlersiniz; her listenin yanında
   oluşturulma tarihi görünür
+- **Bölümler**: alışkanlıklara isteğe bağlı bölüm adı verilir; aynı bölümdekiler
+  Bugün ve Alışkanlıklar ekranlarında tek başlık altında toplanır
+- **Program sekmesi — kişiye özel diyet ve spor planı**: cinsiyet, yaş, boy,
+  kilo, hareket düzeyi, antrenman günü, hedef, hız ve yemediklerini sorar;
+  hesaba özel kalori, makro, gramajlı öğün, akşam protein rotasyonu ve
+  antrenman bölünmesi üretir. Tek dokunuşla alışkanlıklara kurulur: öğünler
+  gramajlı sabit liste, su ve adım sayaç, antrenman haftada N kez; yanında
+  anti-kaçak kuralları ve plandan hesaplanmış haftalık alışveriş listesi.
+  Bilgi değişince yenilenir — alışkanlıklar kalıcı anahtarla eşleştiği için
+  kopya çıkmaz, işaretler ve geçmiş korunur
+  - Kalori: Mifflin-St Jeor + hareket + antrenman; açık hem haftalık kilo
+    yüzdesinden hem günlük yakım yüzdesinden hesaplanır, güvenli olan kazanır
+  - Protein ve yağ gerçek kiloyla değil boya denk sağlıklı ağırlıkla çarpılır
+  - Vejetaryen, sütsüz, balıksız ve kırmızı etsiz düzenler desteklenir
 - **Fotoğraf ekleme**: alışkanlıklara (güne bağlı) ve listelere; her fotoğrafın
   altında eklenme zamanı yazar. Görseller tarayıcıda küçültülüp Firestore'da
   saklanır — Firebase Storage ücretsiz planda kapalı olduğu için
@@ -61,6 +75,8 @@ Bu depoda iki uygulama var:
 | `util.js` | Tarih, plan ve seri hesaplamaları |
 | `photo.js` | Görsel küçültme/sıkıştırma ve zaman damgası biçimi |
 | `app.css` | Stiller (koyu/açık tema, mobil + masaüstü) |
+| `plan.js` | Kalori, makro, öğün ve antrenman hesabı |
+| `program.js` | Planı alışkanlık ve listelere çeviren katman |
 | `config.js` | **Firebase ayarlarınızı buraya yazın** |
 | `firestore.rules` | Firestore güvenlik kuralları — konsola yapıştırın |
 | `sw.js` | Service worker (çevrimdışı önbellek) |

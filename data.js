@@ -19,6 +19,7 @@ const LS = {
   tasks:   'habits.local.tasks',
   lists:   'habits.local.lists',
   albums:  'habits.local.albums',
+  profile: 'habits.local.profile',
   photos:  'habits.local.photos',
 };
 
@@ -301,6 +302,14 @@ export class CloudStore {
       },
       (err) => handlers.error?.(err)
     ));
+
+    /* Diyet/spor profili tek belgedir; hesaba bağlı olduğu için cihazlar
+       arasında da senkron gelir. */
+    this.unsubs.push(S.onSnapshot(
+      this._doc('meta', 'profile'),
+      (snap) => handlers.profile?.(snap.exists() ? snap.data() : null),
+      (err) => handlers.error?.(err)
+    ));
   }
 
   stop() {
@@ -315,6 +324,15 @@ export class CloudStore {
     if (!data.createdAt) data.createdAt = data.updatedAt;
     await this.S.setDoc(this._doc('habits', id), data, { merge: true });
     return id;
+  }
+
+  async saveProfile(profile) {
+    await this.S.setDoc(this._doc('meta', 'profile'),
+      { ...profile, updatedAt: new Date().toISOString() });
+  }
+
+  async clearProfile() {
+    await this.S.deleteDoc(this._doc('meta', 'profile'));
   }
 
   async deleteHabit(id) {
@@ -438,7 +456,7 @@ export class CloudStore {
 
   async wipe() {
     const S = this.S;
-    for (const name of ['tasks', 'entries', 'habits', 'lists', 'albums', 'photos']) {
+    for (const name of ['tasks', 'entries', 'habits', 'lists', 'albums', 'photos', 'meta']) {
       const snap = await S.getDocs(this._col(name));
       const refs = [];
       snap.forEach((d) => refs.push(d.ref));
@@ -527,13 +545,14 @@ export class LocalStore {
       amap.set(k, { ...v, items: Array.isArray(v.items) ? v.items : [] });
     }
     this.handlers.albums?.(amap);
+    this.handlers.profile?.(this._readProfile());
     this.handlers.status?.({ fromCache: true });
   }
 
   start(handlers) {
     this.handlers = handlers;
     this._onStorage = (e) => {
-      if ([LS.habits, LS.entries, LS.tasks, LS.lists, LS.albums].includes(e.key)) this._emit();
+      if ([LS.habits, LS.entries, LS.tasks, LS.lists, LS.albums, LS.profile].includes(e.key)) this._emit();
     };
     window.addEventListener('storage', this._onStorage);
     this._emit();
@@ -541,6 +560,20 @@ export class LocalStore {
 
   stop() {
     if (this._onStorage) window.removeEventListener('storage', this._onStorage);
+  }
+
+  _readProfile() {
+    try { return JSON.parse(localStorage.getItem(LS.profile) || 'null'); } catch { return null; }
+  }
+
+  async saveProfile(profile) {
+    localStorage.setItem(LS.profile, JSON.stringify({ ...profile, updatedAt: new Date().toISOString() }));
+    this._emit();
+  }
+
+  async clearProfile() {
+    localStorage.removeItem(LS.profile);
+    this._emit();
   }
 
   async saveHabit(habit) {
@@ -678,6 +711,7 @@ export class LocalStore {
     localStorage.removeItem(LS.lists);
     localStorage.removeItem(LS.albums);
     localStorage.removeItem(LS.photos);
+    localStorage.removeItem(LS.profile);
     this._emit();
   }
 }
