@@ -1,6 +1,6 @@
 /* Service worker — uygulama kabuğunu önbelleğe alır, çevrimdışı açılışı sağlar. */
 
-const CACHE = 'aliskanliklarim-v11';
+const CACHE = 'aliskanliklarim-v12';
 const SDK_CACHE = 'firebase-sdk-v1';   // sürüm adreste; içerik hiç değişmez
 
 const SHELL = [

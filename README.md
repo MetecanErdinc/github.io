@@ -56,6 +56,10 @@ Bu depoda iki uygulama var:
   bilinmeyen bir şey için 100 gramdaki değer elle girilir. Gramaj yazılınca
   kalori hesaplanır ve günün sayacına eklenir. Ürün bilgisi Open Food
   Facts'ten gelir; ağ ya da kamera çalışmasa da elle giriş hep açıktır
+- **Ürün defteri**: barkod veritabanlarında Türk ürünlerinin bir kısmı kayıtlı
+  değil. Bulunamayan ürün bir kez elle girilince barkoduyla deftere yazılır;
+  ikinci okutmada ağa hiç çıkmadan, anında gelir. Sık kullanılanlar ekleme
+  ekranının başında tek dokunuşla durur, isim araması da önce defteri tarar
 - Program alışkanlıkları **Bugün ekranında görünmez ve günlük tamamlama
   oranına katılmaz** — öğün, su ve adım takibi Program sekmesinde yaşar,
   Bugün kişinin kendi kurduğu alışkanlıklara ayrılmıştır. Alışkanlıklar

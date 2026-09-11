@@ -16,7 +16,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11g';
+export const BUILD = '2026-09-11h';
 
 
 const FULL_EDGE  = 1280;
