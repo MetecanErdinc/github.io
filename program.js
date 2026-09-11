@@ -8,6 +8,10 @@
    akşam rotasyonu kendi günlerine göre toplanır.
    ========================================================================== */
 
+/* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
+export const BUILD = '2026-09-11c';
+
+
 import { FOODS } from './plan.js';
 
 export const PROGRAM_GROUP = 'Spor ve Diyet';
