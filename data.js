@@ -7,7 +7,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11e';
+export const BUILD = '2026-09-11f';
 
 
 import { dateKey, addDays, today, uid } from './util.js';
@@ -24,6 +24,7 @@ const LS = {
   lists:   'habits.local.lists',
   albums:  'habits.local.albums',
   profile: 'habits.local.profile',
+  foodlog: 'habits.local.foodlog',
   photos:  'habits.local.photos',
 };
 
@@ -307,6 +308,22 @@ export class CloudStore {
       (err) => handlers.error?.(err)
     ));
 
+    /*  Gün içinde eklenen yiyecekler: gün başına tek belge, kimliği tarih.
+        Kayıtlar da alışkanlık kayıtlarıyla aynı pencerede tutulur — geçmişin
+        tamamını indirmek telefonda gereksiz yük. */
+    this.unsubs.push(S.onSnapshot(
+      S.query(this._col('foodlog'), S.where('date', '>=', cutoff)),
+      (snap) => {
+        const map = new Map();
+        snap.forEach((doc) => {
+          const v = doc.data();
+          if (v?.date) map.set(v.date, Array.isArray(v.items) ? v.items : []);
+        });
+        handlers.foodlog?.(map);
+      },
+      (err) => handlers.error?.(err)
+    ));
+
     /* Diyet/spor profili tek belgedir; hesaba bağlı olduğu için cihazlar
        arasında da senkron gelir. */
     this.unsubs.push(S.onSnapshot(
@@ -333,6 +350,12 @@ export class CloudStore {
   async saveProfile(profile) {
     await this.S.setDoc(this._doc('meta', 'profile'),
       { ...profile, updatedAt: new Date().toISOString() });
+  }
+
+  async setFoodLog(dk, items) {
+    const ref = this._doc('foodlog', dk);
+    if (!items.length) { await this.S.deleteDoc(ref).catch(() => {}); return; }
+    await this.S.setDoc(ref, { date: dk, items, updatedAt: new Date().toISOString() });
   }
 
   async clearProfile() {
@@ -460,7 +483,7 @@ export class CloudStore {
 
   async wipe() {
     const S = this.S;
-    for (const name of ['tasks', 'entries', 'habits', 'lists', 'albums', 'photos', 'meta']) {
+    for (const name of ['tasks', 'entries', 'habits', 'lists', 'albums', 'photos', 'meta', 'foodlog']) {
       const snap = await S.getDocs(this._col(name));
       const refs = [];
       snap.forEach((d) => refs.push(d.ref));
@@ -549,6 +572,12 @@ export class LocalStore {
       amap.set(k, { ...v, items: Array.isArray(v.items) ? v.items : [] });
     }
     this.handlers.albums?.(amap);
+    const fmap = new Map();
+    for (const [k, v] of Object.entries(this._readFoodLog())) {
+      if (Array.isArray(v)) fmap.set(k, v);
+    }
+    this.handlers.foodlog?.(fmap);
+
     this.handlers.profile?.(this._readProfile());
     this.handlers.status?.({ fromCache: true });
   }
@@ -556,7 +585,7 @@ export class LocalStore {
   start(handlers) {
     this.handlers = handlers;
     this._onStorage = (e) => {
-      if ([LS.habits, LS.entries, LS.tasks, LS.lists, LS.albums, LS.profile].includes(e.key)) this._emit();
+      if ([LS.habits, LS.entries, LS.tasks, LS.lists, LS.albums, LS.profile, LS.foodlog].includes(e.key)) this._emit();
     };
     window.addEventListener('storage', this._onStorage);
     this._emit();
@@ -564,6 +593,17 @@ export class LocalStore {
 
   stop() {
     if (this._onStorage) window.removeEventListener('storage', this._onStorage);
+  }
+
+  _readFoodLog() {
+    try { return JSON.parse(localStorage.getItem(LS.foodlog) || '{}'); } catch { return {}; }
+  }
+
+  async setFoodLog(dk, items) {
+    const raw = this._readFoodLog();
+    if (items.length) raw[dk] = items; else delete raw[dk];
+    localStorage.setItem(LS.foodlog, JSON.stringify(raw));
+    this._emit();
   }
 
   _readProfile() {
@@ -577,6 +617,7 @@ export class LocalStore {
 
   async clearProfile() {
     localStorage.removeItem(LS.profile);
+    localStorage.removeItem(LS.foodlog);
     this._emit();
   }
 
@@ -716,6 +757,7 @@ export class LocalStore {
     localStorage.removeItem(LS.albums);
     localStorage.removeItem(LS.photos);
     localStorage.removeItem(LS.profile);
+    localStorage.removeItem(LS.foodlog);
     this._emit();
   }
 }

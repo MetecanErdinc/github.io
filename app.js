@@ -20,8 +20,9 @@ import * as UtilNS from './util.js';
 import * as DataNS from './data.js';
 import * as PlanNS from './plan.js';
 import * as ProgramNS from './program.js';
+import * as FoodsNS from './foods.js';
 
-const BUILD = '2026-09-11e';
+const BUILD = '2026-09-11f';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -35,6 +36,10 @@ import { PROGRAM_GROUP, buildHabits, buildLists, eskiAdUyuyor } from './program.
 import {
   buildPlan, fiberRamp, CINSIYET, HAREKET, HEDEF, HIZ, KACIN,
 } from './plan.js';
+
+import {
+  lookupBarcode, searchFoods, kcalFor, startScanner, kameraVar,
+} from './foods.js';
 
 import {
   resolveConfig, isUsableConfig, storeConfig, clearStoredConfig, parseConfigText,
@@ -54,6 +59,7 @@ const state = {
   openTasks: new Set(),
   lists: [],
   profile: null,
+  foodlog: new Map(),        // tarih anahtarı -> [{id,name,g,kcal,...}]
   openList: null,
   albums: new Map(),
   buildAt: null,
@@ -419,8 +425,14 @@ function photoStripHtml(meta, { compact = false } = {}) {
 
 /* ---------------------------------------------------------------- modal */
 
-function openModal(html, bind) {
+/*  Kip kapanırken çalışacak temizlik. Kamera gibi bırakılması gereken
+    kaynaklar için: kullanıcı ✕'e de bassa, arka plana da dokunsa, Esc'e de
+    bassa tek çıkış noktası burası. */
+let modalCleanup = null;
+
+function openModal(html, bind, cleanup) {
   closeModal();
+  modalCleanup = cleanup || null;
   // Açık bir bildirim kipin üstüne binip alanları kapatabiliyor.
   $$('.toast').forEach((t) => t.remove());
   const wrap = document.createElement('div');
@@ -434,6 +446,9 @@ function openModal(html, bind) {
 }
 
 function closeModal() {
+  const temizle = modalCleanup;
+  modalCleanup = null;
+  if (temizle) { try { temizle(); } catch (err) { console.error(err); } }
   $('#modal-root').innerHTML = '';
   document.body.style.overflow = '';
 }
@@ -705,6 +720,7 @@ function attachStore(store) {
   state.tasks = new Map();
   state.lists = [];
   state.profile = null;
+  state.foodlog = new Map();
   state.openList = null;
   state.albums = new Map();
   state.view = 'today';          // yeni oturum her zaman Bugün ile başlar
@@ -718,6 +734,7 @@ function attachStore(store) {
     lists:   (rows) => { state.lists = rows; render(); },
     albums:  (map)  => { state.albums = map; render(); },
     profile: (p)    => { state.profile = p || readMirror(); if (p) mirrorProfile(p); render(); },
+    foodlog: (map)  => { state.foodlog = map; render(); },
     status:  (s)    => { state.fromCache = !!s.fromCache; updateSyncBadge(); },
     error:   (err)  => {
       console.error(err);
@@ -2021,6 +2038,11 @@ function mealCalories(h, d, plan) {
   return entryValue(h.id, d) >= targetOf(h) ? toplam : 0;
 }
 
+/** O gün elle/barkodla eklenen yiyecekler. */
+function foodsFor(d = state.date) {
+  return state.foodlog.get(dateKey(d)) || [];
+}
+
 /** O günün kalori tablosu: hedef, yenen, kalan. Plan yoksa null. */
 function dayCalories(d) {
   const plan = currentPlan();
@@ -2028,11 +2050,26 @@ function dayCalories(d) {
 
   const ogunler = activeHabits().filter((h) => (h.group || '').trim() === PROGRAM_GROUP
     && (Number(h.kcal) > 0 || /^ogun\d$/.test(h.progKey || '')));
-  if (!ogunler.length) return null;
 
-  const yenen = ogunler.reduce((s, h) => s + mealCalories(h, d, plan), 0);
+  const ekstra = foodsFor(d).reduce((s, f) => s + (Number(f.kcal) || 0), 0);
+  if (!ogunler.length && !ekstra) return null;
+
+  const ogun = ogunler.reduce((s, h) => s + mealCalories(h, d, plan), 0);
   const hedef = plan.hedef.kcal;
-  return { hedef, yenen: Math.round(yenen), kalan: Math.round(hedef - yenen) };
+  const yenen = Math.round(ogun + ekstra);
+  return { hedef, yenen, kalan: Math.round(hedef - yenen), ogun: Math.round(ogun), ekstra };
+}
+
+/** Günün yiyecek listesini yazar; ekran iyimser güncellenir. */
+async function writeFoods(d, items) {
+  const dk = dateKey(d);
+  if (items.length) state.foodlog.set(dk, items); else state.foodlog.delete(dk);
+  render();
+  try {
+    await state.store.setFoodLog(dk, items);
+  } catch (err) {
+    toast('Kaydedilemedi: ' + (err?.message || err));
+  }
 }
 
 /*  Profilin yerel yedeği.
@@ -2101,6 +2138,8 @@ function viewProgram() {
   const d = state.date;
   const kal = dayCalories(d);
   const gunun = programHabits();
+  const yiyecekler = foodsFor(d);
+  const ekstraKcal = yiyecekler.reduce((sum, f) => sum + (Number(f.kcal) || 0), 0);
   const planli = gunun.filter((h) => isScheduled(h, d));
   const digerleri = gunun.filter((h) => !isScheduled(h, d));
 
@@ -2119,7 +2158,9 @@ function viewProgram() {
           <i style="width:${oran}%" class="${asti ? 'over' : ''}"></i>
         </div>
         <div class="pg-tdee">Hedef ${kal.hedef.toLocaleString('tr-TR')} ·
-          yenen ${kal.yenen.toLocaleString('tr-TR')} kcal</div>`
+          yenen ${kal.yenen.toLocaleString('tr-TR')} kcal${kal.ekstra
+            ? ` (öğün ${kal.ogun.toLocaleString('tr-TR')} + eklenen ${kal.ekstra.toLocaleString('tr-TR')})`
+            : ''}</div>`
       : `
         <div class="pg-kcal">${t.kcal.toLocaleString('tr-TR')}<span>kcal / gün</span></div>`}
       <div class="pg-sub">
@@ -2130,6 +2171,25 @@ function viewProgram() {
       <div class="pg-tdee">Günlük yakımın ~${t.tdee.toLocaleString('tr-TR')} kcal
         · açık ${(t.tdee - t.kcal).toLocaleString('tr-TR')} kcal · BKİ ${t.bki}</div>
     </div>
+
+    ${kal ? `
+      <button class="btn btn-primary btn-block" data-act="add-food"
+              style="margin-bottom:4px">＋ Yiyecek ekle (barkod / arama)</button>` : ''}
+
+    ${yiyecekler.length ? `
+      <div class="section-title">Gün içinde eklediklerin
+        <span class="muted" style="font-weight:500">· ${ekstraKcal.toLocaleString('tr-TR')} kcal</span></div>
+      <div class="panel">
+        ${yiyecekler.map((f) => `
+          <div class="list-row">
+            <div class="grow" style="min-width:0">
+              <div class="h-name truncate">${esc(f.name)}</div>
+              <div class="h-meta">${f.g} g · ${f.per100 ? `100 g = ${f.per100} kcal` : ''}</div>
+            </div>
+            <div class="pg-gram">${f.kcal}</div>
+            <button class="icon-btn" data-act="del-food" data-fid="${esc(f.id)}" aria-label="sil">🗑</button>
+          </div>`).join('')}
+      </div>` : ''}
 
     ${planli.length ? `
       <div class="section-title">Bugün</div>
@@ -2212,6 +2272,289 @@ function viewProgram() {
             <div class="h-meta">${esc(v)}</div></div>
         </div>`).join('')}
     </div>`;
+}
+
+/* ------------------------------------------------------ yiyecek ekleme -- */
+
+/**
+ * Yiyecek ekleme ekranı: barkod okut, isimle ara ya da elle yaz.
+ *
+ * Üç yol da aynı yere çıkar: bir ürün seçilir, gramaj girilir, kalori
+ * hesaplanır. Ağ ya da kamera çalışmasa bile elle giriş hep açıktır —
+ * kullanıcının kalori takibi dış bir servisin ayakta olmasına bağlı olmamalı.
+ */
+function foodDialog() {
+  let mod = 'ara';                 // 'barkod' | 'ara' | 'elle'
+  let secili = null;               // seçilen ürün
+  let durdur = null;               // kamerayı kapatan işlev
+
+  const gunluk = foodsFor(state.date);
+
+  openModal(`
+    <div class="modal-head">
+      <h3>Yiyecek ekle</h3>
+      <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button>
+    </div>
+
+    <div class="chips" id="fd-mod" style="margin-bottom:14px">
+      <button type="button" class="chip" data-v="barkod" aria-pressed="false">📷 Barkod</button>
+      <button type="button" class="chip" data-v="ara" aria-pressed="true">🔍 Ara</button>
+      <button type="button" class="chip" data-v="elle" aria-pressed="false">✏️ Elle</button>
+    </div>
+
+    <div class="stack">
+      <!-- BARKOD -->
+      <div id="fd-barkod" hidden>
+        <div class="fd-cam"><video id="fd-video" muted playsinline></video>
+          <div class="fd-hedef"></div></div>
+        <div class="tiny muted" id="fd-cam-not" style="margin:8px 0 12px">
+          Barkodu çerçeveye getir.</div>
+        <div class="field">
+          <label for="fd-kod">Barkodu elle yaz</label>
+          <div style="display:flex;gap:8px">
+            <input id="fd-kod" class="input" type="text" inputmode="numeric"
+                   autocomplete="off" placeholder="8690..." />
+            <button class="btn btn-primary" data-x="kod-bul">Bul</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ARAMA -->
+      <div id="fd-ara">
+        <div class="field">
+          <label for="fd-q">Ürün adı</label>
+          <div style="display:flex;gap:8px">
+            <input id="fd-q" class="input" type="text" autocomplete="off"
+                   placeholder="örn. sütaş yoğurt" />
+            <button class="btn btn-primary" data-x="ara">Ara</button>
+          </div>
+        </div>
+        <div id="fd-sonuc" class="fd-liste"></div>
+      </div>
+
+      <!-- ELLE -->
+      <div id="fd-elle" hidden>
+        <div class="field">
+          <label for="fd-ad">Yiyeceğin adı</label>
+          <input id="fd-ad" class="input" type="text" maxlength="60" placeholder="örn. simit" />
+        </div>
+        <div class="field">
+          <label for="fd-p100">100 gramda kaç kalori?</label>
+          <input id="fd-p100" class="input" type="text" inputmode="numeric"
+                 autocomplete="off" placeholder="280" />
+          <div class="tiny muted">Paketin arkasında yazar.</div>
+        </div>
+      </div>
+
+      <!-- SEÇİLEN ÜRÜN + GRAMAJ -->
+      <div id="fd-secim" hidden>
+        <div class="panel" style="margin-bottom:12px">
+          <div class="list-row">
+            <div class="grow" style="min-width:0">
+              <div class="h-name" id="fd-secim-ad"></div>
+              <div class="h-meta" id="fd-secim-alt"></div>
+            </div>
+            <button class="btn btn-sm btn-ghost" data-x="vazgec">Değiştir</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="fd-g">Kaç gram yedin?</label>
+          <input id="fd-g" class="input" type="text" inputmode="decimal"
+                 autocomplete="off" value="100" />
+        </div>
+        <div class="fd-toplam" id="fd-toplam">0 kcal</div>
+      </div>
+
+      <div id="fd-err" class="error-box hidden"></div>
+    </div>
+
+    ${gunluk.length ? `
+      <div class="section-title">Bugün eklediklerin</div>
+      <div class="panel">
+        ${gunluk.map((f) => `
+          <div class="list-row">
+            <div class="grow" style="min-width:0">
+              <div class="h-name truncate">${esc(f.name)}</div>
+              <div class="h-meta">${f.g} g · ${f.kcal} kcal</div>
+            </div>
+            <button class="icon-btn" data-x="sil" data-fid="${esc(f.id)}" aria-label="sil">🗑</button>
+          </div>`).join('')}
+      </div>` : ''}
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-act="close-modal">Kapat</button>
+      <button class="btn btn-primary" data-x="ekle" id="fd-ekle" disabled>Ekle</button>
+    </div>`, (m) => {
+
+    const $$$ = (sel) => $(sel, m);
+    const hata = (msg) => {
+      const box = $$$('#fd-err');
+      box.textContent = msg;
+      box.classList.toggle('hidden', !msg);
+    };
+
+    /* --- mod değiştirme ------------------------------------------------- */
+    const modGoster = () => {
+      $$$('#fd-barkod').hidden = mod !== 'barkod';
+      $$$('#fd-ara').hidden = mod !== 'ara';
+      $$$('#fd-elle').hidden = mod !== 'elle';
+      $$$('#fd-secim').hidden = !secili;
+      if (secili) { $$$('#fd-barkod').hidden = true; $$$('#fd-ara').hidden = true; $$$('#fd-elle').hidden = true; }
+      $$$('#fd-ekle').disabled = !secili && mod !== 'elle';
+    };
+
+    const kamerayiKapat = () => { try { durdur?.(); } catch {} durdur = null; };
+
+    const kamerayiAc = async () => {
+      if (durdur) return;
+      const not = $$$('#fd-cam-not');
+      if (!kameraVar()) {
+        not.textContent = 'Bu tarayıcı kamerayı kullanmıyor — barkodu elle yaz ya da isimle ara.';
+        return;
+      }
+      not.textContent = 'Kamera açılıyor…';
+      try {
+        durdur = await startScanner($$$('#fd-video'), (kod) => {
+          kamerayiKapat();
+          $$$('#fd-kod').value = kod;
+          barkoddanBul(kod);
+        });
+        not.textContent = 'Barkodu çerçeveye getir.';
+      } catch (err) {
+        not.textContent = 'Kamera açılamadı (' + (err?.message || err)
+                        + '). Barkodu elle yazabilir ya da isimle arayabilirsin.';
+      }
+    };
+
+    $$$('#fd-mod').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-v]');
+      if (!b) return;
+      $$('[data-v]', $$$('#fd-mod')).forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      mod = b.dataset.v;
+      secili = null;
+      hata('');
+      if (mod === 'barkod') kamerayiAc(); else kamerayiKapat();
+      modGoster();
+    });
+
+    /* --- ürün seçimi ---------------------------------------------------- */
+    const toplamiCiz = () => {
+      const g = Number(String($$$('#fd-g').value || '').replace(',', '.')) || 0;
+      const kcal = kcalFor(secili?.per100 || 0, g);
+      $$$('#fd-toplam').textContent = `${kcal.toLocaleString('tr-TR')} kcal`;
+      $$$('#fd-ekle').disabled = !(secili && g > 0);
+    };
+
+    const urunSec = (u) => {
+      secili = u;
+      $$$('#fd-secim-ad').textContent = u.name + (u.brand ? ` · ${u.brand}` : '');
+      $$$('#fd-secim-alt').textContent = `100 g = ${u.per100} kcal`
+        + (u.protein100 != null ? ` · ${u.protein100} g protein` : '');
+      hata('');
+      modGoster();
+      toplamiCiz();
+      setTimeout(() => $$$('#fd-g')?.select(), 60);
+    };
+
+    $$$('#fd-g').addEventListener('input', toplamiCiz);
+
+    /* --- barkod --------------------------------------------------------- */
+    const barkoddanBul = async (kod) => {
+      hata('');
+      $$$('#fd-cam-not').textContent = 'Ürün aranıyor…';
+      try {
+        const u = await lookupBarcode(kod);
+        if (!u) {
+          hata('Bu barkod veritabanında yok ya da kalorisi kayıtlı değil. '
+             + '"Elle" sekmesinden kendin girebilirsin.');
+          $$$('#fd-cam-not').textContent = 'Barkodu çerçeveye getir.';
+          return;
+        }
+        urunSec(u);
+      } catch (err) {
+        hata('Ürün bilgisi alınamadı: ' + (err?.message || err)
+           + '. İnternet yoksa "Elle" sekmesini kullan.');
+        $$$('#fd-cam-not').textContent = 'Barkodu çerçeveye getir.';
+      }
+    };
+
+    /* --- arama ---------------------------------------------------------- */
+    const araYap = async () => {
+      const q = $$$('#fd-q').value.trim();
+      const kutu = $$$('#fd-sonuc');
+      if (q.length < 2) return hata('En az iki harf yaz.');
+      hata('');
+      kutu.innerHTML = '<div class="tiny muted">Aranıyor…</div>';
+      try {
+        const liste = await searchFoods(q);
+        if (!liste.length) {
+          kutu.innerHTML = '<div class="tiny muted">Sonuç yok. "Elle" sekmesinden '
+                         + 'kendin girebilirsin.</div>';
+          return;
+        }
+        kutu.innerHTML = liste.map((u, i) => `
+          <button type="button" class="fd-satir" data-i="${i}">
+            <span class="fd-ad">${esc(u.name)}${u.brand ? ` <em>${esc(u.brand)}</em>` : ''}</span>
+            <span class="fd-kcal">${u.per100} <i>kcal/100g</i></span>
+          </button>`).join('');
+        $$('[data-i]', kutu).forEach((b) => {
+          b.addEventListener('click', () => urunSec(liste[Number(b.dataset.i)]));
+        });
+      } catch (err) {
+        kutu.innerHTML = '';
+        hata('Arama yapılamadı: ' + (err?.message || err) + '. "Elle" sekmesini kullanabilirsin.');
+      }
+    };
+
+    /* --- tıklamalar ----------------------------------------------------- */
+    m.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-x]');
+      if (!b) return;
+      const x = b.dataset.x;
+
+      if (x === 'ara') return araYap();
+      if (x === 'kod-bul') return barkoddanBul($$$('#fd-kod').value);
+      if (x === 'vazgec') { secili = null; modGoster(); if (mod === 'barkod') kamerayiAc(); return; }
+
+      if (x === 'sil') {
+        const kalan = foodsFor(state.date).filter((f) => f.id !== b.dataset.fid);
+        await writeFoods(state.date, kalan);
+        kamerayiKapat();
+        closeModal();
+        foodDialog();                       // liste güncel gelsin
+        return;
+      }
+
+      if (x === 'ekle') {
+        if (mod === 'elle' && !secili) {
+          const ad = $$$('#fd-ad').value.trim();
+          const p100 = Number(String($$$('#fd-p100').value || '').replace(',', '.'));
+          if (!ad) return hata('Yiyeceğe bir ad ver.');
+          if (!(p100 > 0 && p100 < 1000)) return hata('100 gramdaki kaloriyi gir (1-999).');
+          urunSec({ barcode: '', name: ad, brand: '', per100: Math.round(p100), protein100: null });
+          return;
+        }
+        const g = Number(String($$$('#fd-g').value || '').replace(',', '.'));
+        if (!(g > 0 && g <= 5000)) return hata('Gramajı gir (1-5000).');
+
+        const kayit = {
+          id: uid('f'),
+          name: secili.name + (secili.brand ? ` · ${secili.brand}` : ''),
+          g: Math.round(g),
+          kcal: kcalFor(secili.per100, g),
+          per100: secili.per100,
+          barcode: secili.barcode || '',
+        };
+        await writeFoods(state.date, [...foodsFor(state.date), kayit]);
+        kamerayiKapat();
+        closeModal();
+        toast(`${kayit.name.slice(0, 24)} eklendi · ${kayit.kcal} kcal`);
+      }
+    });
+
+    modGoster();
+    setTimeout(() => $$$('#fd-q')?.focus(), 60);
+  }, () => { try { durdur?.(); } catch {} durdur = null; });
 }
 
 /* --------------------------------------------------------- bilgi formu -- */
@@ -2746,6 +3089,11 @@ function handleAction(act, el) {
 
     case 'install-program': return installProgram();
     case 'edit-profile':    return profileDialog();
+    case 'add-food':        return foodDialog();
+    case 'del-food': {
+      const fid = el.dataset.fid;
+      return writeFoods(state.date, foodsFor(state.date).filter((f) => f.id !== fid));
+    }
 
     case 'export': return exportDialog();
     case 'import': return importDialog();
@@ -3278,7 +3626,7 @@ function registerSW() {
 function buildMismatch() {
   const moduller = {
     'util.js': UtilNS.BUILD, 'data.js': DataNS.BUILD, 'plan.js': PlanNS.BUILD,
-    'program.js': ProgramNS.BUILD, 'photo.js': PhotoNS.BUILD,
+    'program.js': ProgramNS.BUILD, 'photo.js': PhotoNS.BUILD, 'foods.js': FoodsNS.BUILD,
   };
   return Object.entries(moduller).filter(([, v]) => v !== BUILD).map(([k]) => k);
 }
