@@ -48,10 +48,13 @@ Bu depoda iki uygulama var:
     yüzdesinden hem günlük yakım yüzdesinden hesaplanır, güvenli olan kazanır
   - Protein ve yağ gerçek kiloyla değil boya denk sağlıklı ağırlıkla çarpılır
   - Vejetaryen, sütsüz, balıksız ve kırmızı etsiz düzenler desteklenir
-- **Günlük kalori sayacı**: Bugün ekranında Spor ve Diyet başlığının yanında
-  o gün kalan kalori yazar. Öğün maddeleri işaretlendikçe her kalem kendi
-  payınca düşer; hedef aşılırsa sayaç kırmızıya döner. Sayı güne özeldir,
-  geçmiş günlerde o günün kaydını gösterir
+- **Günlük kalori sayacı**: Program sekmesinin başında o gün kalan kalori
+  yazar. Öğün maddeleri işaretlendikçe her kalem kendi payınca düşer; hedef
+  aşılırsa sayaç kırmızıya döner
+- Program alışkanlıkları **Bugün ekranında görünmez ve günlük tamamlama
+  oranına katılmaz** — öğün, su ve adım takibi Program sekmesinde yaşar,
+  Bugün kişinin kendi kurduğu alışkanlıklara ayrılmıştır. Alışkanlıklar
+  sekmesi ve tek tek istatistikler ikisini de gösterir
 - **Fotoğraf ekleme**: alışkanlıklara (güne bağlı) ve listelere; her fotoğrafın
   altında eklenme zamanı yazar. Görseller tarayıcıda küçültülüp Firestore'da
   saklanır — Firebase Storage ücretsiz planda kapalı olduğu için

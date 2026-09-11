@@ -21,7 +21,7 @@ import * as DataNS from './data.js';
 import * as PlanNS from './plan.js';
 import * as ProgramNS from './program.js';
 
-const BUILD = '2026-09-11d';
+const BUILD = '2026-09-11e';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -142,6 +142,15 @@ function valuesOf(habitId) {
 const EMPTY_VALUES = new Map();
 
 const activeHabits = () => state.habits.filter((h) => !h.archived);
+
+const isProgramHabit = (h) => (h.group || '').trim() === PROGRAM_GROUP;
+
+/*  Program alışkanlıkları Bugün ekranından ve günlük yüzdeden ayrı tutulur:
+    öğün ve su takibi kendi sekmesinde yaşar, kişinin kendi kurduğu
+    alışkanlıkların oranını on bir kalemle boğmasın. Alışkanlıklar sekmesi ve
+    tek tek istatistikler ikisini de gösterir — orada amaç yönetim, ölçüm değil. */
+const personalHabits = () => activeHabits().filter((h) => !isProgramHabit(h));
+const programHabits = () => activeHabits().filter(isProgramHabit);
 
 /** Kullanımdaki bölüm adları — editördeki öneri listesi için. */
 function groupNames() {
@@ -1035,7 +1044,7 @@ function taskTimeDialog(habit, item) {
 
 function viewToday() {
   const d = state.date;
-  const list = activeHabits();
+  const list = personalHabits();
   const prog = dayProgress(list, state.entries, d);
   const isToday = diffDays(d, today()) === 0;
   const future = diffDays(d, today()) > 0;
@@ -1044,12 +1053,15 @@ function viewToday() {
   const other = list.filter((h) => !isScheduled(h, d));
 
   if (list.length === 0) {
+    const programVar = programHabits().length > 0;
     return `
       <div class="empty">
         <div class="big">🌱</div>
         <h3>Henüz alışkanlık yok</h3>
         <p class="small">Küçük başlayın: günde bir alışkanlık bile fark yaratır.</p>
         <button class="btn btn-primary mt" data-act="new-habit">İlk alışkanlığını ekle</button>
+        ${programVar ? `<p class="small" style="margin-top:14px">Diyet ve spor
+          takibin <b>Program</b> sekmesinde.</p>` : ''}
       </div>`;
   }
 
@@ -1071,7 +1083,7 @@ function viewToday() {
 
     ${scheduled.length
       ? byGroup(scheduled).map((sec) => `
-          ${sec.name ? sectionHeadHtml(sec.name, d) : ''}
+          ${sec.name ? `<div class="section-title">${esc(sec.name)}</div>` : ''}
           <div class="habit-list">${sec.items.map((h) => habitCardHtml(h, d)).join('')}</div>`).join('')
       : '<div class="empty"><div class="big">🎉</div><h3>Bugün planlı alışkanlık yok</h3><p class="small">Dinlenme günü.</p></div>'}
 
@@ -1082,32 +1094,6 @@ function viewToday() {
     <button class="btn btn-ghost btn-block mt" data-act="new-habit">+ Yeni alışkanlık</button>`;
 }
 
-/**
- * Bölüm başlığı. Spor ve Diyet bölümünde yanında o günün kalori sayacı durur:
- * hedeften yenen düşülür, kalan yazılır. Öğünler işaretlendikçe azalır.
- */
-function sectionHeadHtml(name, d) {
-  const kal = name === PROGRAM_GROUP ? dayCalories(d) : null;
-  if (!kal) return `<div class="section-title">${esc(name)}</div>`;
-
-  const asti = kal.kalan < 0;
-  const oran = Math.min(100, Math.round((kal.yenen / kal.hedef) * 100));
-
-  return `
-    <div class="section-title sec-row">
-      <span>${esc(name)}</span>
-      <span class="kcal-tag ${asti ? 'over' : ''}">
-        ${Math.abs(kal.kalan).toLocaleString('tr-TR')}<i>kcal ${asti ? 'aşıldı' : 'kaldı'}</i>
-      </span>
-    </div>
-    <div class="kcal-bar" role="img"
-         aria-label="${kal.yenen.toLocaleString('tr-TR')} / ${kal.hedef.toLocaleString('tr-TR')} kcal">
-      <i style="width:${oran}%" class="${asti ? 'over' : ''}"></i>
-    </div>
-    <div class="kcal-alt">Hedef ${kal.hedef.toLocaleString('tr-TR')} ·
-      yenen ${kal.yenen.toLocaleString('tr-TR')} kcal</div>`;
-}
-
 function weekStripHtml(d) {
   const start = startOfWeek(d, 1);
   const t = today();
@@ -1115,7 +1101,7 @@ function weekStripHtml(d) {
 
   for (let i = 0; i < 7; i++) {
     const day = addDays(start, i);
-    const p = dayProgress(activeHabits(), state.entries, day);
+    const p = dayProgress(personalHabits(), state.entries, day);
     const sel = dateKey(day) === dateKey(d);
     cells.push(`
       <button data-act="pick-day" data-date="${dateKey(day)}" aria-selected="${sel}"
@@ -1462,7 +1448,12 @@ function viewStats() {
   }
 
   const t = today();
-  const todayP = dayProgress(list, state.entries, t);
+
+  /*  Oranlar yalnızca kişinin kendi alışkanlıklarından hesaplanır; program
+      kalemleri kendi sekmesinde sayılır. Aşağıdaki tek tek paneller ise
+      hepsini gösterir — seri ve ısı haritası öğünler için de anlamlı. */
+  const oranList = personalHabits();
+  const todayP = dayProgress(oranList, state.entries, t);
 
   // Bu haftanın ortalaması (bugüne kadar)
   const wStart = startOfWeek(t, 1);
@@ -1470,7 +1461,7 @@ function viewStats() {
   for (let i = 0; i < 7; i++) {
     const d = addDays(wStart, i);
     if (d > t) break;
-    const p = dayProgress(list, state.entries, d);
+    const p = dayProgress(oranList, state.entries, d);
     if (p.total > 0) { wSum += p.pct; wDays += 1; }
   }
   const weekPct = wDays ? Math.round(wSum / wDays) : 0;
@@ -1486,7 +1477,7 @@ function viewStats() {
   }
 
   const overallHeat = heatHtml((d) => {
-    const p = dayProgress(list, state.entries, d);
+    const p = dayProgress(oranList, state.entries, d);
     return p.total === 0 ? 0 : p.done / p.total;
   }, 'var(--accent)');
 
@@ -2107,9 +2098,30 @@ function viewProgram() {
         </div>`).join('')}
     </div>`;
 
+  const d = state.date;
+  const kal = dayCalories(d);
+  const gunun = programHabits();
+  const planli = gunun.filter((h) => isScheduled(h, d));
+  const digerleri = gunun.filter((h) => !isScheduled(h, d));
+
+  /*  Başlıktaki büyük rakam program kurulduysa KALAN kaloridir, kurulmadıysa
+      günlük hedef. Kullanıcının gün içinde bakıp merak ettiği şey hedef değil,
+      "daha ne yiyebilirim" sorusunun cevabı. */
+  const asti = kal ? kal.kalan < 0 : false;
+  const oran = kal ? Math.min(100, Math.round((kal.yenen / kal.hedef) * 100)) : 0;
+
   return `
     <div class="panel pg-head">
-      <div class="pg-kcal">${t.kcal.toLocaleString('tr-TR')}<span>kcal / gün</span></div>
+      ${kal ? `
+        <div class="pg-kcal ${asti ? 'over' : ''}">${Math.abs(kal.kalan).toLocaleString('tr-TR')}
+          <span>kcal ${asti ? 'aşıldı' : 'kaldı'}</span></div>
+        <div class="kcal-bar" style="margin:14px 0 8px">
+          <i style="width:${oran}%" class="${asti ? 'over' : ''}"></i>
+        </div>
+        <div class="pg-tdee">Hedef ${kal.hedef.toLocaleString('tr-TR')} ·
+          yenen ${kal.yenen.toLocaleString('tr-TR')} kcal</div>`
+      : `
+        <div class="pg-kcal">${t.kcal.toLocaleString('tr-TR')}<span>kcal / gün</span></div>`}
       <div class="pg-sub">
         ${esc(hedefAd)}${t.haftalikKg > 0
           ? ` · haftada ~${t.haftalikKg.toLocaleString('tr-TR')} kg (ayda ~${t.aylikKg.toLocaleString('tr-TR')} kg)`
@@ -2119,7 +2131,16 @@ function viewProgram() {
         · açık ${(t.tdee - t.kcal).toLocaleString('tr-TR')} kcal · BKİ ${t.bki}</div>
     </div>
 
-    <div class="stat-grid mt">
+    ${planli.length ? `
+      <div class="section-title">Bugün</div>
+      <div class="habit-list">${planli.map((h) => habitCardHtml(h, d)).join('')}</div>` : ''}
+
+    ${digerleri.length ? `
+      <div class="section-title">Bugün planlı değil</div>
+      <div class="habit-list" style="opacity:.72">${digerleri.map((h) => habitCardHtml(h, d)).join('')}</div>` : ''}
+
+    <div class="section-title">Günlük hedefler</div>
+    <div class="stat-grid">
       <div class="stat-box"><div class="sv" style="color:var(--success)">${t.protein}</div><div class="sl">protein (g)</div></div>
       <div class="stat-box"><div class="sv">${t.karb}</div><div class="sl">karbonhidrat (g)</div></div>
       <div class="stat-box"><div class="sv">${t.yag}</div><div class="sl">yağ (g)</div></div>
@@ -2526,7 +2547,11 @@ function render() {
 
 function go(view) {
   state.view = view;
-  if (view === 'today') state.date = today();
+  /*  Her iki ekran da "bugün"ü gösterir. Program sekmesinde tarih ileri geri
+      gezilmiyor; işaretler state.date'e yazıldığı için burada sıfırlanmazsa
+      Bugün'de geçmiş bir güne bakıp Program'a geçen kişi o eski güne
+      işaret koymuş olurdu. */
+  if (view === 'today' || view === 'program') state.date = today();
   window.scrollTo(0, 0);
   render();
 }
