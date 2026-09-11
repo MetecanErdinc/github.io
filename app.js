@@ -23,7 +23,7 @@ import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
 import * as TrFoodsNS from './tr-foods.js';
 
-const BUILD = '2026-09-11j';
+const BUILD = '2026-09-11k';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -1115,7 +1115,7 @@ function viewToday() {
       <div class="section-title">Bugün planlı değil</div>
       <div class="habit-list" style="opacity:.72">${other.map((h) => habitCardHtml(h, d)).join('')}</div>` : ''}
 
-    <button class="btn btn-ghost btn-block mt push-bottom" data-act="new-habit">+ Yeni alışkanlık</button>`;
+    <button class="btn btn-ghost btn-block mt" data-act="new-habit">+ Yeni alışkanlık</button>`;
 }
 
 function weekStripHtml(d) {
@@ -1170,9 +1170,7 @@ function viewHabits() {
     </div>`;
   };
 
-  /*  Ekleme düğmesi Bugün'deki gibi en altta: hem iki ekran aynı deseni
-      izliyor hem de kısa listede içerik alt menüye kadar iniyor, ortada
-      yüzlerce piksel ölü alan kalmıyor. */
+  /* Ekleme düğmesi listenin sonunda: Bugün ve Listeler ile aynı desen. */
   return `
     ${list.length
       ? byGroup(list).map((sec) => `
@@ -1186,7 +1184,7 @@ function viewHabits() {
       <div class="section-title">Arşiv (${archived.length})</div>
       <div class="panel" style="opacity:.75">${archived.map((h) => rowHtml(h, 0, 1, true)).join('')}</div>` : ''}
 
-    <button class="btn btn-primary btn-block mt push-bottom"
+    <button class="btn btn-primary btn-block mt"
             data-act="new-habit">+ Yeni alışkanlık</button>`;
 }
 
@@ -1358,7 +1356,7 @@ function listIndexHtml() {
       </div>`;
   }
 
-  /*  Ekleme düğmesi diğer ekranlardaki gibi en altta. Üstteyken push-bottom
+  /*  Ekleme düğmesi diğer ekranlardaki gibi en altta. Üstteyken
       üstündeki bütün boşluğu emiyor ve liste aşağı kayıyor — yaslama ancak
       son öğede işe yarar. */
   return `
@@ -1386,7 +1384,7 @@ function listIndexHtml() {
       }).join('')}
     </div>
 
-    <button class="btn btn-primary btn-block mt push-bottom"
+    <button class="btn btn-primary btn-block mt"
             data-act="new-list">+ Yeni liste</button>`;
 }
 
