@@ -32,7 +32,8 @@ Bu depoda iki uygulama var:
   işaretlemelide hepsi bitince tamamlanır
 - **Listeler sekmesi**: alışkanlıklardan ve tarihten bağımsız listeler — market
   alışverişi, gün içinde halledilecek tek seferlik işler. İstediğiniz kadar liste
-  açar, tamamlananları tek dokunuşla temizlersiniz
+  açar, tamamlananları tek dokunuşla temizlersiniz; her listenin yanında
+  oluşturulma tarihi görünür
 - **Fotoğraf ekleme**: alışkanlıklara (güne bağlı) ve listelere; her fotoğrafın
   altında eklenme zamanı yazar. Görseller tarayıcıda küçültülüp Firestore'da
   saklanır — Firebase Storage ücretsiz planda kapalı olduğu için

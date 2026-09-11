@@ -56,6 +56,23 @@ export function humanDate(d) {
   return `${d.getDate()} ${MONTHS[d.getMonth()]} ${DAY_FULL[d.getDay()]}`;
 }
 
+/**
+ * Kart üzerinde yer kaplamayan kısa tarih: "Bugün" / "Dün" / "11 Eylül"
+ * (başka yıldaysa yıl da eklenir). Saat göstermez.
+ */
+export function shortDate(input, now = new Date()) {
+  const d = input instanceof Date ? input : new Date(input);
+  if (isNaN(d)) return '';
+
+  const n = diffDays(d, now);
+  if (n === 0) return 'Bugün';
+  if (n === -1) return 'Dün';
+  if (n === 1) return 'Yarın';
+
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}${sameYear ? '' : ' ' + d.getFullYear()}`;
+}
+
 /** "Bugün" / "Dün" / "Yarın" / "10 Eylül Perşembe" */
 export function dayLabel(d, ref = today()) {
   const n = diffDays(d, ref);

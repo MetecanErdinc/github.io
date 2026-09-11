@@ -331,6 +331,9 @@ içindir: market alışverişi, bugün halletmeniz gereken tek seferlik işler,
 unutmamanız gerekenler.
 
 - İstediğiniz kadar liste açarsınız (Market, Bugün, Tamir edilecekler…)
+- Her listenin yanında **oluşturulma tarihi** yazar: aynı günse "Bugün", bir
+  önceki günse "Dün", daha eskiyse "19 Ağustos" gibi. Listeyi düzenleme
+  penceresinde saatiyle birlikte tam hâli görünür.
 - Her listenin kendi simgesi ve adı vardır
 - **Tarihe bağlı değildir.** Alışkanlık listeleri günden güne değişir; buradakiler
   siz silene kadar olduğu gibi durur. Günü değiştirmek bunları etkilemez.

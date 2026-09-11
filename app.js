@@ -8,7 +8,7 @@ import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
   dayLabel, isScheduled, targetOf, perWeekOf, scheduleLabel, streakInfo,
   completionRate, dayProgress, esc, modeOf, formatDuration, formatClock, targetLabel, uid,
-  derivedValue, derivedLabel, derivedDone, MONTHS as MONTH_NAMES,
+  derivedValue, derivedLabel, derivedDone, MONTHS as MONTH_NAMES, shortDate,
 } from './util.js';
 
 import {
@@ -1130,6 +1130,8 @@ function listEditor(list) {
       </div>
       <div id="ls-err" class="error-box hidden"></div>
     </div>
+    ${l.createdAt ? `<p class="tiny muted center" style="margin-top:12px">
+      Oluşturuldu: ${esc(stampLabel(l.createdAt))}</p>` : ''}
     <div class="modal-actions">
       <button class="btn btn-ghost" data-act="close-modal">Vazgeç</button>
       <button class="btn btn-primary" data-x="save">${isNew ? 'Oluştur' : 'Kaydet'}</button>
@@ -1268,9 +1270,11 @@ function listIndexHtml() {
           <div class="h-emoji" style="background:var(--surface3)">${esc(l.emoji || '📝')}</div>
           <div class="grow" style="text-align:left;min-width:0">
             <div class="h-name truncate">${esc(l.name)}</div>
-            <div class="h-meta">${items.length
-              ? `${done}/${items.length} tamamlandı`
-              : 'boş liste'}</div>
+            <div class="h-meta">
+              ${items.length ? `${done}/${items.length} tamamlandı` : 'boş liste'}
+              ${l.createdAt ? `<span class="muted">·</span>
+                <span class="list-date" title="Oluşturulma tarihi">${esc(shortDate(l.createdAt))}</span>` : ''}
+            </div>
             ${items.length ? `<div class="progress-line">
               <i style="width:${(done / items.length) * 100}%;background:var(--accent)"></i></div>` : ''}
           </div>
@@ -1290,7 +1294,11 @@ function listDetailHtml(l) {
       <div class="h-emoji" style="background:var(--surface3)">${esc(l.emoji || '📝')}</div>
       <div class="grow" style="min-width:0">
         <div class="h-name truncate">${esc(l.name)}</div>
-        <div class="h-meta">${items.length ? `${done}/${items.length} tamamlandı` : 'boş liste'}</div>
+        <div class="h-meta">
+          ${items.length ? `${done}/${items.length} tamamlandı` : 'boş liste'}
+          ${l.createdAt ? `<span class="muted">·</span>
+            <span class="list-date" title="Oluşturulma tarihi">${esc(shortDate(l.createdAt))}</span>` : ''}
+        </div>
       </div>
       <button class="icon-btn" data-act="edit-list" data-id="${esc(l.id)}" aria-label="düzenle">✏️</button>
       <button class="icon-btn" data-act="del-list" data-id="${esc(l.id)}" aria-label="sil">🗑</button>

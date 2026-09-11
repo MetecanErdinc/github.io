@@ -766,3 +766,5 @@ html[data-standalone="true"] .topbar { padding-bottom: 8px; }
   .photo-thumb, .photo-thumb img, .photo-add, .photo-thumb .pt-stamp { width: 68px; }
   .photo-thumb img, .photo-add { height: 68px; }
 }
+
+.list-date { color: var(--text3); font-variant-numeric: tabular-nums; white-space: nowrap; }
