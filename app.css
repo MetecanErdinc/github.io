@@ -683,11 +683,6 @@ html[data-standalone="true"] .topbar { padding-bottom: 8px; }
   cursor: pointer;
 }
 .list-card:hover { border-color: var(--border2); }
-
-/*  Kart, madde önizlemesiyle uzayabiliyor. Simge ve ok ortalanırsa uzun
-    kartın ortasında asılı kalıyorlar; ikisi de üste hizalanır. */
-.list-card { align-items: flex-start; }
-.list-card .h-emoji, .list-card .list-caret { margin-top: 2px; }
 .list-caret { color: var(--text3); font-size: 20px; flex: 0 0 auto; padding: 0 2px; }
 
 .list-head {
@@ -727,16 +722,6 @@ html[data-standalone="true"] .topbar { padding-bottom: 8px; }
   background: var(--success); transition: width .25s ease;
 }
 .kcal-bar i.over { background: var(--danger); }
-
-/*  Liste kartındaki önizleme: bekleyen ilk maddeler alt alta, her biri tek
-    satır. Uzun madde metni kartı bozmasın diye kırpılır. */
-.list-peek { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
-.list-peek span {
-  font-size: 12px; color: var(--text2); line-height: 1.5;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.list-peek span::before { content: '· '; color: var(--text3); }
-.list-peek span.muted::before { content: ''; }
 
 /* ------------------------------------------------------- yiyecek ekleme -- */
 

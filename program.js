@@ -9,7 +9,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11m';
+export const BUILD = '2026-09-11n';
 
 
 import { FOODS } from './plan.js';
