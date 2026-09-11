@@ -12,25 +12,54 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11f';
+export const BUILD = '2026-09-11g';
 
-const API = 'https://world.openfoodfacts.org';
+/*  Birden fazla sunucu denenir. world.* coğrafyaya göre ülke alan adına
+    yönlendirebiliyor; yönlendirilen yanıt CORS başlığı taşımazsa istek
+    "ağa ulaşılamadı" diye düşüyor ve kullanıcı bunu internet hatası sanıyor.
+    İlki olmazsa ikincisi doğrudan denenir. */
+const SUNUCULAR = ['https://world.openfoodfacts.org', 'https://tr.openfoodfacts.org'];
 const ZAMAN_ASIMI = 9000;
+const ARAMA_ZAMAN_ASIMI = 20000;   // arama uç noktası kayda değer biçimde yavaş
 
 /* İstenen alanlar: yanıtı küçük tutmak telefonda gözle görülür fark yaratır. */
 const ALANLAR = 'code,product_name,product_name_tr,generic_name,brands,nutriments,image_small_url';
 
-/** Zaman aşımlı fetch — mobil ağda yanıtsız kalan istek kullanıcıyı kilitler. */
-async function getir(url) {
+/**
+ * Zaman aşımlı fetch.
+ *
+ * Hata türleri ayrıştırılır, çünkü hepsine "internet yok" demek yanıltıcı:
+ * bağlantı varken de CORS reddi ya da sunucu hatası olabiliyor ve kullanıcı
+ * neyi düzelteceğini bilemiyor. İstek başlıksız gider — Accept eklemek
+ * bazı vekil sunucularda gereksiz ön kontrol tetikleyebiliyor.
+ */
+async function getirTek(url, sure = ZAMAN_ASIMI) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), ZAMAN_ASIMI);
+  const t = setTimeout(() => ctrl.abort(), sure);
   try {
-    const res = await fetch(url, { signal: ctrl.signal, headers: { Accept: 'application/json' } });
-    if (!res.ok) throw new Error(`Sunucu ${res.status}`);
+    const res = await fetch(url, { signal: ctrl.signal, mode: 'cors', credentials: 'omit' });
+    if (!res.ok) throw new Error(`sunucu ${res.status} döndü`);
     return await res.json();
+  } catch (err) {
+    if (err?.name === 'AbortError') throw new Error(`${Math.round(sure / 1000)} sn içinde yanıt gelmedi`);
+    if (err instanceof TypeError) throw new Error('sunucuya ulaşılamadı (CORS ya da bağlantı)');
+    throw err;
   } finally {
     clearTimeout(t);
   }
+}
+
+/** Sunucuları sırayla dener; hepsi düşerse son hatayı bildirir. */
+async function getir(yol, sure) {
+  let sonHata;
+  for (const kok of SUNUCULAR) {
+    try {
+      return await getirTek(kok + yol, sure);
+    } catch (err) {
+      sonHata = err;
+    }
+  }
+  throw sonHata || new Error('bilinmeyen hata');
 }
 
 /**
@@ -76,7 +105,14 @@ export async function lookupBarcode(code) {
   const temiz = String(code || '').replace(/\D/g, '');
   if (temiz.length < 6) throw new Error('Barkod en az 6 haneli olmalı');
 
-  const data = await getir(`${API}/api/v2/product/${temiz}.json?fields=${ALANLAR}`);
+  /*  Önce alan süzgeciyle (yanıt küçük olsun), olmazsa süzgeçsiz: bazı
+      sunucular tanımadığı alan adında hata döndürüyor. */
+  let data;
+  try {
+    data = await getir(`/api/v2/product/${temiz}.json?fields=${ALANLAR}`);
+  } catch {
+    data = await getir(`/api/v2/product/${temiz}.json`);
+  }
   if (!data || data.status === 0 || !data.product) return null;
   return urunDenNesne({ ...data.product, code: data.product.code || temiz });
 }
@@ -86,11 +122,11 @@ export async function searchFoods(q) {
   const terim = String(q || '').trim();
   if (terim.length < 2) return [];
 
-  const url = `${API}/cgi/search.pl?search_terms=${encodeURIComponent(terim)}`
+  const yol = `/cgi/search.pl?search_terms=${encodeURIComponent(terim)}`
             + `&search_simple=1&action=process&json=1&page_size=24`
             + `&sort_by=unique_scans_n&lc=tr&fields=${ALANLAR}`;
 
-  const data = await getir(url);
+  const data = await getir(yol, ARAMA_ZAMAN_ASIMI);
   return (data?.products || []).map(urunDenNesne).filter(Boolean).slice(0, 20);
 }
 
@@ -99,6 +135,31 @@ export function kcalFor(per100, gram) {
   const p = Number(per100), g = Number(gram);
   if (!Number.isFinite(p) || !Number.isFinite(g)) return 0;
   return Math.round((p * g) / 100);
+}
+
+/**
+ * Bağlantı sınaması.
+ *
+ * "İnternet hatası" kullanıcı için de geliştirici için de işe yaramaz bir
+ * bilgi: bağlantı varken CORS reddi, yönlendirme, sunucu hatası ya da
+ * yavaşlık da aynı şekilde görünüyor. Bu işlev her sunucuyu tek tek deneyip
+ * ne olduğunu açıkça yazar.
+ */
+export async function testConnection() {
+  const sonuclar = [];
+  for (const kok of SUNUCULAR) {
+    const bas = Date.now();
+    try {
+      const d = await getirTek(`${kok}/api/v2/product/737628064502.json?fields=code,product_name`, 12000);
+      sonuclar.push({
+        kok, ok: true,
+        not: `${Date.now() - bas} ms · ${d?.status === 1 ? 'ürün geldi' : 'yanıt geldi, ürün yok'}`,
+      });
+    } catch (err) {
+      sonuclar.push({ kok, ok: false, not: `${Date.now() - bas} ms · ${err?.message || err}` });
+    }
+  }
+  return sonuclar;
 }
 
 /* ------------------------------------------------------------ barkod okuma */

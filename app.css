@@ -253,7 +253,20 @@ main {
   flex: 1;
   width: 100%; max-width: 760px; margin: 0 auto;
   padding: 16px 16px calc(var(--nav-h) + 26px + var(--safe-b));
+
+  /*  Sütun düzeni, kısa sayfalardaki ölü bölge için: içerik ekranı
+      doldurmadığında (tek alışkanlık, iki liste) son eylem düğmesi
+      push-bottom ile alt menünün hemen üstüne iner. Yoksa kartlar tepede
+      kalıp altlarında yüzlerce piksel boşluk bırakıyor ve ekran bozuk
+      görünüyordu. Uzun sayfalarda margin-top:auto'nun etkisi yok. */
+  display: flex; flex-direction: column;
 }
+
+.push-bottom { margin-top: auto; }
+
+/*  Sütun düzeninde esneme kapalı: kartlar içeriği kadar yer kaplasın,
+    aralarındaki boşluğu paylaşarak uzamasınlar. */
+main > * { flex: 0 0 auto; }
 
 .navbar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 40;
