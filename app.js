@@ -23,7 +23,7 @@ import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
 import * as TrFoodsNS from './tr-foods.js';
 
-const BUILD = '2026-09-11n';
+const BUILD = '2026-09-11o';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
