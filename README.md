@@ -34,13 +34,6 @@ Bu depoda iki uygulama var:
   alışverişi, gün içinde halledilecek tek seferlik işler. İstediğiniz kadar liste
   açar, tamamlananları tek dokunuşla temizlersiniz; her listenin yanında
   oluşturulma tarihi görünür
-- **Bölümler**: alışkanlıklara isteğe bağlı bölüm adı verilir; aynı bölümdekiler
-  Bugün ve Alışkanlıklar ekranlarında tek başlık altında toplanır
-- **Hazır paket — Spor ve Diyet**: Ayarlar → Hazır paket → Kur, günlük beslenme
-  ve antrenman programını tek dokunuşla kurar (öğünler gramajlı sabit
-  listelerle, su ve adım sayaçlı, haftada 3 antrenman, takviyeler, tartı ve
-  haftalık ölçüm) artı anti-kaçak kuralları ve alışveriş listesi. Tekrar
-  çalıştırmak kopya üretmez, güncel tanımı yazar; işaretler ve geçmiş korunur
 - **Fotoğraf ekleme**: alışkanlıklara (güne bağlı) ve listelere; her fotoğrafın
   altında eklenme zamanı yazar. Görseller tarayıcıda küçültülüp Firestore'da
   saklanır — Firebase Storage ücretsiz planda kapalı olduğu için
@@ -68,7 +61,6 @@ Bu depoda iki uygulama var:
 | `util.js` | Tarih, plan ve seri hesaplamaları |
 | `photo.js` | Görsel küçültme/sıkıştırma ve zaman damgası biçimi |
 | `app.css` | Stiller (koyu/açık tema, mobil + masaüstü) |
-| `program.js` | "Spor ve Diyet" hazır paketinin tanımı |
 | `config.js` | **Firebase ayarlarınızı buraya yazın** |
 | `firestore.rules` | Firestore güvenlik kuralları — konsola yapıştırın |
 | `sw.js` | Service worker (çevrimdışı önbellek) |
