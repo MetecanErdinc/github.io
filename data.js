@@ -18,6 +18,8 @@ const LS = {
   entries: 'habits.local.entries',
   tasks:   'habits.local.tasks',
   lists:   'habits.local.lists',
+  albums:  'habits.local.albums',
+  photos:  'habits.local.photos',
 };
 
 /** Giriş ekranına kadar geriye dönük yüklenecek gün sayısı. */
@@ -255,6 +257,22 @@ export class CloudStore {
       (err) => handlers.error?.(err)
     ));
 
+    /*  Fotoğraf albümleri. Belgede yalnızca küçük önizlemeler durur; tam boyutlu
+        görseller ayrı belgelerde ve sadece açıldıklarında indirilir. Böylece bu
+        abonelik her açılışta megabaytlarca veri çekmez. */
+    this.unsubs.push(S.onSnapshot(
+      this._col('albums'),
+      (snap) => {
+        const map = new Map();
+        snap.forEach((d) => {
+          const v = d.data();
+          map.set(d.id, { ...v, items: Array.isArray(v.items) ? v.items : [] });
+        });
+        handlers.albums?.(map);
+      },
+      (err) => handlers.error?.(err)
+    ));
+
     // Alışkanlıklardan bağımsız listeler (market, tek seferlik işler…)
     this.unsubs.push(S.onSnapshot(
       this._col('lists'),
@@ -329,6 +347,30 @@ export class CloudStore {
     });
   }
 
+  async saveAlbum(albumId, album) {
+    const ref = this._doc('albums', albumId);
+    if (!album?.items?.length) {
+      await this.S.deleteDoc(ref);
+      return;
+    }
+    await this.S.setDoc(ref, { ...album, updatedAt: new Date().toISOString() });
+  }
+
+  async savePhoto(photoId, data) {
+    await this.S.setDoc(this._doc('photos', photoId), {
+      data, createdAt: new Date().toISOString(),
+    });
+  }
+
+  async getPhoto(photoId) {
+    const snap = await this.S.getDoc(this._doc('photos', photoId));
+    return snap.exists() ? (snap.data().data || null) : null;
+  }
+
+  async deletePhoto(photoId) {
+    await this.S.deleteDoc(this._doc('photos', photoId));
+  }
+
   async saveList(list) {
     const id = list.id || uid('l');
     const data = { ...list, updatedAt: new Date().toISOString() };
@@ -360,7 +402,7 @@ export class CloudStore {
     await batch.commit();
   }
 
-  async importData({ habits = [], entries = [], tasks = [], lists = [] }) {
+  async importData({ habits = [], entries = [], tasks = [], lists = [], albums = [] }) {
     const S = this.S;
     const ops = [];
     habits.forEach((h) => {
@@ -382,6 +424,11 @@ export class CloudStore {
       const { id, ...rest } = l;
       ops.push([this._doc('lists', id || uid('l')), rest]);
     });
+    albums.forEach((a) => {
+      if (!a?.id || !Array.isArray(a.items) || !a.items.length) return;
+      const { id, ...rest } = a;
+      ops.push([this._doc('albums', id), rest]);
+    });
     for (let i = 0; i < ops.length; i += 400) {
       const batch = S.writeBatch(this.db);
       ops.slice(i, i + 400).forEach(([ref, data]) => batch.set(ref, data, { merge: true }));
@@ -391,7 +438,7 @@ export class CloudStore {
 
   async wipe() {
     const S = this.S;
-    for (const name of ['tasks', 'entries', 'habits', 'lists']) {
+    for (const name of ['tasks', 'entries', 'habits', 'lists', 'albums', 'photos']) {
       const snap = await S.getDocs(this._col(name));
       const refs = [];
       snap.forEach((d) => refs.push(d.ref));
@@ -430,10 +477,31 @@ export class LocalStore {
     try { return JSON.parse(localStorage.getItem(LS.lists) || '[]'); } catch { return []; }
   }
 
+  _readAlbums() {
+    try { return JSON.parse(localStorage.getItem(LS.albums) || '{}'); } catch { return {}; }
+  }
+
+  _readPhotos() {
+    try { return JSON.parse(localStorage.getItem(LS.photos) || '{}'); } catch { return {}; }
+  }
+
   _writeHabits(list) { localStorage.setItem(LS.habits, JSON.stringify(list)); }
   _writeEntries(obj) { localStorage.setItem(LS.entries, JSON.stringify(obj)); }
   _writeTasks(obj)   { localStorage.setItem(LS.tasks, JSON.stringify(obj)); }
   _writeLists(list)  { localStorage.setItem(LS.lists, JSON.stringify(list)); }
+  _writeAlbums(obj)  { localStorage.setItem(LS.albums, JSON.stringify(obj)); }
+
+  /*  Yerel modda fotoğraflar tarayıcının localStorage'ında durur ve orada
+      yaklaşık 5 MB'lık bir sınır vardır. Dolduğunda sessizce kaybolmasın diye
+      hatayı yukarı taşıyoruz. */
+  _writePhotos(obj) {
+    try {
+      localStorage.setItem(LS.photos, JSON.stringify(obj));
+    } catch {
+      throw new Error('Bu cihazdaki depolama doldu. Yerel modda fotoğraf alanı sınırlıdır; '
+                    + 'birkaç fotoğraf silin ya da hesapla giriş yapın.');
+    }
+  }
 
   _emit() {
     const list = this._readHabits()
@@ -453,13 +521,19 @@ export class LocalStore {
     this.handlers.entries?.(map);
     this.handlers.tasks?.(tmap);
     this.handlers.lists?.(this._readLists().slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0)));
+
+    const amap = new Map();
+    for (const [k, v] of Object.entries(this._readAlbums())) {
+      amap.set(k, { ...v, items: Array.isArray(v.items) ? v.items : [] });
+    }
+    this.handlers.albums?.(amap);
     this.handlers.status?.({ fromCache: true });
   }
 
   start(handlers) {
     this.handlers = handlers;
     this._onStorage = (e) => {
-      if ([LS.habits, LS.entries, LS.tasks, LS.lists].includes(e.key)) this._emit();
+      if ([LS.habits, LS.entries, LS.tasks, LS.lists, LS.albums].includes(e.key)) this._emit();
     };
     window.addEventListener('storage', this._onStorage);
     this._emit();
@@ -505,17 +579,28 @@ export class LocalStore {
     this._emit();
   }
 
-  async saveList(list) {
-    const id = list.id || uid('l');
-    const data = { ...list, updatedAt: new Date().toISOString() };
-    delete data.id;
-    if (!data.createdAt) data.createdAt = data.updatedAt;
-    await this.S.setDoc(this._doc('lists', id), data);
-    return id;
+  async saveAlbum(albumId, album) {
+    const raw = this._readAlbums();
+    if (!album?.items?.length) delete raw[albumId];
+    else raw[albumId] = { ...album, updatedAt: new Date().toISOString() };
+    this._writeAlbums(raw);
+    this._emit();
   }
 
-  async deleteList(id) {
-    await this.S.deleteDoc(this._doc('lists', id));
+  async savePhoto(photoId, data) {
+    const raw = this._readPhotos();
+    raw[photoId] = data;
+    this._writePhotos(raw);
+  }
+
+  async getPhoto(photoId) {
+    return this._readPhotos()[photoId] || null;
+  }
+
+  async deletePhoto(photoId) {
+    const raw = this._readPhotos();
+    delete raw[photoId];
+    this._writePhotos(raw);
   }
 
   async saveList(list) {
@@ -552,7 +637,7 @@ export class LocalStore {
     this._emit();
   }
 
-  async importData({ habits = [], entries = [], tasks = [], lists = [] }) {
+  async importData({ habits = [], entries = [], tasks = [], lists = [], albums = [] }) {
     const cur = new Map(this._readHabits().map((h) => [h.id, h]));
     habits.forEach((h) => { if (h?.id) cur.set(h.id, { ...cur.get(h.id), ...h }); });
     this._writeHabits([...cur.values()]);
@@ -575,6 +660,14 @@ export class LocalStore {
     lists.forEach((l) => { if (l?.id) curLists.set(l.id, { ...curLists.get(l.id), ...l }); });
     this._writeLists([...curLists.values()]);
 
+    const alb = this._readAlbums();
+    albums.forEach((a) => {
+      if (!a?.id || !Array.isArray(a.items) || !a.items.length) return;
+      const { id, ...rest } = a;
+      alb[id] = rest;
+    });
+    this._writeAlbums(alb);
+
     this._emit();
   }
 
@@ -583,6 +676,8 @@ export class LocalStore {
     localStorage.removeItem(LS.entries);
     localStorage.removeItem(LS.tasks);
     localStorage.removeItem(LS.lists);
+    localStorage.removeItem(LS.albums);
+    localStorage.removeItem(LS.photos);
     this._emit();
   }
 }

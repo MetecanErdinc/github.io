@@ -33,6 +33,10 @@ Bu depoda iki uygulama var:
 - **Listeler sekmesi**: alışkanlıklardan ve tarihten bağımsız listeler — market
   alışverişi, gün içinde halledilecek tek seferlik işler. İstediğiniz kadar liste
   açar, tamamlananları tek dokunuşla temizlersiniz
+- **Fotoğraf ekleme**: alışkanlıklara (güne bağlı) ve listelere; her fotoğrafın
+  altında eklenme zamanı yazar. Görseller tarayıcıda küçültülüp Firestore'da
+  saklanır — Firebase Storage ücretsiz planda kapalı olduğu için
+- Liste maddelerine **son tarih**; geçmiş tarihler kırmızı, bugün mavi
 - Üç plan tipi: her gün, belirli günler, haftada N kez
 - Seri (streak) ve rekor takibi, 30 günlük başarı oranı, 13 haftalık ısı haritası
 - Geçmiş günleri geriye dönük işaretleme
@@ -54,6 +58,7 @@ Bu depoda iki uygulama var:
 | `app.js` | Arayüz, görünümler, eylemler |
 | `data.js` | Firebase bağlantısı, bulut ve yerel veri depoları |
 | `util.js` | Tarih, plan ve seri hesaplamaları |
+| `photo.js` | Görsel küçültme/sıkıştırma ve zaman damgası biçimi |
 | `app.css` | Stiller (koyu/açık tema, mobil + masaüstü) |
 | `config.js` | **Firebase ayarlarınızı buraya yazın** |
 | `firestore.rules` | Firestore güvenlik kuralları — konsola yapıştırın |

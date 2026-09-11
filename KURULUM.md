@@ -297,6 +297,33 @@ Giriş ekranında **Şifremi unuttum** → e-postanıza sıfırlama bağlantıs�
 
 ---
 
+## Fotoğraf ekleme
+
+Hem alışkanlıklara hem de Listeler sekmesindeki listelere fotoğraf ekleyebilirsiniz.
+Alışkanlık kartındaki rozete dokunup açılan panelde, listelerde ise listenin
+üstündeki şeritte **📷** düğmesi bulunur. Telefonda kamera ile çekme veya
+galeriden seçme seçeneklerini tarayıcı sunar.
+
+- Her fotoğrafın altında **ne zaman eklendiği** yazar ("Bugün 14:32", "Dün 09:05",
+  "3 gün önce", eskiler için "1 Eylül 07:45")
+- Alışkanlık fotoğrafları **güne bağlıdır**: bugün eklediğiniz fotoğraf bugünde
+  kalır, tarih oklarıyla geçmiş günlerin fotoğraflarına bakabilirsiniz
+- Liste fotoğrafları listeye bağlıdır, tarihten bağımsızdır
+- Fotoğrafa dokununca tam boyutlu hâli açılır; oradan silebilirsiniz
+- Bir yere en fazla 60 fotoğraf eklenebilir
+
+### Neden Firebase Storage kullanılmıyor?
+
+Firebase'in dosya depolama servisi (Cloud Storage) **ücretsiz planda kapalıdır**,
+kredi kartı bağlamanızı ister. Ücretsiz kalmak için fotoğraflar tarayıcınızda
+küçültülüp (uzun kenar 1280 piksel) Firestore veritabanına yazılıyor. Tipik bir
+fotoğraf 150-400 KB yer kaplar; ücretsiz 1 GB alan birkaç bin fotoğraf demektir.
+
+> Yedek dosyasına fotoğrafların yalnızca küçük önizlemeleri girer. Tam boyutlu
+> hâlleri dosyayı çok büyüteceği için dışarıda bırakılır; onlar hesabınızda durur.
+
+---
+
 ## Listeler sekmesi
 
 Alt menüdeki **Listeler**, alışkanlıklarla hiç ilgisi olmayan serbest listeler
@@ -307,6 +334,10 @@ unutmamanız gerekenler.
 - Her listenin kendi simgesi ve adı vardır
 - **Tarihe bağlı değildir.** Alışkanlık listeleri günden güne değişir; buradakiler
   siz silene kadar olduğu gibi durur. Günü değiştirmek bunları etkilemez.
+- Her maddeye **son tarih** verebilirsiniz: maddenin yanındaki 📅 düğmesine dokunup
+  Bugün / Yarın / Hafta sonu gibi hazır seçeneklerden birini ya da takvimden bir
+  gün seçin. Tarih geçmişse kırmızı, bugünse mavi görünür. Pencerede maddenin ne
+  zaman eklendiği de yazar.
 - Tamamladığınız maddeleri **Tamamlanan N maddeyi temizle** ile toplu silersiniz
 - Maddenin üstüne dokunup metnini değiştirebilirsiniz
 

@@ -2,11 +2,13 @@
    Alışkanlıklarım — ana uygulama
    ========================================================================== */
 
+import { processImage, stampLabel, dataUrlBytes } from './photo.js';
+
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
   dayLabel, isScheduled, targetOf, perWeekOf, scheduleLabel, streakInfo,
   completionRate, dayProgress, esc, modeOf, formatDuration, formatClock, targetLabel, uid,
-  derivedValue, derivedLabel, derivedDone,
+  derivedValue, derivedLabel, derivedDone, MONTHS as MONTH_NAMES,
 } from './util.js';
 
 import {
@@ -27,6 +29,8 @@ const state = {
   openTasks: new Set(),
   lists: [],
   openList: null,
+  albums: new Map(),
+  photoCache: new Map(),
   view: 'today',
   date: today(),
   prefs: getPrefs(),
@@ -193,6 +197,160 @@ async function syncDerived(habit) {
   if (!habit?.hasTasks || !habit?.driveFromTasks) return;
   const v = derivedValue(habit, tasksFor(habit.id));
   if (v !== null) await setValue(habit.id, v);
+}
+
+/* ------------------------------------------------------------ fotoğraf -- */
+
+/** Albüm kimliği: alışkanlıkta güne, listede listeye bağlıdır. */
+function albumIdOf(meta) {
+  return meta.ownerType === 'habit'
+    ? `h_${meta.ownerId}_${meta.date}`
+    : `l_${meta.ownerId}`;
+}
+
+function albumItems(meta) {
+  return state.albums.get(albumIdOf(meta))?.items || [];
+}
+
+/** Dosya seçtirir; telefonda kamera ve galeri seçeneklerini tarayıcı sunar. */
+function pickPhotos(onPick) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.hidden = true;
+  document.body.appendChild(input);
+  input.addEventListener('change', () => {
+    const files = [...(input.files || [])];
+    input.remove();
+    if (files.length) onPick(files);
+  }, { once: true });
+  input.click();
+}
+
+/*  Önizlemeler sahibinin belgesinde durur ve Firestore'un belge sınırı 1 MiB'dir.
+    Tanesi ~2-8 KB olduğundan 60 fotoğraf rahat sığar; ötesinde yazma sessizce
+    başarısız olmasın diye burada durduruyoruz. */
+const ALBUM_MAX = 60;
+
+async function addPhotos(meta, files) {
+  const albumId = albumIdOf(meta);
+  const existing = state.albums.get(albumId)?.items.length || 0;
+
+  if (existing + files.length > ALBUM_MAX) {
+    toast(`Bir yere en çok ${ALBUM_MAX} fotoğraf eklenebilir (şu an ${existing} var).`, 5000);
+    return;
+  }
+
+  if (files.length > 1) toast(`${files.length} fotoğraf işleniyor…`);
+
+  for (const file of files) {
+    try {
+      const { full, thumb, w, h, bytes } = await processImage(file);
+      const id = uid('p');
+      const createdAt = new Date().toISOString();
+
+      await state.store.savePhoto(id, full);
+
+      const prev = state.albums.get(albumId);
+      const next = { ...meta, items: [...(prev?.items || []), { id, createdAt, thumb, w, h, bytes }] };
+      state.albums.set(albumId, next);
+      state.photoCache.set(id, full);
+      render();
+
+      await state.store.saveAlbum(albumId, next);
+    } catch (err) {
+      toast('Eklenemedi: ' + (err?.message || err), 6000);
+      return;
+    }
+  }
+  toast('Fotoğraf eklendi 📷');
+}
+
+async function removePhoto(meta, photoId) {
+  const albumId = albumIdOf(meta);
+  const prev = state.albums.get(albumId);
+  if (!prev) return;
+
+  const items = prev.items.filter((p) => p.id !== photoId);
+  if (items.length) state.albums.set(albumId, { ...prev, items });
+  else state.albums.delete(albumId);
+  state.photoCache.delete(photoId);
+  render();
+
+  try {
+    await state.store.saveAlbum(albumId, { ...prev, items });
+    await state.store.deletePhoto(photoId);
+  } catch (err) {
+    toast('Silinemedi: ' + (err?.message || err));
+  }
+}
+
+/** Tam boyutlu görsel yalnızca burada indirilir; önce küçük hâli gösterilir. */
+function photoViewer(meta, photoId) {
+  const item = albumItems(meta).find((p) => p.id === photoId);
+  if (!item) return;
+
+  const cached = state.photoCache.get(photoId);
+
+  openModal(`
+    <div class="modal-head">
+      <h3 class="truncate">${esc(stampLabel(item.createdAt))}</h3>
+      <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button>
+    </div>
+    <div class="photo-view">
+      <img id="pv-img" class="${cached ? '' : 'loading'}" src="${esc(cached || item.thumb)}" alt="" />
+    </div>
+    <p class="tiny muted center" style="margin-top:10px" id="pv-note">
+      ${cached ? '' : 'Tam boyut yükleniyor…'}
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-act="close-modal">Kapat</button>
+      <button class="btn btn-danger" data-x="del">Fotoğrafı sil</button>
+    </div>`, (m) => {
+    m.addEventListener('click', async (e) => {
+      if (e.target.closest('[data-x]')?.dataset.x !== 'del') return;
+      closeModal();
+      const ok = await confirmDialog('Fotoğraf silinsin mi?',
+        'Bu fotoğraf kalıcı olarak silinecek.');
+      if (ok) removePhoto(meta, photoId);
+    });
+
+    if (cached) return;
+    state.store.getPhoto(photoId)
+      .then((data) => {
+        const img = $('#pv-img', m);
+        if (!img || !data) throw new Error('bulunamadı');
+        state.photoCache.set(photoId, data);
+        img.src = data;
+        img.classList.remove('loading');
+        $('#pv-note', m).textContent = '';
+      })
+      .catch(() => {
+        const note = $('#pv-note', m);
+        if (note) note.textContent = 'Tam boyutlu görsel açılamadı (çevrimdışı olabilirsiniz).';
+      });
+  });
+}
+
+function photoStripHtml(meta, { compact = false } = {}) {
+  const items = albumItems(meta);
+  const attrs = `data-otype="${esc(meta.ownerType)}" data-oid="${esc(meta.ownerId)}" `
+              + `data-odate="${esc(meta.date || '')}"`;
+
+  return `
+  <div class="photo-strip ${compact ? 'compact' : ''}">
+    ${items.map((p) => `
+      <button class="photo-thumb" data-act="photo-open" data-pid="${esc(p.id)}" ${attrs}
+              aria-label="fotoğrafı aç">
+        <img src="${esc(p.thumb)}" alt="" />
+        <span class="pt-stamp">${esc(stampLabel(p.createdAt))}</span>
+      </button>`).join('')}
+    <button class="photo-add" data-act="photo-add" ${attrs} aria-label="fotoğraf ekle">
+      <span class="pa-ico">📷</span>
+      <span class="pa-txt">${items.length ? 'Ekle' : 'Fotoğraf'}</span>
+    </button>
+  </div>`;
 }
 
 /* ---------------------------------------------------------------- modal */
@@ -483,6 +641,7 @@ function attachStore(store) {
   state.tasks = new Map();
   state.lists = [];
   state.openList = null;
+  state.albums = new Map();
   state.view = 'today';          // yeni oturum her zaman Bugün ile başlar
   state.date = today();
   invalidateIndex();
@@ -492,6 +651,7 @@ function attachStore(store) {
     entries: (map)  => { state.entries = map; invalidateIndex(); render(); },
     tasks:   (map)  => { state.tasks = map; render(); },
     lists:   (rows) => { state.lists = rows; render(); },
+    albums:  (map)  => { state.albums = map; render(); },
     status:  (s)    => { state.fromCache = !!s.fromCache; updateSyncBadge(); },
     error:   (err)  => {
       console.error(err);
@@ -612,15 +772,23 @@ function habitCardHtml(h, d) {
               aria-label="${done ? 'geri al' : 'tamamlandı işaretle'}">✓</button>`;
   }
 
-  const taskToggle = h.hasTasks ? `
+  const photoMeta = { ownerType: 'habit', ownerId: h.id, date: dateKey(d) };
+  const photoCount = albumItems(photoMeta).length;
+
+  const badge = [
+    h.hasTasks ? `☑ ${doneCount}/${items.length}` : '',
+    photoCount ? `📷 ${photoCount}` : '',
+  ].filter(Boolean).join(' · ') || '📷 +';
+
+  const taskToggle = `
       <button class="task-toggle ${open ? 'on' : ''}" data-act="task-panel" data-id="${esc(h.id)}"
               aria-expanded="${open}">
-        ☑ ${doneCount}/${items.length}<span class="tt-caret">${open ? '▴' : '▾'}</span>
-      </button>` : '';
+        ${badge}<span class="tt-caret">${open ? '▴' : '▾'}</span>
+      </button>`;
 
   return `
   <div class="habit-block">
-    <div class="habit-card ${(driven ? derivedDone(h, items) : done) ? 'done' : ''} ${h.hasTasks && open ? 'has-panel' : ''}"
+    <div class="habit-card ${(driven ? derivedDone(h, items) : done) ? 'done' : ''} ${open ? 'has-panel' : ''}"
          data-habit="${esc(h.id)}">
       <div class="h-emoji" style="background:${color}22;color:${color}">${esc(h.emoji || '✅')}</div>
       <div class="grow">
@@ -630,7 +798,16 @@ function habitCardHtml(h, d) {
       </div>
       ${control}
     </div>
-    ${h.hasTasks && open ? taskPanelHtml(h, items, d) : ''}
+    ${open ? habitPanelHtml(h, items, d) : ''}
+  </div>`;
+}
+
+function habitPanelHtml(h, items, d) {
+  const meta = { ownerType: 'habit', ownerId: h.id, date: dateKey(d) };
+  return `
+  <div class="task-panel">
+    ${photoStripHtml(meta)}
+    ${h.hasTasks ? taskPanelHtml(h, items, d) : ''}
   </div>`;
 }
 
@@ -640,7 +817,7 @@ function taskPanelHtml(h, items, d) {
   const total = items.reduce((sum, it) => sum + (Number(it.minutes) || 0), 0);
 
   return `
-  <div class="task-panel">
+  <div class="task-section">
     ${items.length ? `<div class="task-list">${items.map((it) => `
       <div class="task-item ${it.done ? 'done' : ''}">
         <button class="task-check ${it.done ? 'on' : ''}" data-act="task-check"
@@ -994,6 +1171,73 @@ function listEditor(list) {
   });
 }
 
+/** Son tarih etiketi: "Bugün" / "Yarın" / "3 gün geçti" / "15 Eylül" */
+function dueLabel(due, todayD = today()) {
+  const d = parseKey(due);
+  if (isNaN(d)) return '';
+  const n = diffDays(d, todayD);
+  if (n === 0) return 'Bugün';
+  if (n === 1) return 'Yarın';
+  if (n === -1) return 'Dün';
+  if (n < 0) return `${-n} gün geçti`;
+  if (n < 7) return `${n} gün sonra`;
+  return `${d.getDate()} ${MONTH_NAMES[d.getMonth()]}`;
+}
+
+function dueClass(due, todayD = today()) {
+  const n = diffDays(parseKey(due), todayD);
+  return n < 0 ? 'overdue' : n === 0 ? 'today' : '';
+}
+
+/** Bir liste maddesine son tarih verme penceresi. */
+function dueDialog(listId, item) {
+  const t = today();
+  const quick = [
+    ['Bugün', dateKey(t)],
+    ['Yarın', dateKey(addDays(t, 1))],
+    ['Hafta sonu', dateKey(addDays(startOfWeek(t, 1), 5))],
+    ['Gelecek hafta', dateKey(addDays(startOfWeek(t, 1), 7))],
+  ];
+
+  openModal(`
+    <div class="modal-head">
+      <h3 class="truncate">${esc(item.text)}</h3>
+      <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button>
+    </div>
+    ${item.createdAt ? `<p class="tiny muted center" style="margin-bottom:14px">
+      Eklendi: ${esc(stampLabel(item.createdAt))}</p>` : ''}
+
+    <div class="chips" style="justify-content:center;margin-bottom:14px">
+      ${quick.map(([label, v]) => `<button type="button" class="chip" data-q="${v}">${label}</button>`).join('')}
+    </div>
+
+    <div class="field">
+      <label for="dd-date">Son tarih</label>
+      <input id="dd-date" class="input" type="date" value="${esc(item.due || '')}" />
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" data-x="clear">Tarihi kaldır</button>
+      <button class="btn btn-primary" data-x="save">Kaydet</button>
+    </div>`, (m) => {
+    const apply = (due) => {
+      const l = state.lists.find((x) => x.id === listId);
+      if (!l) return;
+      closeModal();
+      writeListItems(listId, (l.items || []).map((it) =>
+        it.id === item.id ? { ...it, due: due || null } : it));
+    };
+
+    m.addEventListener('click', (e) => {
+      const q = e.target.closest('[data-q]');
+      if (q) { apply(q.dataset.q); return; }
+      const x = e.target.closest('[data-x]')?.dataset.x;
+      if (x === 'clear') apply('');
+      if (x === 'save') apply($('#dd-date', m).value);
+    });
+  });
+}
+
 function viewLists() {
   const open = state.openList ? state.lists.find((l) => l.id === state.openList) : null;
   return open ? listDetailHtml(open) : listIndexHtml();
@@ -1052,6 +1296,8 @@ function listDetailHtml(l) {
       <button class="icon-btn" data-act="del-list" data-id="${esc(l.id)}" aria-label="sil">🗑</button>
     </div>
 
+    ${photoStripHtml({ ownerType: 'list', ownerId: l.id })}
+
     <form class="task-add list-add" data-lid="${esc(l.id)}" style="margin-bottom:14px">
       <input class="input" id="list-add-input" placeholder="Yeni madde…" maxlength="140"
              autocomplete="off" aria-label="yeni madde" />
@@ -1069,6 +1315,9 @@ function listDetailHtml(l) {
               <input class="task-text" value="${esc(it.text)}" maxlength="140"
                      data-change="li-text" data-id="${esc(l.id)}" data-tid="${esc(it.id)}"
                      aria-label="madde metni" />
+              <button class="li-due ${it.due ? 'has ' + dueClass(it.due) : ''}" data-act="li-date"
+                      data-id="${esc(l.id)}" data-tid="${esc(it.id)}"
+                      aria-label="son tarih">${it.due ? esc(dueLabel(it.due)) : '📅'}</button>
               <button class="icon-btn task-del" data-act="li-del"
                       data-id="${esc(l.id)}" data-tid="${esc(it.id)}" aria-label="sil">✕</button>
             </div>`).join('')}
@@ -1699,6 +1948,17 @@ function handleAction(act, el) {
     case 'task-del':
       return writeTasks(id, tasksFor(id).filter((it) => it.id !== el.dataset.tid));
 
+    case 'photo-add': {
+      const meta = { ownerType: el.dataset.otype, ownerId: el.dataset.oid,
+                     date: el.dataset.odate || null };
+      return pickPhotos((files) => addPhotos(meta, files));
+    }
+    case 'photo-open': {
+      const meta = { ownerType: el.dataset.otype, ownerId: el.dataset.oid,
+                     date: el.dataset.odate || null };
+      return photoViewer(meta, el.dataset.pid);
+    }
+
     case 'new-list':   return listEditor(null);
     case 'open-list':  { state.openList = id; window.scrollTo(0, 0); return render(); }
     case 'close-list': { state.openList = null; window.scrollTo(0, 0); return render(); }
@@ -1712,7 +1972,12 @@ function handleAction(act, el) {
         .then(async (ok) => {
           if (!ok) return;
           state.openList = null;
+          const album = state.albums.get(`l_${id}`);
           await state.store.deleteList(id);
+          if (album) {
+            await state.store.saveAlbum(`l_${id}`, { items: [] }).catch(() => {});
+            for (const p of album.items) await state.store.deletePhoto(p.id).catch(() => {});
+          }
           toast('Liste silindi');
         });
     }
@@ -1723,6 +1988,11 @@ function handleAction(act, el) {
       navigator.vibrate?.(8);
       return writeListItems(id, (l.items || []).map((it) =>
         it.id === el.dataset.tid ? { ...it, done: !it.done } : it));
+    }
+    case 'li-date': {
+      const l = state.lists.find((x) => x.id === id);
+      const item = l?.items?.find((it) => it.id === el.dataset.tid);
+      return item && dueDialog(id, item);
     }
     case 'li-del': {
       const l = state.lists.find((x) => x.id === id);
@@ -1873,6 +2143,7 @@ function buildBackup() {
     entries: [...state.entries.values()].map(({ habitId, date, value }) => ({ habitId, date, value })),
     tasks: [...state.tasks.values()].map(({ habitId, date, items }) => ({ habitId, date, items })),
     lists: state.lists.map((l) => ({ ...l })),
+    albums: [...state.albums.entries()].map(([id, a]) => ({ id, ...a })),
   };
 }
 
@@ -1884,7 +2155,13 @@ function exportDialog() {
     <div class="modal-head"><h3>Yedek al</h3>
       <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button></div>
     <p class="small muted">${state.habits.length} alışkanlık, ${state.entries.size} kayıt,
-       ${state.tasks.size} günlük liste, ${state.lists.length} bağımsız liste.</p>
+       ${state.tasks.size} günlük liste, ${state.lists.length} bağımsız liste,
+       ${[...state.albums.values()].reduce((n, a) => n + a.items.length, 0)} fotoğraf.</p>
+    <div class="info-box" style="margin-top:10px">
+      Fotoğrafların yalnızca <b>küçük önizlemeleri</b> bu dosyaya girer; tam boyutlu
+      hâlleri dosyayı çok büyüteceği için dışarıda bırakılır. Onlar hesabınızda
+      durmaya devam eder.
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" data-x="copy">Panoya kopyala</button>
       <button class="btn btn-primary" data-x="download">Dosyayı indir</button>
@@ -1944,7 +2221,7 @@ function importDialog() {
       try {
         await state.store.importData({
           habits: data.habits, entries: data.entries || [],
-          tasks: data.tasks || [], lists: data.lists || [],
+          tasks: data.tasks || [], lists: data.lists || [], albums: data.albums || [],
         });
         closeModal();
         toast(`${data.habits.length} alışkanlık geri yüklendi`);
@@ -2223,7 +2500,8 @@ function bindGlobal() {
     if (form.dataset.lid) {
       const l = state.lists.find((x) => x.id === form.dataset.lid);
       if (!l) return;
-      writeListItems(l.id, [...(l.items || []), { id: uid('i'), text, done: false }]);
+      writeListItems(l.id, [...(l.items || []),
+        { id: uid('i'), text, done: false, createdAt: new Date().toISOString() }]);
       // Art arda madde girmek yaygın; odak kutuda kalsın.
       $('#list-add-input')?.focus();
       return;
