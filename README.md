@@ -56,6 +56,9 @@ Bu depoda iki uygulama var:
   bilinmeyen bir şey için 100 gramdaki değer elle girilir. Gramaj yazılınca
   kalori hesaplanır ve günün sayacına eklenir. Ürün bilgisi Open Food
   Facts'ten gelir; ağ ya da kamera çalışmasa da elle giriş hep açıktır
+- Barkod okuma üç yoldan denenir: tarayıcının kendi okuyucusu (Android),
+  ZXing (iOS Safari, istendiğinde indirilir) ve **fotoğraftan okuma** —
+  canlı görüntü tutmadığında tek kare çok daha güvenilir sonuç verir
 - **Ürün defteri**: barkod veritabanlarında Türk ürünlerinin bir kısmı kayıtlı
   değil. Bulunamayan ürün bir kez elle girilince barkoduyla deftere yazılır;
   ikinci okutmada ağa hiç çıkmadan, anında gelir. Sık kullanılanlar ekleme
