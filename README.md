@@ -30,6 +30,10 @@ Bu depoda iki uygulama var:
 - Liste alışkanlığı besleyebilir (isteğe bağlı), takip şekline göre:
   sayaçta tikler sayacı ilerletir, sürede madde süreleri toplanır,
   işaretlemelide hepsi bitince tamamlanır
+- Bugün ekranının altında **gidişat özeti**: haftalık ortalama, en uzun güncel
+  seri ve 13 haftalık ısı haritası
+- Liste kartlarında **bekleyen ilk maddeler** görünür; listeyi açmadan içinde
+  ne olduğu okunur
 - **Listeler sekmesi**: alışkanlıklardan ve tarihten bağımsız listeler — market
   alışverişi, gün içinde halledilecek tek seferlik işler. İstediğiniz kadar liste
   açar, tamamlananları tek dokunuşla temizlersiniz; her listenin yanında

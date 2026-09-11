@@ -23,7 +23,7 @@ import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
 import * as TrFoodsNS from './tr-foods.js';
 
-const BUILD = '2026-09-11k';
+const BUILD = '2026-09-11l';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -1115,7 +1115,60 @@ function viewToday() {
       <div class="section-title">Bugün planlı değil</div>
       <div class="habit-list" style="opacity:.72">${other.map((h) => habitCardHtml(h, d)).join('')}</div>` : ''}
 
-    <button class="btn btn-ghost btn-block mt" data-act="new-habit">+ Yeni alışkanlık</button>`;
+    <button class="btn btn-ghost btn-block mt" data-act="new-habit">+ Yeni alışkanlık</button>
+
+    ${todaySummaryHtml()}`;
+}
+
+/**
+ * Bugün ekranının altındaki özet.
+ *
+ * Kısa listede ekranın alt yarısı boş kalıyordu; boşluk yerleşimle silinemez,
+ * ancak işe yarar bir şeyle doldurulabilir. Buradaki iki sayı ve ısı haritası
+ * zaten hesaplanan verilerden geliyor, yeni bir kavram getirmiyor: kişi gününü
+ * işaretledikten sonra bakacağı şey tam olarak "seri devam ediyor mu".
+ */
+function todaySummaryHtml() {
+  const list = personalHabits();
+  if (!list.length) return '';
+
+  const t = today();
+
+  /* Haftanın ortalaması: pazartesiden bugüne, planlı gün olanlar. */
+  const wStart = startOfWeek(t, 1);
+  let toplam = 0, gun = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(wStart, i);
+    if (d > t) break;
+    const p = dayProgress(list, state.entries, d);
+    if (p.total > 0) { toplam += p.pct; gun += 1; }
+  }
+  const haftaPct = gun ? Math.round(toplam / gun) : 0;
+
+  /* En uzun güncel seri — hangi alışkanlıkta olduğu da yazılır. */
+  let enIyi = null;
+  for (const h of list) {
+    const st = streakInfo(h, valuesOf(h.id));
+    if (!enIyi || st.current > enIyi.st.current) enIyi = { h, st };
+  }
+
+  return `
+    <div class="section-title">Gidişat</div>
+    <div class="panel" style="padding:14px">
+      <div class="stat-grid" style="margin-bottom:14px">
+        <div class="stat-box"><div class="sv" style="color:var(--accent)">${haftaPct}%</div>
+          <div class="sl">bu hafta</div></div>
+        <div class="stat-box"><div class="sv" style="color:var(--warn)">${enIyi?.st.current ?? 0}</div>
+          <div class="sl">en uzun seri${enIyi?.st.current ? ` (${esc(enIyi.h.name)})` : ''}</div></div>
+        <div class="stat-box"><div class="sv">${list.length}</div>
+          <div class="sl">alışkanlık</div></div>
+      </div>
+      ${heatHtml((d) => {
+        const p = dayProgress(list, state.entries, d);
+        return p.total === 0 ? 0 : p.done / p.total;
+      }, 'var(--accent)')}
+      <div class="tiny muted" style="margin-top:8px">Son 13 hafta · koyu olan gün daha çok tamamlandı</div>
+    </div>`;
 }
 
 function weekStripHtml(d) {
@@ -1378,6 +1431,17 @@ function listIndexHtml() {
             </div>
             ${items.length ? `<div class="progress-line">
               <i style="width:${(done / items.length) * 100}%;background:var(--accent)"></i></div>` : ''}
+
+            <!-- Bekleyen ilk maddeler: listeyi açmadan ne olduğunu gösterir,
+                 kartı da anlamlı biçimde büyütür. -->
+            ${(() => {
+              const bekleyen = items.filter((i) => !i.done).slice(0, 5);
+              if (!bekleyen.length) return '';
+              const kalan = items.filter((i) => !i.done).length - bekleyen.length;
+              return `<div class="list-peek">${bekleyen.map((i) =>
+                  `<span>${esc(i.text)}</span>`).join('')}${
+                  kalan > 0 ? `<span class="muted">+${kalan} tane daha</span>` : ''}</div>`;
+            })()}
           </div>
           <span class="list-caret">›</span>
         </button>`;
