@@ -59,6 +59,10 @@ Bu depoda iki uygulama var:
 - Barkod okuma üç yoldan denenir: tarayıcının kendi okuyucusu (Android),
   ZXing (iOS Safari, istendiğinde indirilir) ve **fotoğraftan okuma** —
   canlı görüntü tutmadığında tek kare çok daha güvenilir sonuç verir
+- **Gömülü Türk mutfağı tablosu**: simit, döner, mercimek çorbası, ayran gibi
+  barkodu olmayan ~150 yiyecek uygulamanın içinde. Arama anında ve çevrimdışı
+  çalışır, paketli ürün veritabanı hiç yanıt vermese bile. Porsiyon karşılığı
+  olanlarda gramaj hazır gelir ("1 simit ≈ 100 g"). Değerler yaklaşıktır
 - **Ürün defteri**: barkod veritabanlarında Türk ürünlerinin bir kısmı kayıtlı
   değil. Bulunamayan ürün bir kez elle girilince barkoduyla deftere yazılır;
   ikinci okutmada ağa hiç çıkmadan, anında gelir. Sık kullanılanlar ekleme
@@ -96,6 +100,7 @@ Bu depoda iki uygulama var:
 | `app.css` | Stiller (koyu/açık tema, mobil + masaüstü) |
 | `plan.js` | Kalori, makro, öğün ve antrenman hesabı |
 | `foods.js` | Barkod okuma ve Open Food Facts sorguları |
+| `tr-foods.js` | Gömülü Türk yiyecekleri tablosu |
 | `program.js` | Planı alışkanlık ve listelere çeviren katman |
 | `config.js` | **Firebase ayarlarınızı buraya yazın** |
 | `firestore.rules` | Firestore güvenlik kuralları — konsola yapıştırın |
