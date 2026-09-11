@@ -12,6 +12,10 @@ import {
 } from './util.js';
 
 import {
+  PROGRAM_GROUP, PROGRAM_SUMMARY, PROGRAM_HABITS, PROGRAM_LISTS, FIBER_RAMP,
+} from './program.js';
+
+import {
   resolveConfig, isUsableConfig, storeConfig, clearStoredConfig, parseConfigText,
   getPrefs, setPrefs, getMode, setMode, initFirebase, authErrorMessage, setAuthPersistence,
   CloudStore, LocalStore, WINDOW_DAYS,
@@ -45,7 +49,8 @@ const COLORS = ['#4f8ef7', '#6c63ff', '#4fcf8e', '#f7b24f', '#f75f5f',
                 '#ef6ec3', '#42c8d4', '#9b8cff', '#7ec24f', '#c98a5b'];
 
 const EMOJIS = ['✅', '💪', '📚', '🏃', '💧', '🧘', '🥗', '😴', '🦷', '💊', '🚭', '✍️',
-                '🎯', '🧹', '🌱', '🎸', '🧠', '☀️', '🙏', '💰', '📵', '🚶', '🏋️', '🎨'];
+                '🎯', '🧹', '🌱', '🎸', '🧠', '☀️', '🙏', '💰', '📵', '🚶', '🏋️', '🎨',
+                '⚖️', '🍳', '🍗', '🐟', '🍰', '📏', '📋', '🛒'];
 
 const VIEW_TITLES = { today: 'Bugün', habits: 'Alışkanlıklar', lists: 'Listeler',
                       stats: 'İstatistik', settings: 'Ayarlar' };
@@ -115,6 +120,33 @@ function valuesOf(habitId) {
 const EMPTY_VALUES = new Map();
 
 const activeHabits = () => state.habits.filter((h) => !h.archived);
+
+/** Kullanımdaki bölüm adları — editördeki öneri listesi için. */
+function groupNames() {
+  const seen = [];
+  for (const h of state.habits) {
+    const g = (h.group || '').trim();
+    if (g && !seen.includes(g)) seen.push(g);
+  }
+  return seen.sort((a, b) => a.localeCompare(b, 'tr'));
+}
+
+/**
+ * Alışkanlıkları bölümlere ayırır. Bölümsüzler her zaman başta ve başlıksız
+ * durur; bölümler sıralamayı ilk üyelerinin sırasından alır, böylece
+ * yukarı/aşağı düğmeleri bölümleri de taşır.
+ */
+function byGroup(list) {
+  const out = [{ name: '', items: [] }];
+  for (const h of list) {
+    const g = (h.group || '').trim();
+    if (!g) { out[0].items.push(h); continue; }
+    let bucket = out.find((x) => x.name === g);
+    if (!bucket) { bucket = { name: g, items: [] }; out.push(bucket); }
+    bucket.items.push(h);
+  }
+  return out.filter((x) => x.items.length);
+}
 
 /* ------------------------------------------------- yapılacaklar listesi -- */
 
@@ -1014,7 +1046,9 @@ function viewToday() {
     ${future ? '<div class="info-box" style="margin-bottom:12px">Bu gün henüz gelmedi — ileri tarihe işaret koyabilirsiniz ama seriler bugüne göre hesaplanır.</div>' : ''}
 
     ${scheduled.length
-      ? `<div class="habit-list">${scheduled.map((h) => habitCardHtml(h, d)).join('')}</div>`
+      ? byGroup(scheduled).map((sec) => `
+          ${sec.name ? `<div class="section-title">${esc(sec.name)}</div>` : ''}
+          <div class="habit-list">${sec.items.map((h) => habitCardHtml(h, d)).join('')}</div>`).join('')
       : '<div class="empty"><div class="big">🎉</div><h3>Bugün planlı alışkanlık yok</h3><p class="small">Dinlenme günü.</p></div>'}
 
     ${other.length ? `
@@ -1079,10 +1113,12 @@ function viewHabits() {
   return `
     <button class="btn btn-primary btn-block" data-act="new-habit">+ Yeni alışkanlık</button>
 
-    ${list.length ? `
-      <div class="section-title">Aktif (${list.length})</div>
-      <div class="panel">${list.map((h, i) => rowHtml(h, i, list.length, false)).join('')}</div>`
-    : `<div class="empty"><div class="big">📋</div><h3>Liste boş</h3>
+    ${list.length
+      ? byGroup(list).map((sec) => `
+          <div class="section-title">${sec.name ? esc(sec.name) : 'Aktif'} (${sec.items.length})</div>
+          <div class="panel">${sec.items
+            .map((h) => rowHtml(h, list.indexOf(h), list.length, false)).join('')}</div>`).join('')
+      : `<div class="empty"><div class="big">📋</div><h3>Liste boş</h3>
          <p class="small">Yukarıdaki düğmeyle ilk alışkanlığınızı ekleyin.</p></div>`}
 
     ${archived.length ? `
@@ -1474,6 +1510,7 @@ function viewStats() {
 
 function viewSettings() {
   const local = state.store?.mode === 'local';
+  const programOn = state.habits.some((h) => (h.group || '').trim() === PROGRAM_GROUP);
   const themes = [['system', 'Sistem'], ['dark', 'Koyu'], ['light', 'Açık']];
   const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -1517,6 +1554,34 @@ function viewSettings() {
           <span class="grow"></span>
           <button class="btn btn-sm btn-danger" data-act="logout">Çıkış yap</button>
         </div>`}
+    </div>
+
+    <div class="section-title">Hazır paket</div>
+    <div class="panel">
+      <div class="list-row">
+        <div class="h-emoji" style="background:rgba(79,207,142,.16);color:var(--success)">🥗</div>
+        <div class="grow" style="min-width:0">
+          <div class="h-name">${esc(PROGRAM_SUMMARY.title)}</div>
+          <div class="h-meta">${esc(PROGRAM_SUMMARY.target)}</div>
+        </div>
+        <button class="btn btn-sm ${programOn ? 'btn-ghost' : 'btn-primary'}"
+                data-act="install-program">${programOn ? 'Yenile' : 'Kur'}</button>
+      </div>
+      <div class="list-row">
+        <div class="grow small muted">
+          ${PROGRAM_HABITS.length} alışkanlık (öğünler gramajlı sabit listelerle) ve
+          ${PROGRAM_LISTS.length} liste kurar, hepsi <b>${esc(PROGRAM_GROUP)}</b> bölümüne girer.
+          Hedef: ${esc(PROGRAM_SUMMARY.goal)}.
+          ${programOn ? 'Yenile, paketteki alışkanlıkları günceller; işaretlerin ve geçmişin korunur.' : ''}
+        </div>
+      </div>
+      <div class="list-row" style="display:block">
+        <div class="h-name" style="margin-bottom:6px">Lifi kademeli artır</div>
+        <div class="tiny muted">10 g'dan 38 g'a bir günde çıkmak şişkinlik ve kramp yapar.</div>
+        <div class="tiny" style="margin-top:8px;line-height:1.9">
+          ${FIBER_RAMP.map(([w, t]) => `<div><b>${esc(w)}:</b> ${esc(t)}</div>`).join('')}
+        </div>
+      </div>
     </div>
 
     <div class="section-title">Görünüm</div>
@@ -1706,6 +1771,17 @@ function openHabitEditor(habit) {
       </div>
 
       <div class="field">
+        <label for="hb-group">Bölüm <span class="muted">(isteğe bağlı)</span></label>
+        <input id="hb-group" class="input" type="text" maxlength="40" list="hb-groups"
+               placeholder="örn. Spor ve Diyet" value="${esc(h.group || '')}" />
+        <datalist id="hb-groups">
+          ${groupNames().map((g) => `<option value="${esc(g)}"></option>`).join('')}
+        </datalist>
+        <div class="tiny muted" style="margin-top:6px">Aynı bölüm adını verdiğiniz
+          alışkanlıklar Bugün ve Alışkanlıklar ekranlarında birlikte görünür.</div>
+      </div>
+
+      <div class="field">
         <label for="hb-note">Not <span class="muted">(isteğe bağlı)</span></label>
         <textarea id="hb-note" class="input" maxlength="200"
                   placeholder="Kendinize küçük bir hatırlatma">${esc(h.note || '')}</textarea>
@@ -1856,6 +1932,7 @@ function openHabitEditor(habit) {
         target,
         schedule,
         note: $('#hb-note', m).value.trim(),
+        group: $('#hb-group', m).value.trim(),
         hasTasks: $('#hb-tasks', m).checked,
         taskMode: sel('#hb-tasktype', 'tm') || 'daily',
         driveFromTasks: $('#hb-tasks', m).checked && $('#hb-drive', m).checked,
@@ -1884,6 +1961,98 @@ function openHabitEditor(habit) {
       }
     });
   });
+}
+
+/* ==========================================================================
+   Hazır paket: Spor ve Diyet
+   ========================================================================== */
+
+/**
+ * Paketi hesaba yazar.
+ *
+ * Yeniden çalıştırıldığında kopya üretmez: aynı bölüm + aynı addaki alışkanlık
+ * bulunursa üzerine yazılır, dolayısıyla işaretler, seriler ve geçmiş kayıtlar
+ * (bunlar alışkanlığın kimliğine bağlıdır) korunur. Sabit liste maddelerinde
+ * metni değişmeyenlerin kimliği de aynı tutulur — yoksa o günün işaretleri
+ * şablonla eşleşmez ve tikler kaybolurdu.
+ *
+ * Listeler yalnızca yoksa oluşturulur; varsa dokunulmaz, çünkü kullanıcı
+ * alışveriş listesindeki maddeleri işaretlemiş olabilir.
+ */
+async function installProgram() {
+  const already = state.habits.some((h) => (h.group || '').trim() === PROGRAM_GROUP);
+
+  const ok = await confirmDialog(
+    already ? 'Paket yenilensin mi?' : 'Spor ve Diyet paketi kurulsun mu?',
+    already
+      ? `${PROGRAM_HABITS.length} alışkanlık güncel tanıma göre yeniden yazılır. `
+        + 'İşaretleriniz, serileriniz ve geçmiş kayıtlarınız korunur; kendi '
+        + 'eklediğiniz alışkanlıklara dokunulmaz.'
+      : `${PROGRAM_HABITS.length} alışkanlık ve ${PROGRAM_LISTS.length} liste `
+        + `"${PROGRAM_GROUP}" bölümüne eklenir. Mevcut alışkanlıklarınıza dokunulmaz.`,
+    already ? 'Yenile' : 'Kur', false);
+  if (!ok) return;
+
+  const find = (name) => state.habits.find(
+    (h) => (h.group || '').trim() === PROGRAM_GROUP && h.name === name);
+
+  let base = state.habits.length;
+  let added = 0, updated = 0;
+
+  try {
+    for (const spec of PROGRAM_HABITS) {
+      const existing = find(spec.name);
+      const hasTasks = Array.isArray(spec.tasks) && spec.tasks.length > 0;
+
+      const payload = {
+        ...(existing || {}),
+        name: spec.name,
+        emoji: spec.emoji,
+        color: spec.color,
+        mode: spec.mode,
+        target: spec.target,
+        schedule: spec.schedule,
+        note: spec.note || '',
+        group: PROGRAM_GROUP,
+        hasTasks,
+        taskMode: hasTasks ? 'fixed' : 'daily',
+        driveFromTasks: hasTasks,
+        archived: false,
+      };
+
+      if (hasTasks) {
+        const old = Array.isArray(existing?.taskTemplate) ? existing.taskTemplate : [];
+        payload.taskTemplate = spec.tasks.map((text) => ({
+          id: old.find((t) => t.text === text)?.id || uid('t'),
+          text,
+        }));
+      } else {
+        delete payload.taskTemplate;
+      }
+
+      if (existing) updated++;
+      else { payload.order = base++; added++; }
+
+      const savedId = await state.store.saveHabit(payload);
+      await syncDerived({ ...payload, id: payload.id || savedId });
+    }
+
+    for (const spec of PROGRAM_LISTS) {
+      if (state.lists.some((l) => l.name === spec.name)) continue;
+      await state.store.saveList({
+        name: spec.name,
+        emoji: spec.emoji,
+        order: state.lists.length,
+        items: spec.items.map((text) => ({ id: uid('i'), text, done: false })),
+      });
+    }
+
+    toast(added && updated ? `${added} eklendi, ${updated} güncellendi 🎉`
+        : added ? `Spor ve Diyet paketi kuruldu 🎉`
+        : `${updated} alışkanlık güncellendi`);
+  } catch (err) {
+    toast('Paket kurulamadı: ' + (err?.message || err));
+  }
 }
 
 /* ==========================================================================
@@ -2102,6 +2271,8 @@ function handleAction(act, el) {
       'Çıkış yap', false).then((ok) => ok && state.fb.sdk.auth.signOut(state.fb.auth));
 
     case 'pass-reset': return sendPasswordReset();
+
+    case 'install-program': return installProgram();
 
     case 'export': return exportDialog();
     case 'import': return importDialog();
