@@ -23,7 +23,7 @@ import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
 import * as TrFoodsNS from './tr-foods.js';
 
-const BUILD = '2026-09-11m';
+const BUILD = '2026-09-11n';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -1407,14 +1407,8 @@ function listIndexHtml() {
       </div>`;
   }
 
-  /*  Ekleme düğmesi en üstte.
-      Bir ara alta taşımıştım; boşluk aynı kaldı ama kısa listede düğme
-      dibe yakın kalıp arkasından boş alan gelince "ortada kalmış" gibi
-      göründü. Üstteyken içerik yukarıdan akıyor ve altta kalan yer
-      listenin bittiği yer olarak okunuyor. */
   return `
     <button class="btn btn-primary btn-block" data-act="new-list">+ Yeni liste</button>
-
     <div class="section-title">Listelerim (${state.lists.length})</div>
     <div class="habit-list">
       ${state.lists.map((l) => {
@@ -1433,17 +1427,6 @@ function listIndexHtml() {
             </div>
             ${items.length ? `<div class="progress-line">
               <i style="width:${(done / items.length) * 100}%;background:var(--accent)"></i></div>` : ''}
-
-            <!-- Bekleyen ilk maddeler: listeyi açmadan ne olduğunu gösterir,
-                 kartı da anlamlı biçimde büyütür. -->
-            ${(() => {
-              const bekleyen = items.filter((i) => !i.done).slice(0, 5);
-              if (!bekleyen.length) return '';
-              const kalan = items.filter((i) => !i.done).length - bekleyen.length;
-              return `<div class="list-peek">${bekleyen.map((i) =>
-                  `<span>${esc(i.text)}</span>`).join('')}${
-                  kalan > 0 ? `<span class="muted">+${kalan} tane daha</span>` : ''}</div>`;
-            })()}
           </div>
           <span class="list-caret">›</span>
         </button>`;

@@ -15,7 +15,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11m';
+export const BUILD = '2026-09-11n';
 
 const T = (ad, kcal, p, pg, pad) => ({ ad, kcal, p, pg: pg || null, pad: pad || '' });
 
