@@ -697,6 +697,41 @@ html[data-standalone="true"] .topbar { padding-bottom: 8px; }
   .navbar button .ico { font-size: 21px; }
 }
 
+/* --------------------------------------------------- günlük kalori sayacı */
+
+.section-title.sec-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 10px; margin-bottom: 8px;
+}
+
+/* Rakam büyük ve tabular: sayaç düştükçe genişlik oynamasın, göz kaymasın. */
+.kcal-tag {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  font-size: 19px; font-weight: 800; letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums; color: var(--success);
+  text-transform: none;
+}
+.kcal-tag i {
+  font-style: normal; font-size: 11px; font-weight: 700;
+  letter-spacing: .4px; color: var(--text3);
+}
+.kcal-tag.over { color: var(--danger); }
+
+.kcal-bar {
+  height: 6px; border-radius: 3px; background: var(--surface3);
+  overflow: hidden; margin-bottom: 6px;
+}
+.kcal-bar i {
+  display: block; height: 100%; border-radius: 3px;
+  background: var(--success); transition: width .25s ease;
+}
+.kcal-bar i.over { background: var(--danger); }
+
+.kcal-alt {
+  font-size: 11px; color: var(--text3); margin-bottom: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ==========================================================================
    Program görünümü
    ========================================================================== */

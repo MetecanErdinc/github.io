@@ -9,7 +9,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11c';
+export const BUILD = '2026-09-11d';
 
 
 import { FOODS } from './plan.js';
@@ -92,6 +92,13 @@ export function buildHabits(plan) {
       mode: 'check', target: 1, schedule: { kind: 'daily' },
       note: notlar.join(' '),
       tasks: o.satirlar.map(satirMetni),
+
+      /*  Kalori sayacı bu iki alandan okunur; not metnindeki "~451 kcal"
+          insan içindir, ayrıştırılmaz. taskKcal, tasks ile aynı sırada:
+          madde tek tek işaretlendikçe sayaç kendi payınca düşsün diye
+          satır satır tutulur, yoksa öğün ancak son maddede sayılırdı. */
+      kcal: o.kcal,
+      taskKcal: o.satirlar.map((x) => Math.round((FOODS[x.key].kcal * x.g) / 100)),
     });
   });
 
