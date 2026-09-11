@@ -22,7 +22,7 @@ import * as PlanNS from './plan.js';
 import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
 
-const BUILD = '2026-09-11g';
+const BUILD = '2026-09-11h';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -60,6 +60,7 @@ const state = {
   lists: [],
   profile: null,
   foodlog: new Map(),        // tarih anahtarı -> [{id,name,g,kcal,...}]
+  myfoods: [],               // kullanıcının kendi ürün defteri
   openList: null,
   albums: new Map(),
   buildAt: null,
@@ -721,6 +722,7 @@ function attachStore(store) {
   state.lists = [];
   state.profile = null;
   state.foodlog = new Map();
+  state.myfoods = [];
   state.openList = null;
   state.albums = new Map();
   state.view = 'today';          // yeni oturum her zaman Bugün ile başlar
@@ -735,6 +737,7 @@ function attachStore(store) {
     albums:  (map)  => { state.albums = map; render(); },
     profile: (p)    => { state.profile = p || readMirror(); if (p) mirrorProfile(p); render(); },
     foodlog: (map)  => { state.foodlog = map; render(); },
+    myfoods: (rows) => { state.myfoods = rows; render(); },
     status:  (s)    => { state.fromCache = !!s.fromCache; updateSyncBadge(); },
     error:   (err)  => {
       console.error(err);
@@ -1351,8 +1354,10 @@ function listIndexHtml() {
       </div>`;
   }
 
+  /*  Ekleme düğmesi diğer ekranlardaki gibi en altta. Üstteyken push-bottom
+      üstündeki bütün boşluğu emiyor ve liste aşağı kayıyor — yaslama ancak
+      son öğede işe yarar. */
   return `
-    <button class="btn btn-primary btn-block push-bottom" data-act="new-list">+ Yeni liste</button>
     <div class="section-title">Listelerim (${state.lists.length})</div>
     <div class="habit-list">
       ${state.lists.map((l) => {
@@ -1375,7 +1380,10 @@ function listIndexHtml() {
           <span class="list-caret">›</span>
         </button>`;
       }).join('')}
-    </div>`;
+    </div>
+
+    <button class="btn btn-primary btn-block mt push-bottom"
+            data-act="new-list">+ Yeni liste</button>`;
 }
 
 function listDetailHtml(l) {
@@ -2042,6 +2050,69 @@ function mealCalories(h, d, plan) {
   return entryValue(h.id, d) >= targetOf(h) ? toplam : 0;
 }
 
+/* ------------------------------------------------------- ürün defteri -- */
+
+/**
+ * Kullanıcının kendi ürün defteri.
+ *
+ * Barkod veritabanlarında Türk ürünlerinin önemli bir kısmı kayıtlı değil.
+ * Bir ürün bir kez elle girildiğinde barkoduyla buraya yazılır; ikinci
+ * okutmada anında, çevrimdışı, sorgusuz gelir. Birkaç hafta sonra kişinin
+ * gerçekten yediği ürünlerden oluşan kendi veritabanı olur — genel bir
+ * veritabanından daha isabetli.
+ */
+
+/** Defter kimliği: barkod varsa o, yoksa addan türetilir. */
+function myFoodId(u) {
+  const bk = String(u.barcode || '').replace(/\D/g, '');
+  if (bk.length >= 6) return `b${bk}`;
+  const slug = String(u.name || '').toLocaleLowerCase('tr-TR')
+    .replace(/[^a-z0-9ğüşıöç]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40);
+  return `n${slug || uid('x')}`;
+}
+
+/** Ürünü deftere yazar ya da kullanım sayısını artırır. */
+async function rememberFood(u) {
+  const id = myFoodId(u);
+  const eski = state.myfoods.find((f) => f.id === id);
+  const kayit = {
+    id,
+    barcode: u.barcode || '',
+    name: u.name,
+    brand: u.brand || '',
+    per100: u.per100,
+    protein100: u.protein100 ?? null,
+    useCount: (eski?.useCount || 0) + 1,
+  };
+  state.myfoods = [...state.myfoods.filter((f) => f.id !== id), kayit];
+  try { await state.store.saveMyFood(kayit); } catch { /* defter kritik değil */ }
+}
+
+/** Barkodu önce defterde arar — çevrimdışı da çalışsın diye. */
+function myFoodByBarcode(code) {
+  const bk = String(code || '').replace(/\D/g, '');
+  if (bk.length < 6) return null;
+  return state.myfoods.find((f) => String(f.barcode || '') === bk) || null;
+}
+
+/** Defterde ada göre arama. */
+function myFoodsMatching(q) {
+  const t = String(q || '').toLocaleLowerCase('tr-TR').trim();
+  if (!t) return [];
+  return state.myfoods
+    .filter((f) => `${f.name} ${f.brand || ''}`.toLocaleLowerCase('tr-TR').includes(t))
+    .sort((a, b) => (b.useCount || 0) - (a.useCount || 0))
+    .slice(0, 8);
+}
+
+/** En çok kullanılan ürünler — ekran açılır açılmaz tek dokunuşla eklensin. */
+function topMyFoods(n = 6) {
+  return [...state.myfoods]
+    .sort((a, b) => (b.useCount || 0) - (a.useCount || 0)
+      || String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
+    .slice(0, n);
+}
+
 /** O gün elle/barkodla eklenen yiyecekler. */
 function foodsFor(d = state.date) {
   return state.foodlog.get(dateKey(d)) || [];
@@ -2294,6 +2365,7 @@ function foodDialog() {
   let durdur = null;               // kamerayı kapatan işlev
 
   const gunluk = foodsFor(state.date);
+  const sik = topMyFoods();
 
   openModal(`
     <div class="modal-head">
@@ -2306,6 +2378,16 @@ function foodDialog() {
       <button type="button" class="chip" data-v="ara" aria-pressed="true">🔍 Ara</button>
       <button type="button" class="chip" data-v="elle" aria-pressed="false">✏️ Elle</button>
     </div>
+
+    ${sik.length ? `
+      <div class="section-title" style="margin-top:0">Ürünlerim</div>
+      <div class="fd-liste" style="margin-bottom:14px">
+        ${sik.map((f) => `
+          <button type="button" class="fd-satir" data-mine="${esc(f.id)}">
+            <span class="fd-ad">${esc(f.name)}${f.brand ? ` <em>${esc(f.brand)}</em>` : ''}</span>
+            <span class="fd-kcal">${f.per100} <i>kcal/100g</i></span>
+          </button>`).join('')}
+      </div>` : ''}
 
     <div class="stack">
       <!-- BARKOD -->
@@ -2339,6 +2421,13 @@ function foodDialog() {
 
       <!-- ELLE -->
       <div id="fd-elle" hidden>
+        <div class="field">
+          <label for="fd-ebk">Barkod <span class="muted">(isteğe bağlı)</span></label>
+          <input id="fd-ebk" class="input" type="text" inputmode="numeric" autocomplete="off"
+                 placeholder="okuttuğun barkod buraya gelir" />
+          <div class="tiny muted">Barkod yazarsan bu ürün deftere kaydedilir ve
+            bir dahaki okutmada anında gelir.</div>
+        </div>
         <div class="field">
           <label for="fd-ad">Yiyeceğin adı</label>
           <input id="fd-ad" class="input" type="text" maxlength="60" placeholder="örn. simit" />
@@ -2466,25 +2555,49 @@ function foodDialog() {
 
     $$$('#fd-g').addEventListener('input', toplamiCiz);
 
+    /* "Ürünlerim" listesinden doğrudan seçim. */
+    $$('[data-mine]', m).forEach((b) => b.addEventListener('click', () => {
+      const f = state.myfoods.find((x) => x.id === b.dataset.mine);
+      if (f) urunSec(f);
+    }));
+
     /* --- barkod --------------------------------------------------------- */
+
+    /*  Bulunamayan barkodu elle giriş sekmesine taşır ve barkodu oraya yazar:
+        kullanıcı adı ve kalorisini bir kez girince ürün deftere kaydolur,
+        ikinci okutmada hazır gelir. */
+    const elleDus = (kod, mesaj) => {
+      hata(mesaj);
+      mod = 'elle';
+      $$('[data-v]', $$$('#fd-mod')).forEach((x) =>
+        x.setAttribute('aria-pressed', String(x.dataset.v === 'elle')));
+      kamerayiKapat();
+      modGoster();
+      $$$('#fd-ebk').value = String(kod || '').replace(/\D/g, '');
+      setTimeout(() => $$$('#fd-ad')?.focus(), 60);
+    };
+
     const barkoddanBul = async (kod) => {
       hata('');
+
+      /* Önce kendi defterim: anında ve çevrimdışı çalışır, ağa hiç çıkmaz. */
+      const bende = myFoodByBarcode(kod);
+      if (bende) { urunSec(bende); return; }
+
       $$$('#fd-cam-not').textContent = 'Ürün aranıyor…';
       try {
         const u = await lookupBarcode(kod);
         if (!u) {
-          hata('Bu barkod veritabanında yok ya da kalorisi kayıtlı değil. '
-             + '"Elle" sekmesinden kendin girebilirsin.');
-          $$$('#fd-cam-not').textContent = 'Barkodu çerçeveye getir.';
+          elleDus(kod, 'Bu barkod veritabanında yok. Adını ve 100 gramdaki '
+                     + 'kalorisini bir kez yaz — bir dahaki okutmada hazır gelecek.');
           return;
         }
         urunSec(u);
       } catch (err) {
         /* Sebep neyse onu yaz: her hatayı "internet yok" diye göstermek
            kullanıcıyı olmayan bir sorunu aramaya yolluyor. */
-        hata('Ürün bilgisi alınamadı — ' + (err?.message || err)
-           + '. "Elle" sekmesinden kendin girebilirsin.');
-        $$$('#fd-cam-not').textContent = 'Barkodu çerçeveye getir.';
+        elleDus(kod, 'Ürün bilgisi alınamadı — ' + (err?.message || err)
+                   + '. Kendin yazabilirsin, ürün deftere kaydedilir.');
       }
     };
 
@@ -2495,23 +2608,39 @@ function foodDialog() {
       if (q.length < 2) return hata('En az iki harf yaz.');
       hata('');
       kutu.innerHTML = '<div class="tiny muted">Aranıyor…</div>';
+
+      /* Defterdeki eşleşmeler hemen çizilir; ağ yanıtı gecikse de iş görür. */
+      const bendekiler = myFoodsMatching(q);
+      const ciz = (liste, baslik) => liste.map((u, i) => `
+        <button type="button" class="fd-satir" data-liste="${baslik}" data-i="${i}">
+          <span class="fd-ad">${esc(u.name)}${u.brand ? ` <em>${esc(u.brand)}</em>` : ''}</span>
+          <span class="fd-kcal">${u.per100} <i>kcal/100g</i></span>
+        </button>`).join('');
+
+      if (bendekiler.length) {
+        kutu.innerHTML = `<div class="tiny muted">Ürünlerimden</div>${ciz(bendekiler, 'benim')}
+                          <div class="tiny muted">Aranıyor…</div>`;
+        $$('[data-liste="benim"]', kutu).forEach((b) =>
+          b.addEventListener('click', () => urunSec(bendekiler[Number(b.dataset.i)])));
+      }
+
       try {
         const liste = await searchFoods(q);
-        if (!liste.length) {
+        if (!liste.length && !bendekiler.length) {
           kutu.innerHTML = '<div class="tiny muted">Sonuç yok. "Elle" sekmesinden '
                          + 'kendin girebilirsin.</div>';
           return;
         }
-        kutu.innerHTML = liste.map((u, i) => `
-          <button type="button" class="fd-satir" data-i="${i}">
-            <span class="fd-ad">${esc(u.name)}${u.brand ? ` <em>${esc(u.brand)}</em>` : ''}</span>
-            <span class="fd-kcal">${u.per100} <i>kcal/100g</i></span>
-          </button>`).join('');
-        $$('[data-i]', kutu).forEach((b) => {
-          b.addEventListener('click', () => urunSec(liste[Number(b.dataset.i)]));
-        });
+        kutu.innerHTML = (bendekiler.length
+            ? `<div class="tiny muted">Ürünlerimden</div>${ciz(bendekiler, 'benim')}
+               <div class="tiny muted">Veritabanından</div>` : '')
+          + ciz(liste, 'net');
+        $$('[data-liste="benim"]', kutu).forEach((b) =>
+          b.addEventListener('click', () => urunSec(bendekiler[Number(b.dataset.i)])));
+        $$('[data-liste="net"]', kutu).forEach((b) =>
+          b.addEventListener('click', () => urunSec(liste[Number(b.dataset.i)])));
       } catch (err) {
-        kutu.innerHTML = '';
+        if (!bendekiler.length) kutu.innerHTML = '';
         hata('Arama yapılamadı — ' + (err?.message || err)
            + '. "Elle" sekmesinden kendin girebilirsin.');
       }
@@ -2551,7 +2680,8 @@ function foodDialog() {
           const p100 = Number(String($$$('#fd-p100').value || '').replace(',', '.'));
           if (!ad) return hata('Yiyeceğe bir ad ver.');
           if (!(p100 > 0 && p100 < 1000)) return hata('100 gramdaki kaloriyi gir (1-999).');
-          urunSec({ barcode: '', name: ad, brand: '', per100: Math.round(p100), protein100: null });
+          urunSec({ barcode: $$$('#fd-ebk').value.replace(/\D/g, ''),
+                    name: ad, brand: '', per100: Math.round(p100), protein100: null });
           return;
         }
         const g = Number(String($$$('#fd-g').value || '').replace(',', '.'));
@@ -2565,6 +2695,7 @@ function foodDialog() {
           per100: secili.per100,
           barcode: secili.barcode || '',
         };
+        await rememberFood(secili);          // bir dahakine hazır olsun
         await writeFoods(state.date, [...foodsFor(state.date), kayit]);
         kamerayiKapat();
         closeModal();

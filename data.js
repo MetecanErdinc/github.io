@@ -7,7 +7,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11g';
+export const BUILD = '2026-09-11h';
 
 
 import { dateKey, addDays, today, uid } from './util.js';
@@ -25,6 +25,7 @@ const LS = {
   albums:  'habits.local.albums',
   profile: 'habits.local.profile',
   foodlog: 'habits.local.foodlog',
+  myfoods: 'habits.local.myfoods',
   photos:  'habits.local.photos',
 };
 
@@ -324,6 +325,19 @@ export class CloudStore {
       (err) => handlers.error?.(err)
     ));
 
+    /*  Kullanıcının kendi ürün defteri. Barkod veritabanında bulunmayan ürün
+        bir kez elle girilince buraya yazılır; bir dahaki okutmada anında
+        gelir. Tarihe bağlı olmadığı için pencere uygulanmaz. */
+    this.unsubs.push(S.onSnapshot(
+      this._col('myfoods'),
+      (snap) => {
+        const rows = [];
+        snap.forEach((doc) => rows.push({ id: doc.id, ...doc.data() }));
+        handlers.myfoods?.(rows);
+      },
+      (err) => handlers.error?.(err)
+    ));
+
     /* Diyet/spor profili tek belgedir; hesaba bağlı olduğu için cihazlar
        arasında da senkron gelir. */
     this.unsubs.push(S.onSnapshot(
@@ -356,6 +370,16 @@ export class CloudStore {
     const ref = this._doc('foodlog', dk);
     if (!items.length) { await this.S.deleteDoc(ref).catch(() => {}); return; }
     await this.S.setDoc(ref, { date: dk, items, updatedAt: new Date().toISOString() });
+  }
+
+  async saveMyFood(food) {
+    const { id, ...rest } = food;
+    await this.S.setDoc(this._doc('myfoods', id),
+      { ...rest, updatedAt: new Date().toISOString() }, { merge: true });
+  }
+
+  async deleteMyFood(id) {
+    await this.S.deleteDoc(this._doc('myfoods', id));
   }
 
   async clearProfile() {
@@ -483,7 +507,7 @@ export class CloudStore {
 
   async wipe() {
     const S = this.S;
-    for (const name of ['tasks', 'entries', 'habits', 'lists', 'albums', 'photos', 'meta', 'foodlog']) {
+    for (const name of ['tasks', 'entries', 'habits', 'lists', 'albums', 'photos', 'meta', 'foodlog', 'myfoods']) {
       const snap = await S.getDocs(this._col(name));
       const refs = [];
       snap.forEach((d) => refs.push(d.ref));
@@ -578,6 +602,7 @@ export class LocalStore {
     }
     this.handlers.foodlog?.(fmap);
 
+    this.handlers.myfoods?.(this._readMyFoods());
     this.handlers.profile?.(this._readProfile());
     this.handlers.status?.({ fromCache: true });
   }
@@ -585,7 +610,7 @@ export class LocalStore {
   start(handlers) {
     this.handlers = handlers;
     this._onStorage = (e) => {
-      if ([LS.habits, LS.entries, LS.tasks, LS.lists, LS.albums, LS.profile, LS.foodlog].includes(e.key)) this._emit();
+      if ([LS.habits, LS.entries, LS.tasks, LS.lists, LS.albums, LS.profile, LS.foodlog, LS.myfoods].includes(e.key)) this._emit();
     };
     window.addEventListener('storage', this._onStorage);
     this._emit();
@@ -606,6 +631,23 @@ export class LocalStore {
     this._emit();
   }
 
+  _readMyFoods() {
+    try { return JSON.parse(localStorage.getItem(LS.myfoods) || '[]'); } catch { return []; }
+  }
+
+  async saveMyFood(food) {
+    const list = this._readMyFoods().filter((f) => f.id !== food.id);
+    list.push({ ...food, updatedAt: new Date().toISOString() });
+    localStorage.setItem(LS.myfoods, JSON.stringify(list));
+    this._emit();
+  }
+
+  async deleteMyFood(id) {
+    localStorage.setItem(LS.myfoods,
+      JSON.stringify(this._readMyFoods().filter((f) => f.id !== id)));
+    this._emit();
+  }
+
   _readProfile() {
     try { return JSON.parse(localStorage.getItem(LS.profile) || 'null'); } catch { return null; }
   }
@@ -618,6 +660,7 @@ export class LocalStore {
   async clearProfile() {
     localStorage.removeItem(LS.profile);
     localStorage.removeItem(LS.foodlog);
+    localStorage.removeItem(LS.myfoods);
     this._emit();
   }
 
@@ -758,6 +801,7 @@ export class LocalStore {
     localStorage.removeItem(LS.photos);
     localStorage.removeItem(LS.profile);
     localStorage.removeItem(LS.foodlog);
+    localStorage.removeItem(LS.myfoods);
     this._emit();
   }
 }
