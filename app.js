@@ -21,8 +21,9 @@ import * as DataNS from './data.js';
 import * as PlanNS from './plan.js';
 import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
+import * as TrFoodsNS from './tr-foods.js';
 
-const BUILD = '2026-09-11i';
+const BUILD = '2026-09-11j';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -41,6 +42,8 @@ import {
   lookupBarcode, searchFoods, kcalFor, startScanner, kameraVar, testConnection,
   decodeImageFile, okuyucuAdi, nativeScannerVar,
 } from './foods.js';
+
+import { searchTrFoods } from './tr-foods.js';
 
 import {
   resolveConfig, isUsableConfig, storeConfig, clearStoredConfig, parseConfigText,
@@ -2434,6 +2437,10 @@ function foodDialog() {
                  placeholder="okuttuğun barkod buraya gelir" />
           <div class="tiny muted">Barkod yazarsan bu ürün deftere kaydedilir ve
             bir dahaki okutmada anında gelir.</div>
+          <!-- Open Food Facts herkese açık bir vikidir; eklenen ürün ertesi
+               sorgudan itibaren herkeste çıkar. -->
+          <a id="fd-katki" class="tiny hidden" target="_blank" rel="noopener"
+             style="color:var(--accent)">Bu ürünü Open Food Facts'e ekle →</a>
         </div>
         <div class="field">
           <label for="fd-ad">Yiyeceğin adı</label>
@@ -2568,9 +2575,13 @@ function foodDialog() {
 
     const urunSec = (u) => {
       secili = u;
+      /*  Tabloda porsiyon karşılığı olan yiyeceklerde gramaj hazır gelsin:
+          "1 simit" diyen kişinin kaç gram olduğunu bilmesi gerekmiyor. */
+      if (u.porsiyon) $$$('#fd-g').value = String(u.porsiyon);
       $$$('#fd-secim-ad').textContent = u.name + (u.brand ? ` · ${u.brand}` : '');
       $$$('#fd-secim-alt').textContent = `100 g = ${u.per100} kcal`
-        + (u.protein100 != null ? ` · ${u.protein100} g protein` : '');
+        + (u.protein100 != null ? ` · ${u.protein100} g protein` : '')
+        + (u.porsiyon ? ` · ${u.porsiyonAd} ≈ ${u.porsiyon} g` : '');
       hata('');
       modGoster();
       toplamiCiz();
@@ -2615,7 +2626,15 @@ function foodDialog() {
         x.setAttribute('aria-pressed', String(x.dataset.v === 'elle')));
       kamerayiKapat();
       modGoster();
-      $$$('#fd-ebk').value = String(kod || '').replace(/\D/g, '');
+      const temiz = String(kod || '').replace(/\D/g, '');
+      $$$('#fd-ebk').value = temiz;
+
+      const katki = $$$('#fd-katki');
+      katki.classList.toggle('hidden', temiz.length < 6);
+      if (temiz.length >= 6) {
+        katki.href = `https://world.openfoodfacts.org/cgi/product.pl?type=add&code=${temiz}`;
+      }
+
       setTimeout(() => $$$('#fd-ad')?.focus(), 60);
     };
 
@@ -2651,38 +2670,53 @@ function foodDialog() {
       hata('');
       kutu.innerHTML = '<div class="tiny muted">Aranıyor…</div>';
 
-      /* Defterdeki eşleşmeler hemen çizilir; ağ yanıtı gecikse de iş görür. */
+      /*  Defter ve gömülü tablo hemen çizilir; ağ yanıtı gecikse ya da hiç
+          gelmese de arama iş görür. Barkodu olmayan yiyecekler (simit, döner,
+          ev yemeği) zaten yalnızca tabloda var. */
       const bendekiler = myFoodsMatching(q);
+      const tablodakiler = searchTrFoods(q);
       const ciz = (liste, baslik) => liste.map((u, i) => `
         <button type="button" class="fd-satir" data-liste="${baslik}" data-i="${i}">
           <span class="fd-ad">${esc(u.name)}${u.brand ? ` <em>${esc(u.brand)}</em>` : ''}</span>
           <span class="fd-kcal">${u.per100} <i>kcal/100g</i></span>
         </button>`).join('');
 
-      if (bendekiler.length) {
-        kutu.innerHTML = `<div class="tiny muted">Ürünlerimden</div>${ciz(bendekiler, 'benim')}
-                          <div class="tiny muted">Aranıyor…</div>`;
+      const yereliCiz = (kuyruk) =>
+        (bendekiler.length ? `<div class="tiny muted">Ürünlerimden</div>${ciz(bendekiler, 'benim')}` : '')
+        + (tablodakiler.length ? `<div class="tiny muted">Türk mutfağı</div>${ciz(tablodakiler, 'tablo')}` : '')
+        + kuyruk;
+
+      const yereliBagla = () => {
         $$('[data-liste="benim"]', kutu).forEach((b) =>
           b.addEventListener('click', () => urunSec(bendekiler[Number(b.dataset.i)])));
+        $$('[data-liste="tablo"]', kutu).forEach((b) =>
+          b.addEventListener('click', () => urunSec(tablodakiler[Number(b.dataset.i)])));
+      };
+
+      if (bendekiler.length || tablodakiler.length) {
+        kutu.innerHTML = yereliCiz('<div class="tiny muted">Paketli ürünler aranıyor…</div>');
+        yereliBagla();
       }
 
       try {
         const liste = await searchFoods(q);
-        if (!liste.length && !bendekiler.length) {
+        if (!liste.length && !bendekiler.length && !tablodakiler.length) {
           kutu.innerHTML = '<div class="tiny muted">Sonuç yok. "Elle" sekmesinden '
                          + 'kendin girebilirsin.</div>';
           return;
         }
-        kutu.innerHTML = (bendekiler.length
-            ? `<div class="tiny muted">Ürünlerimden</div>${ciz(bendekiler, 'benim')}
-               <div class="tiny muted">Veritabanından</div>` : '')
-          + ciz(liste, 'net');
-        $$('[data-liste="benim"]', kutu).forEach((b) =>
-          b.addEventListener('click', () => urunSec(bendekiler[Number(b.dataset.i)])));
+        kutu.innerHTML = yereliCiz(liste.length
+          ? `<div class="tiny muted">Paketli ürünler</div>${ciz(liste, 'net')}` : '');
+        yereliBagla();
         $$('[data-liste="net"]', kutu).forEach((b) =>
           b.addEventListener('click', () => urunSec(liste[Number(b.dataset.i)])));
       } catch (err) {
-        if (!bendekiler.length) kutu.innerHTML = '';
+        if (bendekiler.length || tablodakiler.length) {
+          kutu.innerHTML = yereliCiz('');
+          yereliBagla();
+          return;                      // yerel sonuç var, hata yazmaya gerek yok
+        }
+        kutu.innerHTML = '';
         hata('Arama yapılamadı — ' + (err?.message || err)
            + '. "Elle" sekmesinden kendin girebilirsin.');
       }
@@ -3820,6 +3854,7 @@ function buildMismatch() {
   const moduller = {
     'util.js': UtilNS.BUILD, 'data.js': DataNS.BUILD, 'plan.js': PlanNS.BUILD,
     'program.js': ProgramNS.BUILD, 'photo.js': PhotoNS.BUILD, 'foods.js': FoodsNS.BUILD,
+    'tr-foods.js': TrFoodsNS.BUILD,
   };
   return Object.entries(moduller).filter(([, v]) => v !== BUILD).map(([k]) => k);
 }
