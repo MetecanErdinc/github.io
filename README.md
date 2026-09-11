@@ -48,6 +48,10 @@ Bu depoda iki uygulama var:
     yüzdesinden hem günlük yakım yüzdesinden hesaplanır, güvenli olan kazanır
   - Protein ve yağ gerçek kiloyla değil boya denk sağlıklı ağırlıkla çarpılır
   - Vejetaryen, sütsüz, balıksız ve kırmızı etsiz düzenler desteklenir
+- **Günlük kalori sayacı**: Bugün ekranında Spor ve Diyet başlığının yanında
+  o gün kalan kalori yazar. Öğün maddeleri işaretlendikçe her kalem kendi
+  payınca düşer; hedef aşılırsa sayaç kırmızıya döner. Sayı güne özeldir,
+  geçmiş günlerde o günün kaydını gösterir
 - **Fotoğraf ekleme**: alışkanlıklara (güne bağlı) ve listelere; her fotoğrafın
   altında eklenme zamanı yazar. Görseller tarayıcıda küçültülüp Firestore'da
   saklanır — Firebase Storage ücretsiz planda kapalı olduğu için

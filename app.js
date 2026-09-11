@@ -21,7 +21,7 @@ import * as DataNS from './data.js';
 import * as PlanNS from './plan.js';
 import * as ProgramNS from './program.js';
 
-const BUILD = '2026-09-11c';
+const BUILD = '2026-09-11d';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -1071,7 +1071,7 @@ function viewToday() {
 
     ${scheduled.length
       ? byGroup(scheduled).map((sec) => `
-          ${sec.name ? `<div class="section-title">${esc(sec.name)}</div>` : ''}
+          ${sec.name ? sectionHeadHtml(sec.name, d) : ''}
           <div class="habit-list">${sec.items.map((h) => habitCardHtml(h, d)).join('')}</div>`).join('')
       : '<div class="empty"><div class="big">🎉</div><h3>Bugün planlı alışkanlık yok</h3><p class="small">Dinlenme günü.</p></div>'}
 
@@ -1080,6 +1080,32 @@ function viewToday() {
       <div class="habit-list" style="opacity:.72">${other.map((h) => habitCardHtml(h, d)).join('')}</div>` : ''}
 
     <button class="btn btn-ghost btn-block mt" data-act="new-habit">+ Yeni alışkanlık</button>`;
+}
+
+/**
+ * Bölüm başlığı. Spor ve Diyet bölümünde yanında o günün kalori sayacı durur:
+ * hedeften yenen düşülür, kalan yazılır. Öğünler işaretlendikçe azalır.
+ */
+function sectionHeadHtml(name, d) {
+  const kal = name === PROGRAM_GROUP ? dayCalories(d) : null;
+  if (!kal) return `<div class="section-title">${esc(name)}</div>`;
+
+  const asti = kal.kalan < 0;
+  const oran = Math.min(100, Math.round((kal.yenen / kal.hedef) * 100));
+
+  return `
+    <div class="section-title sec-row">
+      <span>${esc(name)}</span>
+      <span class="kcal-tag ${asti ? 'over' : ''}">
+        ${Math.abs(kal.kalan).toLocaleString('tr-TR')}<i>kcal ${asti ? 'aşıldı' : 'kaldı'}</i>
+      </span>
+    </div>
+    <div class="kcal-bar" role="img"
+         aria-label="${kal.yenen.toLocaleString('tr-TR')} / ${kal.hedef.toLocaleString('tr-TR')} kcal">
+      <i style="width:${oran}%" class="${asti ? 'over' : ''}"></i>
+    </div>
+    <div class="kcal-alt">Hedef ${kal.hedef.toLocaleString('tr-TR')} ·
+      yenen ${kal.yenen.toLocaleString('tr-TR')} kcal</div>`;
 }
 
 function weekStripHtml(d) {
@@ -1962,6 +1988,62 @@ function openHabitEditor(habit) {
    Görünüm: Program — kişiye özel diyet ve spor planı
    ========================================================================== */
 
+/* ------------------------------------------------------- kalori sayacı -- */
+
+/**
+ * Bir öğünün o gün yenen kalorisi.
+ *
+ * Liste varsa madde madde sayılır: kullanıcı tabağındaki her kalemi ayrı
+ * işaretliyor, sayaç da o hızda düşmeli. Öğünün tamamlanmasını beklemek,
+ * yarısını yiyip bırakan birine hiçbir şey yememiş gibi davranırdı.
+ *
+ * taskKcal ile taskTemplate aynı sırada üretilir; eşleşme madde kimliğinden
+ * kurulur, sıra numarasından değil — kullanıcı listeye kendi maddesini
+ * eklediğinde kaymasın diye. Kimliği şablonda olmayan madde 0 sayılır.
+ */
+function mealCalories(h, d, plan) {
+  /*  Kalori alanları sonradan eklendi: daha önce kurulmuş alışkanlıklarda
+      yoklar. Kullanıcıyı "Yenile"ye basmaya zorlamak yerine değerler plandan
+      okunur — öğün anahtarı (ogun0..3) plandaki sırayla birebir eşleşir. */
+  const i = /^ogun(\d)$/.exec(h.progKey || '');
+  const planOgun = i ? plan?.ogunler?.[Number(i[1])] : null;
+
+  const toplam = Number(h.kcal) || planOgun?.kcal || 0;
+  if (!toplam) return 0;
+
+  const per = Array.isArray(h.taskKcal) && h.taskKcal.length
+    ? h.taskKcal
+    : planOgun?.satirlar?.map((x) => x.kcal) || null;
+  const tpl = Array.isArray(h.taskTemplate) ? h.taskTemplate : null;
+
+  if (h.hasTasks && per && tpl && per.length === tpl.length) {
+    let sum = 0;
+    for (const it of tasksFor(h.id, d)) {
+      if (!it.done) continue;
+      const i = tpl.findIndex((t) => t.id === it.id);
+      if (i >= 0) sum += Number(per[i]) || 0;
+    }
+    return sum;
+  }
+
+  /* Listesiz öğün: ya tamamen yendi ya hiç. */
+  return entryValue(h.id, d) >= targetOf(h) ? toplam : 0;
+}
+
+/** O günün kalori tablosu: hedef, yenen, kalan. Plan yoksa null. */
+function dayCalories(d) {
+  const plan = currentPlan();
+  if (!plan) return null;
+
+  const ogunler = activeHabits().filter((h) => (h.group || '').trim() === PROGRAM_GROUP
+    && (Number(h.kcal) > 0 || /^ogun\d$/.test(h.progKey || '')));
+  if (!ogunler.length) return null;
+
+  const yenen = ogunler.reduce((s, h) => s + mealCalories(h, d, plan), 0);
+  const hedef = plan.hedef.kcal;
+  return { hedef, yenen: Math.round(yenen), kalan: Math.round(hedef - yenen) };
+}
+
 /*  Profilin yerel yedeği.
     Buluta yazım başarısız olsa bile plan cihazda kalsın diye tutulur; depo boş
     dönerse buradan okunur. Yeniden yükleme profili silmiş gibi görünmez. */
@@ -2370,6 +2452,8 @@ async function installProgram() {
         taskMode: hasTasks ? 'fixed' : 'daily',
         driveFromTasks: hasTasks,
         archived: false,
+        kcal: spec.kcal || 0,
+        taskKcal: Array.isArray(spec.taskKcal) ? spec.taskKcal : [],
       };
 
       if (hasTasks) {

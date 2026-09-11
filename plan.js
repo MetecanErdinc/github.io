@@ -22,7 +22,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11c';
+export const BUILD = '2026-09-11d';
 
 
 /* ---------------------------------------------------------------- besinler */
@@ -354,7 +354,12 @@ function buildMeals(t, kacin) {
     const satirlar = [];
     const ekle = (key, g, not = '') => {
       const gr = roundPortion(g);
-      if (gr > 0) satirlar.push({ key, g: gr, ad: FOODS[key].ad, not });
+      if (gr > 0) {
+        satirlar.push({
+          key, g: gr, ad: FOODS[key].ad, not,
+          kcal: Math.round(kcalOf(FOODS[key], gr)),   // günlük sayaç bunu okur
+        });
+      }
     };
 
     sabitler[i].satir.forEach((x) => ekle(x.key, x.g));
