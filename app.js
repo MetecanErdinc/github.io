@@ -4,6 +4,25 @@
 
 import { processImage, stampLabel, dataUrlBytes } from './photo.js';
 
+/*  Karışık sürüm koruması.
+    --------------------------------------------------------------------------
+    Service worker uygulama kodunu "önce ağ, olmazsa önbellek" ile ve her dosya
+    için AYRI AYRI sunuyor. Bağlantı zayıfken bazı dosyalar ağdan (yeni), bazıları
+    önbellekten (eski) gelebiliyor; ortaya yeni app.js + eski data.js gibi
+    tutarsız bir karışım çıkıyor ve yeni kodun beklediği fonksiyon bulunamıyor.
+
+    Her modül kendi sürümünü taşır, açılışta karşılaştırılır. Damga ADLI İTHALLE
+    değil ad alanı (namespace) ithaliyle okunur: eski bir dosyada bu dışa aktarım
+    hiç yoktur ve adlı ithal bağlanma anında SyntaxError verip uygulamayı hiç
+    açmazdı — kontrolün kendisi çökme sebebi olamaz. */
+import * as PhotoNS from './photo.js';
+import * as UtilNS from './util.js';
+import * as DataNS from './data.js';
+import * as PlanNS from './plan.js';
+import * as ProgramNS from './program.js';
+
+const BUILD = '2026-09-11c';
+
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
   dayLabel, isScheduled, targetOf, perWeekOf, scheduleLabel, streakInfo,
@@ -689,7 +708,7 @@ function attachStore(store) {
     tasks:   (map)  => { state.tasks = map; render(); },
     lists:   (rows) => { state.lists = rows; render(); },
     albums:  (map)  => { state.albums = map; render(); },
-    profile: (p)    => { state.profile = p; render(); },
+    profile: (p)    => { state.profile = p || readMirror(); if (p) mirrorProfile(p); render(); },
     status:  (s)    => { state.fromCache = !!s.fromCache; updateSyncBadge(); },
     error:   (err)  => {
       console.error(err);
@@ -1943,6 +1962,19 @@ function openHabitEditor(habit) {
    Görünüm: Program — kişiye özel diyet ve spor planı
    ========================================================================== */
 
+/*  Profilin yerel yedeği.
+    Buluta yazım başarısız olsa bile plan cihazda kalsın diye tutulur; depo boş
+    dönerse buradan okunur. Yeniden yükleme profili silmiş gibi görünmez. */
+const PROFIL_YEDEK = 'habits.profile.backup';
+
+function mirrorProfile(p) {
+  try { localStorage.setItem(PROFIL_YEDEK, JSON.stringify(p)); } catch {}
+}
+
+function readMirror() {
+  try { return JSON.parse(localStorage.getItem(PROFIL_YEDEK) || 'null'); } catch { return null; }
+}
+
 /** Profilden planı üretir; bozuk profilde çökmek yerine null döner. */
 function currentPlan() {
   if (!state.profile?.kilo || !state.profile?.boy) return null;
@@ -2114,18 +2146,18 @@ function profileDialog() {
       <div class="pg-3">
         <div class="field">
           <label for="pf-yas">Yaş</label>
-          <input id="pf-yas" class="input" type="number" inputmode="numeric"
-                 min="14" max="90" value="${esc(String(p.yas ?? ''))}" placeholder="24" />
+          <input id="pf-yas" class="input" type="text" inputmode="numeric"
+                 autocomplete="off" value="${esc(String(p.yas ?? ''))}" placeholder="24" />
         </div>
         <div class="field">
           <label for="pf-boy">Boy (cm)</label>
-          <input id="pf-boy" class="input" type="number" inputmode="numeric"
-                 min="120" max="230" value="${esc(String(p.boy ?? ''))}" placeholder="178" />
+          <input id="pf-boy" class="input" type="text" inputmode="numeric"
+                 autocomplete="off" value="${esc(String(p.boy ?? ''))}" placeholder="178" />
         </div>
         <div class="field">
           <label for="pf-kilo">Kilo (kg)</label>
-          <input id="pf-kilo" class="input" type="number" inputmode="decimal"
-                 min="35" max="300" step="0.1" value="${esc(String(p.kilo ?? ''))}" placeholder="85" />
+          <input id="pf-kilo" class="input" type="text" inputmode="decimal"
+                 autocomplete="off" value="${esc(String(p.kilo ?? ''))}" placeholder="85" />
         </div>
       </div>
 
@@ -2138,8 +2170,8 @@ function profileDialog() {
 
       <div class="field">
         <label for="pf-gun">Haftada kaç gün ağırlık antrenmanı yapıyorsun?</label>
-        <input id="pf-gun" class="input" type="number" inputmode="numeric"
-               min="0" max="7" value="${esc(String(p.antrenmanGun ?? 3))}" />
+        <input id="pf-gun" class="input" type="text" inputmode="numeric"
+               autocomplete="off" value="${esc(String(p.antrenmanGun ?? 3))}" />
         <div class="tiny muted">Hiç yapmıyorsan 0 yaz — program yine çıkar ama
           verdiğin kilonun daha büyük kısmı kas olur.</div>
       </div>
@@ -2214,10 +2246,18 @@ function profileDialog() {
     m.addEventListener('click', async (e) => {
       if (e.target.closest('[data-x]')?.dataset.x !== 'save') return;
 
-      const yas = Number($('#pf-yas', m).value);
-      const boy = Number($('#pf-boy', m).value);
-      const kilo = Number($('#pf-kilo', m).value);
-      const gun = Number($('#pf-gun', m).value);
+      /*  Türkçe klavyede ondalık ayırıcı virgüldür ve "85,5" değeri
+          type="number" alanından boş string olarak döner — telefonda form
+          sebepsiz reddedilmiş gibi görünür. Alanlar metin, ayrıştırma burada. */
+      const sayi = (sel) => {
+        const ham = String($(sel, m).value || '').trim().replace(',', '.');
+        const n = Number(ham.replace(/[^\d.]/g, ''));
+        return Number.isFinite(n) ? n : NaN;
+      };
+      const yas = sayi('#pf-yas');
+      const boy = sayi('#pf-boy');
+      const kilo = sayi('#pf-kilo');
+      const gun = sayi('#pf-gun');
 
       const hata = (msg) => {
         const box = $('#pf-err', m);
@@ -2241,13 +2281,26 @@ function profileDialog() {
           .filter((x) => x.checked && !x.disabled).map((x) => x.dataset.v),
       };
 
+      if (typeof state.store?.saveProfile !== 'function') {
+        return hata('Uygulamanın bir parçası eski sürümde kalmış. '
+                  + 'Ayarlar → Uygulama → Güncelle ile yenile, sonra tekrar dene.');
+      }
+
+      /*  Plan hemen gösterilir, bulut yazımı arkada sürer. Bu ekranda kullanıcı
+          zaten bütün bilgiyi girdi; kaydın sunucuya ulaşmasını beklemek, zayıf
+          bağlantıda formu sebepsiz reddedilmiş gibi gösteriyordu. Yazım
+          tutmazsa profil yerel yedekten okunur ve durum toast ile bildirilir. */
+      mirrorProfile(profile);
+      state.profile = profile;
+      closeModal();
+      go('program');
+
       try {
         await state.store.saveProfile(profile);
-        closeModal();
-        go('program');
         toast('Program hesaplandı 🎉');
       } catch (err) {
-        hata('Kaydedilemedi: ' + (err?.message || err));
+        toast('Program hesaplandı ama buluta kaydedilemedi: '
+            + (err?.message || err) + ' — bu cihazda duruyor.', 6000);
       }
     });
   });
@@ -3106,8 +3159,63 @@ function registerSW() {
   });
 }
 
+/**
+ * Yüklenen modüllerin sürümleri tutuyor mu?
+ *
+ * Tutmuyorsa karışık sürüm yüklenmiş demektir. Önbelleği temizleyip bir kez
+ * yeniden yükleriz; ikinci kez aynı duruma düşersek döngüye girmemek için
+ * kullanıcıya elle çıkış yolunu gösteririz.
+ */
+function buildMismatch() {
+  const moduller = {
+    'util.js': UtilNS.BUILD, 'data.js': DataNS.BUILD, 'plan.js': PlanNS.BUILD,
+    'program.js': ProgramNS.BUILD, 'photo.js': PhotoNS.BUILD,
+  };
+  return Object.entries(moduller).filter(([, v]) => v !== BUILD).map(([k]) => k);
+}
+
+const KURTARMA = 'habits.build.recovered';
+
+async function guardBuild() {
+  const eksik = buildMismatch();
+  if (!eksik.length) return true;
+  console.warn('Karışık sürüm yüklendi:', eksik.join(', '));
+
+  let denendi = false;
+  try { denendi = sessionStorage.getItem(KURTARMA) === '1'; } catch {}
+
+  if (!denendi) {
+    try { sessionStorage.setItem(KURTARMA, '1'); } catch {}
+    $('#loading-text').textContent = 'Eksik güncelleme bulundu, yenileniyor…';
+    await forceUpdate();
+    return false;
+  }
+
+  /* Otomatik kurtarma tutmadı: kullanıcıya net bir çıkış bırak. */
+  showScreen('screen-setup');
+  $('#screen-setup').innerHTML = `
+    <div class="brand"><h1>Güncelleme yarım kaldı</h1></div>
+    <div class="panel" style="max-width:420px;margin:0 auto">
+      <div class="list-row"><div class="grow small">
+        Uygulamanın bazı dosyaları eski sürümde kaldı
+        (${esc(eksik.join(', '))}). Bu genelde güncelleme sırasında bağlantının
+        zayıflamasından olur. İnternete bağlan ve aşağıdaki düğmeye bas.
+      </div></div>
+      <div class="list-row">
+        <button class="btn btn-primary btn-block" data-x="yenile">Şimdi yenile</button>
+      </div>
+    </div>`;
+  $('#screen-setup').onclick = (e) => {
+    if (e.target.closest('[data-x]')?.dataset.x !== 'yenile') return;
+    try { sessionStorage.removeItem(KURTARMA); } catch {}
+    forceUpdate();
+  };
+  return false;
+}
+
 async function boot() {
   detectDevice();
+  if (!await guardBuild()) return;
   loadBuildStamp();
   applyTheme();
   bindGlobal();

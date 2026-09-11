@@ -15,6 +15,10 @@
    yazılır ve yalnızca fotoğrafa dokunulduğunda indirilir.
    ========================================================================== */
 
+/* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
+export const BUILD = '2026-09-11c';
+
+
 const FULL_EDGE  = 1280;
 const THUMB_EDGE = 160;
 const FULL_MAX_BYTES = 600 * 1024;   // base64 hâliyle; Firestore sınırı 1 MiB

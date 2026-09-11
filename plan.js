@@ -21,6 +21,10 @@
    - Su                 : 30 ml/kg
    ========================================================================== */
 
+/* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
+export const BUILD = '2026-09-11c';
+
+
 /* ---------------------------------------------------------------- besinler */
 /* 100 g çiğ/ham başına: kcal, protein, karbonhidrat, yağ, lif (gram) */
 
