@@ -22,7 +22,7 @@ import * as PlanNS from './plan.js';
 import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
 
-const BUILD = '2026-09-11h';
+const BUILD = '2026-09-11i';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -39,6 +39,7 @@ import {
 
 import {
   lookupBarcode, searchFoods, kcalFor, startScanner, kameraVar, testConnection,
+  decodeImageFile, okuyucuAdi, nativeScannerVar,
 } from './foods.js';
 
 import {
@@ -2363,6 +2364,7 @@ function foodDialog() {
   let mod = 'ara';                 // 'barkod' | 'ara' | 'elle'
   let secili = null;               // seçilen ürün
   let durdur = null;               // kamerayı kapatan işlev
+  let uyariZamani = null;          // uzun süre okunmazsa yol gösterir
 
   const gunluk = foodsFor(state.date);
   const sik = topMyFoods();
@@ -2394,8 +2396,13 @@ function foodDialog() {
       <div id="fd-barkod" hidden>
         <div class="fd-cam"><video id="fd-video" muted playsinline></video>
           <div class="fd-hedef"></div></div>
-        <div class="tiny muted" id="fd-cam-not" style="margin:8px 0 12px">
+        <div class="tiny muted" id="fd-cam-not" style="margin:8px 0 10px">
           Barkodu çerçeveye getir.</div>
+
+        <!-- Canlı okuma iOS'ta zayıf kalabiliyor; tek kare çok daha net olur. -->
+        <label class="btn btn-ghost btn-block" for="fd-foto" style="margin-bottom:12px">
+          📸 Fotoğraf çek / seç</label>
+        <input id="fd-foto" type="file" accept="image/*" capture="environment" hidden />
         <div class="field">
           <label for="fd-kod">Barkodu elle yaz</label>
           <div style="display:flex;gap:8px">
@@ -2500,7 +2507,11 @@ function foodDialog() {
       $$$('#fd-ekle').disabled = !secili && mod !== 'elle';
     };
 
-    const kamerayiKapat = () => { try { durdur?.(); } catch {} durdur = null; };
+    const kamerayiKapat = () => {
+      clearTimeout(uyariZamani);
+      try { durdur?.(); } catch {}
+      durdur = null;
+    };
 
     const kamerayiAc = async () => {
       if (durdur) return;
@@ -2509,17 +2520,30 @@ function foodDialog() {
         not.textContent = 'Bu tarayıcı kamerayı kullanmıyor — barkodu elle yaz ya da isimle ara.';
         return;
       }
-      not.textContent = 'Kamera açılıyor…';
+      not.textContent = nativeScannerVar()
+        ? 'Kamera açılıyor…'
+        : 'Kamera açılıyor, okuyucu indiriliyor…';
       try {
         durdur = await startScanner($$$('#fd-video'), (kod) => {
           kamerayiKapat();
           $$$('#fd-kod').value = kod;
           barkoddanBul(kod);
         });
-        not.textContent = 'Barkodu çerçeveye getir.';
+        not.textContent = `Barkodu çerçeveye getir · ${okuyucuAdi()}`;
+
+        /*  Okuma uzarsa kullanıcı ekrana bakıp bekliyor. On beş saniye sonra
+            diğer iki yolu hatırlat; canlı okuma her telefonda tutmuyor. */
+        clearTimeout(uyariZamani);
+        uyariZamani = setTimeout(() => {
+          if (durdur && !secili) {
+            not.textContent = 'Okunmuyorsa: barkodu net göster, ışığı artır — '
+                            + 'ya da "Fotoğraf çek" ile tek kare al veya barkodu elle yaz.';
+          }
+        }, 15000);
       } catch (err) {
-        not.textContent = 'Kamera açılamadı (' + (err?.message || err)
-                        + '). Barkodu elle yazabilir ya da isimle arayabilirsin.';
+        not.textContent = 'Kamera açılamadı — ' + (err?.message || err)
+                        + '. "Fotoğraf çek" ile deneyebilir, barkodu elle yazabilir '
+                        + 'ya da isimle arayabilirsin.';
       }
     };
 
@@ -2554,6 +2578,24 @@ function foodDialog() {
     };
 
     $$$('#fd-g').addEventListener('input', toplamiCiz);
+
+    /* Fotoğraftan okuma: canlı görüntü tutmadığında en güvenilir yol. */
+    $$$('#fd-foto').addEventListener('change', async (e) => {
+      const dosya = e.target.files?.[0];
+      e.target.value = '';
+      if (!dosya) return;
+      hata('');
+      $$$('#fd-cam-not').textContent = 'Fotoğraf okunuyor…';
+      try {
+        const kod = await decodeImageFile(dosya);
+        kamerayiKapat();
+        $$$('#fd-kod').value = kod;
+        await barkoddanBul(kod);
+      } catch (err) {
+        $$$('#fd-cam-not').textContent = 'Barkodu çerçeveye getir.';
+        hata((err?.message || err) + '. Barkodu elle de yazabilirsin.');
+      }
+    });
 
     /* "Ürünlerim" listesinden doğrudan seçim. */
     $$('[data-mine]', m).forEach((b) => b.addEventListener('click', () => {

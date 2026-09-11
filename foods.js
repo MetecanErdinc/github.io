@@ -12,7 +12,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11h';
+export const BUILD = '2026-09-11i';
 
 /*  Birden fazla sunucu denenir. world.* coğrafyaya göre ülke alan adına
     yönlendirebiliyor; yönlendirilen yanıt CORS başlığı taşımazsa istek
@@ -174,62 +174,92 @@ export function kameraVar() {
   return typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
 }
 
-const ZXING_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js';
-let zxingYuklendi = null;
+/*  iOS Safari'de BarcodeDetector yok, o yüzden bir kütüphane gerekiyor. İki
+    paket de denenir: @zxing/browser tarayıcı için yazılmış olan, @zxing/library
+    ise eski sürümlerde aynı sınıfları taşıyan. Global adları farklı olduğu için
+    ikisi de aranır ve hangi yöntem varsa o kullanılır — sürümler arasında API
+    değiştiği için varsayım yapmak yerine çalışma anında bakılıyor. */
+const KUTUPHANELER = [
+  { url: 'https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/umd/zxing-browser.min.js', global: 'ZXingBrowser' },
+  { url: 'https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js', global: 'ZXing' },
+];
 
-/** ZXing'i yalnızca gerektiğinde indirir; inmezse çağıran elle girişe düşer. */
-function zxingYukle() {
-  if (zxingYuklendi) return zxingYuklendi;
-  zxingYuklendi = new Promise((ok, hata) => {
-    if (window.ZXing) return ok(window.ZXing);
+let kutuphane = null;
+
+function betikYukle(url) {
+  return new Promise((ok, hata) => {
     const s = document.createElement('script');
-    s.src = ZXING_URL;
+    s.src = url;
     s.async = true;
-    s.onload = () => (window.ZXing ? ok(window.ZXing) : hata(new Error('ZXing yüklenemedi')));
-    s.onerror = () => hata(new Error('Barkod kütüphanesi indirilemedi'));
+    s.onload = ok;
+    s.onerror = () => hata(new Error('indirilemedi'));
     document.head.appendChild(s);
-  }).catch((e) => { zxingYuklendi = null; throw e; });
-  return zxingYuklendi;
+    setTimeout(() => hata(new Error('zaman aşımı')), 15000);
+  });
+}
+
+/** Okuyucu kütüphanesini indirir; ilkini indiremezse ikincisini dener. */
+async function okuyucuYukle() {
+  if (kutuphane) return kutuphane;
+  const hatalar = [];
+
+  for (const { url, global } of KUTUPHANELER) {
+    try {
+      if (!window[global]) await betikYukle(url);
+      const ns = window[global];
+      if (ns?.BrowserMultiFormatReader) {
+        kutuphane = { ns, ad: global };
+        return kutuphane;
+      }
+      hatalar.push(`${global}: sınıf bulunamadı`);
+    } catch (err) {
+      hatalar.push(`${global}: ${err.message}`);
+    }
+  }
+  throw new Error('okuyucu yüklenemedi (' + hatalar.join(', ') + ')');
+}
+
+/** Şu an hangi okuyucunun kullanıldığı — ekranda gösterilip teşhise yarıyor. */
+export function okuyucuAdi() {
+  if (nativeScannerVar()) return 'tarayıcının kendi okuyucusu';
+  return kutuphane ? kutuphane.ad : 'ZXing (indirilecek)';
 }
 
 /**
  * Kamerayı açar ve barkod okumaya başlar.
  *
- * Geriye durdurma işlevi döner — çağıran bunu MUTLAKA çağırmalı, yoksa kamera
- * açık kalır ve telefonun ışığı yanmaya devam eder.
+ * Kütüphane yolunda kamerayı KÜTÜPHANE açar, biz değil. Önceki sürümde akışı
+ * kendimiz alıp hazır <video> öğesini devrediyorduk; ZXing o durumda kendi
+ * çözümleme döngüsünü kuramıyor ve hiçbir barkod okunmuyordu.
  *
- * @param {HTMLVideoElement} video
- * @param {(code:string)=>void} onCode  okunan ilk barkodda çağrılır
+ * Geriye durdurma işlevi döner; çağıran bunu mutlaka çağırmalı.
  */
 export async function startScanner(video, onCode) {
-  if (!kameraVar()) throw new Error('Bu tarayıcı kamerayı kullanmaya izin vermiyor');
+  if (!kameraVar()) throw new Error('bu tarayıcı kamerayı kullanmaya izin vermiyor');
 
-  const stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } },
-    audio: false,
-  });
-
-  video.srcObject = stream;
   video.setAttribute('playsinline', 'true');   // iOS yoksa videoyu tam ekrana alır
-  await video.play().catch(() => {});
+  video.setAttribute('autoplay', 'true');
+  video.muted = true;
 
-  let durduruldu = false;
-  let zxingReader = null;
-
-  const kapat = () => {
-    durduruldu = true;
-    try { zxingReader?.reset(); } catch {}
-    stream.getTracks().forEach((t) => { try { t.stop(); } catch {} });
-    if (video) video.srcObject = null;
-  };
-
+  /* --- 1. yol: tarayıcının kendi okuyucusu (Android/Chrome) --------------- */
   if (nativeScannerVar()) {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play().catch(() => {});
+
+    let durduruldu = false;
+    const kapat = () => {
+      durduruldu = true;
+      stream.getTracks().forEach((t) => { try { t.stop(); } catch {} });
+      video.srcObject = null;
+    };
+
     let detector;
-    try {
-      detector = new window.BarcodeDetector({ formats: FORMATLAR });
-    } catch {
-      detector = new window.BarcodeDetector();       // format listesi desteklenmiyorsa
-    }
+    try { detector = new window.BarcodeDetector({ formats: FORMATLAR }); }
+    catch { detector = new window.BarcodeDetector(); }
 
     const tara = async () => {
       if (durduruldu) return;
@@ -237,21 +267,82 @@ export async function startScanner(video, onCode) {
         const bulunan = await detector.detect(video);
         const kod = bulunan?.[0]?.rawValue;
         if (kod) { kapat(); onCode(String(kod)); return; }
-      } catch { /* kare okunamadı, sonrakine bak */ }
-      if (!durduruldu) setTimeout(tara, 220);
+      } catch { /* kare okunamadı */ }
+      if (!durduruldu) setTimeout(tara, 200);
     };
     tara();
     return kapat;
   }
 
-  /* Yerleşik okuyucu yok (iOS Safari): ZXing'e düş. */
-  const ZXing = await zxingYukle().catch((e) => { kapat(); throw e; });
-  zxingReader = new ZXing.BrowserMultiFormatReader();
-  zxingReader.decodeFromVideoElement(video, (sonuc) => {
-    if (durduruldu || !sonuc) return;
-    const kod = sonuc.getText?.() || sonuc.text;
-    if (kod) { kapat(); onCode(String(kod)); }
-  });
+  /* --- 2. yol: ZXing kamerayı kendisi açsın (iOS Safari) ------------------ */
+  const { ns } = await okuyucuYukle();
+  const reader = new ns.BrowserMultiFormatReader();
+  const kisitlar = { video: { facingMode: { ideal: 'environment' } }, audio: false };
 
-  return kapat;
+  let bitti = false;
+  const bulundu = (sonuc) => {
+    if (bitti || !sonuc) return;
+    const kod = sonuc.getText?.() ?? sonuc.text;
+    if (!kod) return;
+    bitti = true;
+    onCode(String(kod));
+  };
+
+  /*  Sürümler arasında yöntem adı değişiyor: yenisi kontrol nesnesi döndürür,
+      eskisi döndürmez ve reset() ile kapatılır. Hangisi varsa o kullanılır. */
+  let kontrol = null;
+  if (typeof reader.decodeFromConstraints === 'function') {
+    kontrol = await reader.decodeFromConstraints(kisitlar, video, bulundu);
+  } else if (typeof reader.decodeFromVideoDevice === 'function') {
+    kontrol = await reader.decodeFromVideoDevice(undefined, video, bulundu);
+  } else {
+    throw new Error('okuyucuda beklenen yöntem yok');
+  }
+
+  return () => {
+    bitti = true;
+    try { kontrol?.stop?.(); } catch {}
+    try { reader.reset?.(); } catch {}
+    const s = video.srcObject;
+    if (s?.getTracks) s.getTracks().forEach((t) => { try { t.stop(); } catch {} });
+    video.srcObject = null;
+  };
+}
+
+/**
+ * Fotoğraftan barkod okur.
+ *
+ * iOS'ta canlı video üzerinden okuma zayıf kalabiliyor; telefonun kamera
+ * uygulamasıyla çekilen tek kare hem çok daha net hem de kullanıcı barkodu
+ * istediği gibi çerçeveleyebiliyor. Canlı okuma tutmazsa çıkış yolu bu.
+ */
+export async function decodeImageFile(file) {
+  if (!file) throw new Error('dosya yok');
+
+  if (nativeScannerVar() && typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      let detector;
+      try { detector = new window.BarcodeDetector({ formats: FORMATLAR }); }
+      catch { detector = new window.BarcodeDetector(); }
+      const bulunan = await detector.detect(bitmap);
+      bitmap.close?.();
+      if (bulunan?.[0]?.rawValue) return String(bulunan[0].rawValue);
+    } catch { /* kütüphaneye düş */ }
+  }
+
+  const { ns } = await okuyucuYukle();
+  const reader = new ns.BrowserMultiFormatReader();
+  const url = URL.createObjectURL(file);
+  try {
+    const sonuc = await reader.decodeFromImageUrl(url);
+    const kod = sonuc?.getText?.() ?? sonuc?.text;
+    if (!kod) throw new Error('barkod bulunamadı');
+    return String(kod);
+  } catch (err) {
+    throw new Error('fotoğrafta barkod okunamadı — barkodun tamamı kareye girsin ve net olsun');
+  } finally {
+    URL.revokeObjectURL(url);
+    try { reader.reset?.(); } catch {}
+  }
 }
