@@ -7,7 +7,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11o';
+export const BUILD = '2026-09-17a';
 
 
 import { dateKey, addDays, today, uid } from './util.js';
@@ -26,6 +26,7 @@ const LS = {
   profile: 'habits.local.profile',
   foodlog: 'habits.local.foodlog',
   myfoods: 'habits.local.myfoods',
+  lifts:   'habits.local.lifts',
   photos:  'habits.local.photos',
 };
 
@@ -345,6 +346,15 @@ export class CloudStore {
       (snap) => handlers.profile?.(snap.exists() ? snap.data() : null),
       (err) => handlers.error?.(err)
     ));
+
+    /*  Ağırlık kaydı: hareket anahtarı -> son kayıtlar. Koleksiyon değil tek
+        belge, çünkü tamamı birkaç kilobayt ve hep birlikte okunuyor —
+        hareket başına belge açmak salonda her sette bir sorgu demek olurdu. */
+    this.unsubs.push(S.onSnapshot(
+      this._doc('meta', 'lifts'),
+      (snap) => handlers.lifts?.(snap.exists() ? (snap.data().kayit || {}) : {}),
+      (err) => handlers.error?.(err)
+    ));
   }
 
   stop() {
@@ -370,6 +380,11 @@ export class CloudStore {
     const ref = this._doc('foodlog', dk);
     if (!items.length) { await this.S.deleteDoc(ref).catch(() => {}); return; }
     await this.S.setDoc(ref, { date: dk, items, updatedAt: new Date().toISOString() });
+  }
+
+  async saveLifts(kayit) {
+    await this.S.setDoc(this._doc('meta', 'lifts'),
+      { kayit, updatedAt: new Date().toISOString() });
   }
 
   async saveMyFood(food) {
@@ -603,6 +618,7 @@ export class LocalStore {
     this.handlers.foodlog?.(fmap);
 
     this.handlers.myfoods?.(this._readMyFoods());
+    this.handlers.lifts?.(this._readLifts());
     this.handlers.profile?.(this._readProfile());
     this.handlers.status?.({ fromCache: true });
   }
@@ -610,7 +626,7 @@ export class LocalStore {
   start(handlers) {
     this.handlers = handlers;
     this._onStorage = (e) => {
-      if ([LS.habits, LS.entries, LS.tasks, LS.lists, LS.albums, LS.profile, LS.foodlog, LS.myfoods].includes(e.key)) this._emit();
+      if ([LS.habits, LS.entries, LS.tasks, LS.lists, LS.albums, LS.profile, LS.foodlog, LS.myfoods, LS.lifts].includes(e.key)) this._emit();
     };
     window.addEventListener('storage', this._onStorage);
     this._emit();
@@ -628,6 +644,15 @@ export class LocalStore {
     const raw = this._readFoodLog();
     if (items.length) raw[dk] = items; else delete raw[dk];
     localStorage.setItem(LS.foodlog, JSON.stringify(raw));
+    this._emit();
+  }
+
+  _readLifts() {
+    try { return JSON.parse(localStorage.getItem(LS.lifts) || '{}'); } catch { return {}; }
+  }
+
+  async saveLifts(kayit) {
+    localStorage.setItem(LS.lifts, JSON.stringify(kayit));
     this._emit();
   }
 
@@ -802,6 +827,7 @@ export class LocalStore {
     localStorage.removeItem(LS.profile);
     localStorage.removeItem(LS.foodlog);
     localStorage.removeItem(LS.myfoods);
+    localStorage.removeItem(LS.lifts);
     this._emit();
   }
 }

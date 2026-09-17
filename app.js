@@ -23,7 +23,7 @@ import * as ProgramNS from './program.js';
 import * as FoodsNS from './foods.js';
 import * as TrFoodsNS from './tr-foods.js';
 
-const BUILD = '2026-09-11o';
+const BUILD = '2026-09-17a';
 
 import {
   DAY_SHORT, MONTHS, dateKey, parseKey, today, addDays, startOfWeek, diffDays, humanDate,
@@ -35,7 +35,7 @@ import {
 import { PROGRAM_GROUP, buildHabits, buildLists, eskiAdUyuyor } from './program.js';
 
 import {
-  buildPlan, fiberRamp, CINSIYET, HAREKET, HEDEF, HIZ, KACIN,
+  buildPlan, fiberRamp, ILERLEME, CINSIYET, HAREKET, HEDEF, HIZ, KACIN,
 } from './plan.js';
 
 import {
@@ -65,6 +65,7 @@ const state = {
   profile: null,
   foodlog: new Map(),        // tarih anahtarı -> [{id,name,g,kcal,...}]
   myfoods: [],               // kullanıcının kendi ürün defteri
+  lifts: {},                 // hareket anahtarı -> [{d,kg,tekrar}]
   openList: null,
   albums: new Map(),
   buildAt: null,
@@ -727,6 +728,7 @@ function attachStore(store) {
   state.profile = null;
   state.foodlog = new Map();
   state.myfoods = [];
+  state.lifts = {};
   state.openList = null;
   state.albums = new Map();
   state.view = 'today';          // yeni oturum her zaman Bugün ile başlar
@@ -742,6 +744,7 @@ function attachStore(store) {
     profile: (p)    => { state.profile = p || readMirror(); if (p) mirrorProfile(p); render(); },
     foodlog: (map)  => { state.foodlog = map; render(); },
     myfoods: (rows) => { state.myfoods = rows; render(); },
+    lifts:   (obj)  => { state.lifts = obj && typeof obj === 'object' ? obj : {}; render(); },
     status:  (s)    => { state.fromCache = !!s.fromCache; updateSyncBadge(); },
     error:   (err)  => {
       console.error(err);
@@ -904,6 +907,16 @@ function habitPanelHtml(h, items, d) {
 function taskPanelHtml(h, items, d) {
   const prev = items.length === 0 ? previousTaskDay(h.id, d) : null;
   const timeDriven = h.driveFromTasks && modeOf(h) === 'time';
+
+  /*  Antrenman maddelerinin ağırlık kaydı var; hangi maddenin hangi harekete
+      bağlı olduğu bir kez çıkarılıp tabloya alınır — her satırda şablonu
+      baştan taramak uzun listelerde boşuna iş. */
+  const liftKeys = new Map();
+  for (const it of items) {
+    const k = taskLiftKey(h, it.id);
+    if (k) liftKeys.set(it.id, k);
+  }
+
   const total = items.reduce((sum, it) => sum + (Number(it.minutes) || 0), 0);
 
   return `
@@ -920,6 +933,12 @@ function taskPanelHtml(h, items, d) {
           <button class="task-min ${it.minutes ? 'has' : ''}" data-act="task-time"
                   data-id="${esc(h.id)}" data-tid="${esc(it.id)}"
                   aria-label="süre gir">${it.minutes ? formatDuration(it.minutes) : '+ süre'}</button>` : ''}
+        ${liftKeys.get(it.id) ? (() => {
+          const son = liftsFor(liftKeys.get(it.id))[0];
+          return `<button class="task-min task-lift ${son ? 'has' : ''}" data-act="task-lift"
+                  data-id="${esc(h.id)}" data-tid="${esc(it.id)}"
+                  aria-label="ağırlık gir">${son ? esc(liftLabel(son)) : '+ kg'}</button>`;
+        })() : ''}
         <button class="icon-btn task-del" data-act="task-del"
                 data-id="${esc(h.id)}" data-tid="${esc(it.id)}" aria-label="sil">✕</button>
       </div>`).join('')}</div>` : ''}
@@ -1059,6 +1078,140 @@ function taskTimeDialog(habit, item) {
         it.id === item.id ? { ...it, minutes: mins } : it);
       writeTasks(habit.id, items);
     },
+  });
+}
+
+/* ==========================================================================
+   Ağırlık kaydı — antrenman listesindeki hareketlerin yükü
+   --------------------------------------------------------------------------
+   Diyetteyken tek başarı ölçütü ağırlığın düşmemesi. Bunu görebilmek için
+   geçen hafta ne kaldırdığının yazılı olması gerekir; salonda "galiba 60 idi"
+   diye hatırlamak ilerlemeyi de gerilemeyi de görünmez yapar.
+
+   Kayıt harekete bağlıdır, alışkanlığa değil: bölünme değişip Bench press
+   başka bir güne taşınsa da geçmişi peşinden gelir.
+   ========================================================================== */
+
+/** Bir hareketin kayıtları, yenisi başta. */
+function liftsFor(key) {
+  const rows = key ? state.lifts?.[key] : null;
+  return Array.isArray(rows) ? rows : [];
+}
+
+/** "62,5 kg × 8" — vücut ağırlığıyla yapılanlarda kilo yazılmaz. */
+function liftLabel(x) {
+  const kg = Number(x?.kg) || 0;
+  const tekrar = Number(x?.tekrar) || 0;
+  if (!kg) return `${tekrar} tekrar`;
+  return `${kg.toLocaleString('tr-TR')} kg × ${tekrar}`;
+}
+
+/**
+ * Listedeki maddenin hangi harekete karşılık geldiği.
+ *
+ * taskLift ile taskTemplate aynı sırada üretilir ama eşleşme madde
+ * kimliğinden kurulur, sıra numarasından değil — kullanıcı listeye kendi
+ * maddesini eklediğinde kaymasın diye (öğün kalorilerinde de aynı yol).
+ */
+function taskLiftKey(h, itemId) {
+  const per = Array.isArray(h?.taskLift) ? h.taskLift : null;
+  const tpl = Array.isArray(h?.taskTemplate) ? h.taskTemplate : null;
+  if (!per || !tpl || per.length !== tpl.length) return null;
+  const i = tpl.findIndex((t) => t.id === itemId);
+  return i >= 0 ? (per[i] || null) : null;
+}
+
+/** Hareket başına tutulan kayıt sayısı — birkaç aylık geçmiş yeter. */
+const LIFT_LIMIT = 24;
+
+async function saveLift(key, entry) {
+  const rows = [entry, ...liftsFor(key).filter((r) => r.d !== entry.d)]
+    .sort((a, b) => (a.d < b.d ? 1 : -1))
+    .slice(0, LIFT_LIMIT);
+
+  const next = { ...state.lifts, [key]: rows };
+  /*  İyimser yazım: salonda bağlantı çoğu zaman zayıf, set arasında ekranın
+      dönmesini beklemek kimsenin işine yaramaz. Yazma başarısız olursa
+      kullanıcı uyarılır ama girdiği değer ekranda kalır. */
+  state.lifts = next;
+  render();
+  try {
+    await state.store.saveLifts(next);
+  } catch (err) {
+    toast('Ağırlık kaydedilemedi: ' + (err?.message || err), 5000);
+  }
+}
+
+/** kg × tekrar giriş penceresi; geçmiş kayıtlar da burada görünür. */
+function liftDialog(habit, item, key) {
+  const gecmis = liftsFor(key);
+  const dk = dateKey(state.date);
+  const bugunku = gecmis.find((r) => r.d === dk) || null;
+  const son = bugunku || gecmis[0] || null;
+
+  /* Başlıkta hareketin adı yeter; "— 4 × 6-8 · 2 dk" reçetesi alt satırda. */
+  const [ad, ...kalan] = String(item.text).split(' — ');
+  const recete = kalan.join(' — ');
+
+  openModal(`
+    <div class="modal-head">
+      <h3 class="truncate">${esc(ad)}</h3>
+      <button class="icon-btn" data-act="close-modal" aria-label="kapat">✕</button>
+    </div>
+    ${recete ? `<p class="small muted center" style="margin-bottom:14px">${esc(recete)}</p>` : ''}
+
+    <div class="lift-inputs">
+      <div class="field"><label for="lf-kg">Ağırlık (kg)</label>
+        <input id="lf-kg" class="input" inputmode="decimal" autocomplete="off"
+               placeholder="0" value="${son ? String(son.kg).replace('.', ',') : ''}" /></div>
+      <div class="field"><label for="lf-rep">Tekrar</label>
+        <input id="lf-rep" class="input" inputmode="numeric" autocomplete="off"
+               placeholder="0" value="${son ? esc(String(son.tekrar)) : ''}" /></div>
+    </div>
+
+    ${gecmis.length ? `
+      <div class="section-title" style="margin-top:6px">Geçmiş</div>
+      <div class="panel">
+        ${gecmis.slice(0, 5).map((r) => `
+          <div class="list-row">
+            <div class="grow"><div class="h-name">${esc(liftLabel(r))}</div></div>
+            <div class="h-meta">${esc(shortDate(parseKey(r.d)))}</div>
+          </div>`).join('')}
+      </div>`
+    : `<p class="tiny muted center">İlk kaydın. Bir dahaki sefere burada geçen
+         seferki ağırlığı görürsün — hedef onu düşürmemek.</p>`}
+
+    <div class="modal-actions">
+      ${bugunku ? '<button class="btn btn-ghost" data-x="sil">Bugünküyü sil</button>' : ''}
+      <button class="btn btn-primary" data-x="kaydet">Kaydet</button>
+    </div>`, (m) => {
+    $('#lf-kg', m)?.focus();
+
+    m.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-x]');
+      if (!b) return;
+
+      if (b.dataset.x === 'sil') {
+        const next = { ...state.lifts, [key]: gecmis.filter((r) => r.d !== dk) };
+        closeModal();
+        state.lifts = next;
+        render();
+        try { await state.store.saveLifts(next); }
+        catch (err) { toast('Silinemedi: ' + (err?.message || err), 5000); }
+        return;
+      }
+
+      /*  Türkçe klavyede ondalık virgülle yazılır; type="number" bunu boş
+          değer olarak döndürdüğü için alan metin ve çevrim burada. */
+      const kg = Number(String($('#lf-kg', m).value || '').replace(',', '.')) || 0;
+      const tekrar = Math.round(Number(String($('#lf-rep', m).value || '').replace(',', '.')) || 0);
+
+      if (tekrar <= 0) { toast('Kaç tekrar yaptığını yaz'); return; }
+      if (kg < 0 || kg > 500) { toast('Ağırlık 0 ile 500 kg arasında olmalı'); return; }
+
+      closeModal();
+      await saveLift(key, { d: dk, kg, tekrar });
+    });
   });
 }
 
@@ -2371,16 +2524,29 @@ function viewProgram() {
     </div>
 
     ${t.antrenmanGun > 0 ? `
-      <div class="section-title">🏋️ ${esc(plan.antrenman.ad)}</div>
-      <div class="panel">
-        ${plan.antrenman.gunler.map((g) => `
-          <div class="list-row" style="display:block">
-            <div class="h-name" style="margin-bottom:4px">${esc(g.ad)}</div>
-            <div class="h-meta">${g.hareketler.map(esc).join(' · ')}</div>
-          </div>`).join('')}
-        <div class="list-row"><div class="grow tiny muted">${esc(plan.antrenman.not)}
-          Her set 6-12 tekrar, son 2 tekrar zorlanacak şekilde.</div></div>
-      </div>` : `
+      <div class="section-title">🏋️ Antrenman — ${esc(plan.antrenman.ad)}</div>
+      <div class="panel"><div class="list-row"><div class="grow small muted">
+        Haftada ${t.antrenmanGun} gün. Her gün ayrı bir alışkanlık olarak kurulur;
+        listedeki hareketin yanındaki düğmeye o gün kaldırdığın ağırlığı yaz,
+        bir dahaki sefere geçen seferki rakam orada seni bekler.
+      </div></div></div>
+      ${plan.antrenman.gunler.map((g) => `
+        <div class="section-title">🏋️ ${esc(g.ad)}</div>
+        <div class="panel">
+          ${g.hareketler.map((x) => {
+            const son = liftsFor(x.key)[0];
+            return `
+            <div class="list-row">
+              <div class="grow" style="min-width:0">
+                <div class="h-name">${esc(x.ad)}</div>
+                <div class="h-meta">${x.set} × ${esc(x.tekrar)} · ${esc(x.dk)} dinlenme${son
+                  ? ` · <b>son: ${esc(liftLabel(son))}</b>` : ''}</div>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`).join('')}
+      <div class="info-box mt">${esc(plan.antrenman.not)}</div>
+      <div class="info-box mt">${esc(ILERLEME)}</div>` : `
       <div class="info-box mt">Antrenman günü girmemişsin. Diyette kas kaybını
         önleyen tek şey ağırlık antrenmanıdır — haftada 2-3 güne çıkarsan
         verdiğin kilonun daha büyük kısmı yağ olur.</div>`}
@@ -3061,11 +3227,24 @@ async function installProgram() {
   if (!ok) return;
 
   const bolumde = (h) => (h.group || '').trim() === PROGRAM_GROUP;
+
+  /*  Eşleşme sırası: önce kendi anahtarı, sonra devraldığı eski anahtarlar
+      (tek "antrenman" alışkanlığı güne bölündüğünde ilk gün onu sahiplenir),
+      en son anahtarsız kurulumlardaki eski adlar. Sahiplenilmezse aynı iş
+      ikinci kez eklenir ve geçmişi ayrı düşerdi. */
   const bul = (spec) => state.habits.find((h) => bolumde(h) && h.progKey === spec.key)
+    || (spec.devralir || []).reduce((bulunan, eskiKey) =>
+        bulunan || state.habits.find((h) => bolumde(h) && h.progKey === eskiKey), null)
     || state.habits.find((h) => bolumde(h) && !h.progKey && eskiAdUyuyor(spec.key, h.name));
 
   let base = state.habits.length;
   let eklenen = 0, guncellenen = 0;
+
+  /*  Bu turda yazılanların kimlikleri. Aşağıdaki arşivleme taraması
+      state.habits üzerinden yürüyor ve o liste yazımlardan hemen sonra
+      tazelenmiş olmayabiliyor: devralınan bir alışkanlık orada hâlâ eski
+      anahtarıyla görünüp "artık üretilmiyor" sanılarak arşivlenebilirdi. */
+  const yazilanlar = new Set();
 
   try {
     for (const spec of specs) {
@@ -3089,7 +3268,9 @@ async function installProgram() {
         archived: false,
         kcal: spec.kcal || 0,
         taskKcal: Array.isArray(spec.taskKcal) ? spec.taskKcal : [],
+        taskLift: Array.isArray(spec.taskLift) ? spec.taskLift : [],
       };
+      delete payload.devralir;
 
       if (hasTasks) {
         const eski = Array.isArray(mevcut?.taskTemplate) ? mevcut.taskTemplate : [];
@@ -3105,6 +3286,7 @@ async function installProgram() {
       else { payload.order = base++; eklenen++; }
 
       const savedId = await state.store.saveHabit(payload);
+      yazilanlar.add(payload.id || savedId);
       await syncDerived({ ...payload, id: payload.id || savedId });
     }
 
@@ -3113,6 +3295,7 @@ async function installProgram() {
     const anahtarlar = new Set(specs.map((x) => x.key));
     for (const h of state.habits) {
       if ((h.group || '').trim() !== PROGRAM_GROUP || h.archived) continue;
+      if (yazilanlar.has(h.id)) continue;
       if (h.progKey && !anahtarlar.has(h.progKey)) {
         await state.store.saveHabit({ ...h, archived: true });
       }
@@ -3287,6 +3470,12 @@ function handleAction(act, el) {
     case 'task-time': {
       const item = tasksFor(id).find((it) => it.id === el.dataset.tid);
       return habit && item && taskTimeDialog(habit, item);
+    }
+
+    case 'task-lift': {
+      const item = tasksFor(id, state.date).find((it) => it.id === el.dataset.tid);
+      const key = habit && item && taskLiftKey(habit, item.id);
+      return key ? liftDialog(habit, item, key) : undefined;
     }
 
     case 'task-copy': {

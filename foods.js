@@ -12,7 +12,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11o';
+export const BUILD = '2026-09-17a';
 
 /*  Birden fazla sunucu denenir. world.* coğrafyaya göre ülke alan adına
     yönlendirebiliyor; yönlendirilen yanıt CORS başlığı taşımazsa istek

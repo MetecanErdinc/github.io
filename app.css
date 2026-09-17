@@ -687,8 +687,19 @@ html[data-standalone="true"] .topbar { padding-bottom: 8px; }
   background: rgba(79, 142, 247, .14); color: var(--accent);
 }
 
+/*  Ağırlık düğmesi süre düğmesiyle aynı kalıpta ama "62,5 kg × 8" daha uzun
+    yazı: dar ekranda metnin kırpılmaması için biraz daha geniş. */
+.task-lift { min-width: 78px; }
+
+.lift-inputs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin-bottom: 14px;
+}
+.lift-inputs .input { text-align: center; font-size: 20px; font-weight: 700; }
+
 @media (max-width: 360px) {
   .task-min { min-width: 48px; padding: 5px 6px; font-size: 11px; }
+  .task-lift { min-width: 66px; }
   .task-text { font-size: 15px; }
 }
 

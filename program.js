@@ -9,10 +9,10 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11o';
+export const BUILD = '2026-09-17a';
 
 
-import { FOODS } from './plan.js';
+import { FOODS, hareketMetni, ILERLEME } from './plan.js';
 
 export const PROGRAM_GROUP = 'Spor ve Diyet';
 
@@ -45,7 +45,7 @@ export const ESKI_ADLAR = {
   ogun3: ['Ara öğün / protein kek', 'Ara öğün…'],
   su: ['Su —…'],
   adim: ['Adım —…'],
-  antrenman: ['Full body antrenman', 'Full body…', 'Üst / Alt…', 'İtiş / Çekiş…'],
+  antrenman0: ['Full body antrenman', 'Full body…', 'Üst / Alt…', 'İtiş / Çekiş…'],
   takviye: ['Takviyeler'],
   kayit: ['Kalori kaydı'],
   olcum: ['Haftalık ölçüm'],
@@ -117,13 +117,32 @@ export function buildHabits(plan) {
         + 'programın en ucuz parçası burası.',
   });
 
+  /*  Antrenman günleri ayrı ayrı alışkanlık olur, tek "haftada 4" sayacı
+      değil. Sebebi listeler: Üst A ile Alt B'nin hareketleri farklı, tek
+      alışkanlığa tek sabit liste bağlanabiliyor. Ayrıca hangi günü yaptığı
+      hangisini atladığı ancak böyle görünür — haftada 4'ün üçünü hep üst
+      gününe harcayan biri sayaçta "3/4" diye başarılı görünürdü.
+
+      Her biri haftada 1 planlanır: gün adı sabit değil, sırayla yapılır. */
   if (t.antrenmanGun > 0) {
-    h.push({
-      key: 'antrenman', name: plan.antrenman.ad, emoji: '🏋️', color: '#6c63ff',
-      mode: 'check', target: 1,
-      schedule: { kind: 'perWeek', perWeek: t.antrenmanGun },
-      note: 'Her hafta bir harekette ya 1 tekrar ya 2,5 kg ekle. Diyetteyken kas '
-          + 'korumanın tek yolu ağırlığın düşmemesi. ' + plan.antrenman.not,
+    plan.antrenman.gunler.forEach((g, i) => {
+      h.push({
+        key: `antrenman${i}`,
+        /* Anahtar öncesi tek antrenman alışkanlığı ilk güne devredilir ki
+           serisi ve geçmişi sıfırlanmasın. */
+        devralir: i === 0 ? ['antrenman'] : [],
+        name: g.ad, emoji: '🏋️', color: '#6c63ff',
+        mode: 'check', target: 1,
+        schedule: { kind: 'perWeek', perWeek: 1 },
+        note: `${plan.antrenman.ad} · ${i + 1}. gün. ${ILERLEME} `
+            + 'Diyetteyken kas korumanın tek yolu ağırlığın düşmemesi.',
+        tasks: g.hareketler.map(hareketMetni),
+
+        /*  taskLift, tasks ile aynı sırada: listedeki maddeye hangi hareketin
+            ağırlık kaydının bağlı olduğunu söyler. Hareket adı değişse bile
+            anahtar sabit kaldığı için geçmiş kayıt maddeyle birlikte taşınır. */
+        taskLift: g.hareketler.map((x) => x.key),
+      });
     });
   }
 

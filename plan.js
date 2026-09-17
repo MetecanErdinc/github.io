@@ -22,7 +22,7 @@
    ========================================================================== */
 
 /* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-11o';
+export const BUILD = '2026-09-17a';
 
 
 /* ---------------------------------------------------------------- besinler */
@@ -430,52 +430,163 @@ function reconcile(ogunler, hedefKcal) {
 
 /* -------------------------------------------------------------- antrenman */
 
-const HAREKETLER = {
-  fullBody: ['Squat veya Leg press', 'Bench press veya Dumbbell press', 'Lat pulldown veya Barfiks',
-             'Dumbbell row', 'Omuz press', 'Plank'],
-  ust:      ['Bench press', 'Lat pulldown', 'Omuz press', 'Dumbbell row', 'Biceps curl', 'Triceps pushdown'],
-  alt:      ['Squat veya Leg press', 'Romanian deadlift', 'Leg curl', 'Leg extension', 'Calf raise', 'Plank'],
-  itis:     ['Bench press', 'Omuz press', 'Incline dumbbell press', 'Lateral raise', 'Triceps pushdown'],
-  cekis:    ['Lat pulldown veya Barfiks', 'Barbell row', 'Face pull', 'Biceps curl', 'Hammer curl'],
-  bacak:    ['Squat', 'Romanian deadlift', 'Leg press', 'Leg curl', 'Calf raise'],
+/**
+ * Hareket adları, kalıcı anahtarlarıyla.
+ *
+ * Anahtar ağırlık kaydının kimliğidir: hareketin adı değişse ya da başka bir
+ * bölünmede başka bir günde geçse bile geçmiş kayıt aynı anahtarda durur.
+ * O yüzden buradaki anahtarlar bir kez yazılır, bir daha değişmez.
+ */
+const HRK_AD = {
+  squatpress:  'Squat veya Leg press',
+  legpress:    'Leg press',
+  squat:       'Squat',
+  goblet:      'Goblet squat veya Hack squat',
+  rdl:         'Romanian deadlift',
+  hipthrust:   'Hip thrust',
+  legcurl:     'Leg curl (yatarak)',
+  legcurlo:    'Leg curl (oturarak)',
+  legext:      'Leg extension',
+  calf:        'Calf raise (ayakta)',
+  calfo:       'Calf raise (oturarak)',
+
+  bench:       'Bench press',
+  dbbench:     'Dumbbell bench press',
+  incline:     'Incline dumbbell press (30°)',
+  omuzpress:   'Omuz press (oturarak)',
+  lateral:     'Lateral raise',
+  pushdown:    'Triceps pushdown',
+  overheadtri: 'Overhead triceps extension',
+
+  latpull:     'Lat pulldown',
+  cablerow:    'Seated cable row',
+  dbrow:       'Dumbbell row (tek kol)',
+  barrow:      'Barbell row',
+  facepull:    'Face pull',
+  curl:        'Biceps curl',
+  hammer:      'Hammer curl',
+
+  plank:       'Plank',
+  legraise:    'Lying leg raise',
 };
+
+/** Bir antrenman satırı: hangi hareket, kaç set, kaç tekrar, ne kadar dinlenme. */
+function g(key, set, tekrar, dk) {
+  const ad = HRK_AD[key];
+  if (!ad) throw new Error(`plan.js: bilinmeyen hareket anahtarı "${key}"`);
+  return { key, ad, set, tekrar, dk };
+}
+
+/*  Set ve tekrar aralıkları hareketin işine göre: bileşik hareketlerde az
+    tekrar–çok dinlenme (yük taşımak için), izolasyonda çok tekrar–az dinlenme
+    (eklem yerine kası yormak için). Diyetteyken hacim değil, ağırlığın
+    düşmemesi korur — bu yüzden ilk hareket hep en ağır olanı. */
+const HAREKETLER = {
+  fullBodyA: [
+    g('squatpress', 3, '8-10', '2-3 dk'), g('bench', 3, '6-8', '2-3 dk'),
+    g('latpull', 3, '8-10', '2 dk'), g('rdl', 3, '10', '2 dk'),
+    g('omuzpress', 3, '10', '90 sn'), g('plank', 3, '30-45 sn', '45 sn'),
+  ],
+  fullBodyB: [
+    g('legpress', 3, '10-12', '2-3 dk'), g('incline', 3, '8-10', '2 dk'),
+    g('cablerow', 3, '10-12', '2 dk'), g('legcurl', 3, '12', '90 sn'),
+    g('lateral', 3, '15', '60 sn'), g('curl', 3, '12', '60 sn'),
+  ],
+  fullBodyC: [
+    g('goblet', 3, '10-12', '2-3 dk'), g('dbbench', 3, '8-10', '2 dk'),
+    g('barrow', 3, '8-10', '2 dk'), g('legext', 3, '15', '60 sn'),
+    g('omuzpress', 3, '10', '90 sn'), g('pushdown', 3, '12', '60 sn'),
+  ],
+
+  ustA: [
+    g('bench', 4, '6-8', '2-3 dk'), g('latpull', 4, '8-10', '2 dk'),
+    g('omuzpress', 3, '8-10', '2 dk'), g('dbrow', 3, '10-12', '90 sn'),
+    g('pushdown', 3, '12', '60 sn'), g('curl', 3, '12', '60 sn'),
+  ],
+  altA: [
+    g('legpress', 4, '10-12', '2-3 dk'), g('rdl', 3, '8-10', '2 dk'),
+    g('legcurl', 3, '12', '90 sn'), g('legext', 3, '12-15', '60 sn'),
+    g('calf', 4, '15', '45 sn'), g('plank', 3, '30-45 sn', '45 sn'),
+  ],
+  ustB: [
+    g('incline', 4, '8-10', '2 dk'), g('cablerow', 4, '10-12', '2 dk'),
+    g('lateral', 3, '15', '60 sn'), g('facepull', 3, '15', '60 sn'),
+    g('hammer', 3, '12', '60 sn'), g('overheadtri', 3, '12', '60 sn'),
+  ],
+  altB: [
+    g('goblet', 4, '10-12', '2-3 dk'), g('hipthrust', 3, '10-12', '2 dk'),
+    g('legcurlo', 3, '12', '90 sn'), g('legext', 3, '15', '60 sn'),
+    g('calfo', 4, '15', '45 sn'), g('legraise', 3, '12', '60 sn'),
+  ],
+
+  itis: [
+    g('bench', 4, '6-8', '2-3 dk'), g('omuzpress', 4, '8-10', '2 dk'),
+    g('incline', 3, '10', '2 dk'), g('lateral', 3, '15', '60 sn'),
+    g('pushdown', 3, '12', '60 sn'),
+  ],
+  cekis: [
+    g('latpull', 4, '8-10', '2 dk'), g('barrow', 4, '8-10', '2 dk'),
+    g('cablerow', 3, '10-12', '90 sn'), g('facepull', 3, '15', '60 sn'),
+    g('curl', 3, '12', '60 sn'), g('hammer', 3, '12', '60 sn'),
+  ],
+  bacak: [
+    g('squatpress', 4, '8-10', '2-3 dk'), g('rdl', 4, '8-10', '2 dk'),
+    g('legpress', 3, '12', '90 sn'), g('legcurl', 3, '12', '90 sn'),
+    g('calf', 4, '15', '45 sn'),
+  ],
+};
+
+/** Bir hareket satırının okunur hâli: "Bench press — 4 × 6-8 · 2-3 dk" */
+export function hareketMetni(x) {
+  return `${x.ad} — ${x.set} × ${x.tekrar} · ${x.dk}`;
+}
+
+/*  İlerleme kuralı her bölünmede aynı, o yüzden tek yerde duruyor. Sayısı
+    yazılı bir hedefi olmayan program takip edilmez: "ağır çalış" ölçülemez,
+    "geçen hafta 8 tekrar yaptıysan bu hafta 2,5 kg ekle" ölçülür. */
+export const ILERLEME = 'Çift ilerleme: tekrar aralığının üst ucunu tüm setlerde '
+  + 'tamamladığın hafta ağırlığa 2,5 kg ekle, tekrarlar alt uca düşsün, oradan '
+  + 'tekrar tırman. Setleri başarısızlığa götürme — rezervde 1-2 tekrar kalsın; '
+  + 'yalnızca izolasyon hareketlerinin son setinde sonuna kadar git.';
 
 /** Antrenman günü sayısına göre bölünme. */
 export function buildTraining(gun) {
   const n = clamp(Number(gun) || 0, 0, 7);
   if (n <= 1) {
-    return { ad: 'Haftada 1 gün yetmez', gunler: [{ ad: 'Full body', hareketler: HAREKETLER.fullBody }],
+    return { ad: 'Haftada 1 gün yetmez', gunler: [{ ad: 'Full body', hareketler: HAREKETLER.fullBodyA }],
              not: 'Kas korumak için haftada en az 2, tercihen 3 gün gerekir. '
                 + 'Şimdilik full body ile başla, üçüncü güne çık.' };
   }
   if (n === 2) {
     return { ad: 'Full body ×2', gunler: [
-      { ad: 'A günü', hareketler: HAREKETLER.fullBody },
-      { ad: 'B günü', hareketler: HAREKETLER.fullBody },
-    ], not: 'Aynı hareketler, aralarında en az 2 gün olsun.' };
+      { ad: 'Full body A', hareketler: HAREKETLER.fullBodyA },
+      { ad: 'Full body B', hareketler: HAREKETLER.fullBodyB },
+    ], not: 'İki gün arasında en az 2 gün olsun.' };
   }
   if (n === 3) {
     return { ad: 'Full body ×3', gunler: [
-      { ad: 'A günü', hareketler: HAREKETLER.fullBody },
-      { ad: 'B günü', hareketler: HAREKETLER.fullBody },
-      { ad: 'C günü', hareketler: HAREKETLER.fullBody },
-    ], not: 'Diyetteyken en verimli bölünme bu. Her kas grubu haftada 3 kez uyarılır.' };
+      { ad: 'Full body A', hareketler: HAREKETLER.fullBodyA },
+      { ad: 'Full body B', hareketler: HAREKETLER.fullBodyB },
+      { ad: 'Full body C', hareketler: HAREKETLER.fullBodyC },
+    ], not: 'Diyetteyken en verimli bölünme bu: her kas grubu haftada 3 kez uyarılır. '
+          + 'Pazartesi–Çarşamba–Cuma gibi aralarında birer gün olacak şekilde dağıt.' };
   }
   if (n === 4) {
     return { ad: 'Üst / Alt ×2', gunler: [
-      { ad: 'Üst 1', hareketler: HAREKETLER.ust },
-      { ad: 'Alt 1', hareketler: HAREKETLER.alt },
-      { ad: 'Üst 2', hareketler: HAREKETLER.ust },
-      { ad: 'Alt 2', hareketler: HAREKETLER.alt },
-    ], not: 'İki üst, iki alt. Arka arkaya aynı bölge gelmesin.' };
+      { ad: 'Üst A', hareketler: HAREKETLER.ustA },
+      { ad: 'Alt A', hareketler: HAREKETLER.altA },
+      { ad: 'Üst B', hareketler: HAREKETLER.ustB },
+      { ad: 'Alt B', hareketler: HAREKETLER.altB },
+    ], not: 'Pazartesi Üst A, Salı Alt A, Perşembe Üst B, Cuma Alt B. '
+          + 'Arka arkaya iki üst ya da iki alt gün gelmesin; her kas haftada 2 kez çalışır.' };
   }
   return { ad: 'İtiş / Çekiş / Bacak', gunler: [
-    { ad: 'İtiş', hareketler: HAREKETLER.itis },
-    { ad: 'Çekiş', hareketler: HAREKETLER.cekis },
-    { ad: 'Bacak', hareketler: HAREKETLER.bacak },
-    { ad: 'İtiş 2', hareketler: HAREKETLER.itis },
-    { ad: 'Çekiş 2', hareketler: HAREKETLER.cekis },
-    ...(n >= 6 ? [{ ad: 'Bacak 2', hareketler: HAREKETLER.bacak }] : []),
+    { ad: 'İtiş A', hareketler: HAREKETLER.itis },
+    { ad: 'Çekiş A', hareketler: HAREKETLER.cekis },
+    { ad: 'Bacak A', hareketler: HAREKETLER.bacak },
+    { ad: 'İtiş B', hareketler: HAREKETLER.itis },
+    { ad: 'Çekiş B', hareketler: HAREKETLER.cekis },
+    ...(n >= 6 ? [{ ad: 'Bacak B', hareketler: HAREKETLER.bacak }] : []),
   ], not: 'Bu hacim toparlanma ister: uyku 7+ saat olmazsa 4 güne düş.' };
 }
 
