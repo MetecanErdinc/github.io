@@ -1,8 +1,8 @@
-# Alışkanlıklarım — Kurulum Kılavuzu
+# 126'dan 105'e — Kurulum Kılavuzu
 
 iPhone'unuzdan, Android tabletinizden ve Windows bilgisayarınızdan aynı anda
 kullanabileceğiniz, birinde yaptığınız değişikliğin diğerlerine anında yansıdığı
-bir alışkanlık takip uygulaması.
+bir diyet ve antrenman takip uygulaması.
 
 **Tamamen ücretsizdir.** Kullanılan her şey ücretsiz seviyede kalır:
 
@@ -127,7 +127,7 @@ service cloud.firestore {
 
 1. Sol üstteki ⚙️ → **Project settings**
 2. Sayfanın altında **Your apps** → **`</>`** (Web) simgesine tıklayın
-3. Takma ad: `alışkanlıklar` → **Register app**
+3. Takma ad: `diyet` → **Register app**
    (Firebase Hosting kutusunu **işaretlemeyin**, gerekmiyor)
 4. Ekrana şuna benzer bir blok gelir — **tamamını kopyalayın**:
 
@@ -149,9 +149,7 @@ const firebaseConfig = {
 
 ## Adım 6 — Ayarları uygulamaya girin
 
-İki yolu var. **A yolunu öneririm** — bir kez yapar, üç cihazda da hazır bulursunuz.
-
-### A) `config.js` dosyasını düzenleyin (önerilen)
+Ayarlar `config.js` dosyasında durur; bir kez yaparsınız, üç cihazda da hazır gelir.
 
 1. GitHub'da depoyu açın → `config.js` dosyasına girin
 2. Sağ üstteki **kalem (✏️)** simgesine basın
@@ -170,12 +168,6 @@ export const firebaseConfig = {
 
 4. **Commit changes** → 1–2 dakika içinde site güncellenir
 
-### B) Uygulamanın içinden yapıştırın
-
-Uygulamayı açtığınızda çıkan kurulum ekranındaki kutuya Adım 5'te kopyaladığınız
-bloğu yapıştırıp **Kaydet ve bağlan** deyin. Bu yöntemde ayarı **her cihazda ayrı
-ayrı** yapmanız gerekir.
-
 ---
 
 ## Adım 7 — Hesabınızı oluşturun
@@ -190,34 +182,8 @@ açık kalır. Kapatmak isterseniz: **Ayarlar → Hesap → Beni hatırla**. Ort
 kullanılan bir bilgisayarda bu kutuyu işaretlemeyin; o zaman oturum yalnızca
 sekme kapanana kadar sürer.
 
-Farklı bir e-postayla giriş yaparsanız o hesabın kendi alışkanlıkları görünür;
+Farklı bir e-postayla giriş yaparsanız o hesabın kendi kayıtları görünür;
 hesaplar birbirinin verisini göremez.
-
----
-
-## Adım 7b — Kurulum kontrolü ile doğrulayın
-
-Uygulamada **Ayarlar → Bulut bağlantısı → Kurulum kontrolü → Çalıştır** deyin
-(giriş yapmadan önce, giriş ekranının altındaki **Kurulum kontrolü** düğmesiyle
-de çalışır).
-
-Şunları tek tek test edip sonucu listeler:
-
-| Kontrol | Ne anlama gelir |
-|---|---|
-| Firebase ayarları | `config.js` doğru okunuyor mu |
-| E-posta/Şifre girişi | Adım 3'ü yaptınız mı |
-| Yetkili alan adı | Adım 3b hatırlatması |
-| Kendi verinize erişim | Adım 4b'deki kurallar yayınlandı mı |
-| Başkasının verisi kapalı mı? | Kurallar gerçekten koruyor mu |
-
-Eksik olan her satırın altında **Firebase konsolundaki tam sayfaya doğrudan
-bağlantı** çıkar — menülerde gezinmenize gerek kalmaz. Hepsi ✅ olduğunda
-kurulum bitmiştir.
-
-> Son satır özellikle önemli: eğer "Kurallar fazla açık" uyarısı çıkarsa
-> Firestore'u *test mode* ile kurmuşsunuz demektir ve o hâlde **başkaları
-> verinizi okuyabilir**. Adım 4b'yi mutlaka yapın.
 
 ---
 
@@ -256,8 +222,8 @@ Uygulama olarak kurulduğunda tam ekran açılır, çevrimdışı da çalışır
 
 ## Sorun giderme
 
-> Önce **Kurulum kontrolü**'nü çalıştırın (Adım 7b) — çoğu sorunu adıyla söyler
-> ve düzeltme bağlantısını verir.
+> Bir şey çalışmıyorsa önce konsola bakın — tarayıcının geliştirici konsolundaki hata mesajı
+> çoğu sorunu adıyla söyler.
 
 **"Bu adres Firebase projesinde yetkili değil"**
 Adım 3b'yi yapmadınız. Authentication → Settings → Authorized domains →
@@ -306,109 +272,6 @@ Giriş ekranında **Şifremi unuttum** → e-postanıza sıfırlama bağlantıs�
 
 ---
 
-## Fotoğraf ekleme
-
-Hem alışkanlıklara hem de Listeler sekmesindeki listelere fotoğraf ekleyebilirsiniz.
-Alışkanlık kartındaki rozete dokunup açılan panelde, listelerde ise listenin
-üstündeki şeritte **📷** düğmesi bulunur. Telefonda kamera ile çekme veya
-galeriden seçme seçeneklerini tarayıcı sunar.
-
-- Her fotoğrafın altında **ne zaman eklendiği** yazar ("Bugün 14:32", "Dün 09:05",
-  "3 gün önce", eskiler için "1 Eylül 07:45")
-- Alışkanlık fotoğrafları **güne bağlıdır**: bugün eklediğiniz fotoğraf bugünde
-  kalır, tarih oklarıyla geçmiş günlerin fotoğraflarına bakabilirsiniz
-- Liste fotoğrafları listeye bağlıdır, tarihten bağımsızdır
-- Fotoğrafa dokununca tam boyutlu hâli açılır; oradan silebilirsiniz
-- Bir yere en fazla 60 fotoğraf eklenebilir
-
-### Neden Firebase Storage kullanılmıyor?
-
-Firebase'in dosya depolama servisi (Cloud Storage) **ücretsiz planda kapalıdır**,
-kredi kartı bağlamanızı ister. Ücretsiz kalmak için fotoğraflar tarayıcınızda
-küçültülüp (uzun kenar 1280 piksel) Firestore veritabanına yazılıyor. Tipik bir
-fotoğraf 150-400 KB yer kaplar; ücretsiz 1 GB alan birkaç bin fotoğraf demektir.
-
-> Yedek dosyasına fotoğrafların yalnızca küçük önizlemeleri girer. Tam boyutlu
-> hâlleri dosyayı çok büyüteceği için dışarıda bırakılır; onlar hesabınızda durur.
-
----
-
-## Listeler sekmesi
-
-Alt menüdeki **Listeler**, alışkanlıklarla hiç ilgisi olmayan serbest listeler
-içindir: market alışverişi, bugün halletmeniz gereken tek seferlik işler,
-unutmamanız gerekenler.
-
-- İstediğiniz kadar liste açarsınız (Market, Bugün, Tamir edilecekler…)
-- Her listenin yanında **oluşturulma tarihi** yazar: aynı günse "Bugün", bir
-  önceki günse "Dün", daha eskiyse "19 Ağustos" gibi. Listeyi düzenleme
-  penceresinde saatiyle birlikte tam hâli görünür.
-- Her listenin kendi simgesi ve adı vardır
-- **Tarihe bağlı değildir.** Alışkanlık listeleri günden güne değişir; buradakiler
-  siz silene kadar olduğu gibi durur. Günü değiştirmek bunları etkilemez.
-- Her maddeye **son tarih** verebilirsiniz: maddenin yanındaki 📅 düğmesine dokunup
-  Bugün / Yarın / Hafta sonu gibi hazır seçeneklerden birini ya da takvimden bir
-  gün seçin. Tarih geçmişse kırmızı, bugünse mavi görünür. Pencerede maddenin ne
-  zaman eklendiği de yazar.
-- Tamamladığınız maddeleri **Tamamlanan N maddeyi temizle** ile toplu silersiniz
-- Maddenin üstüne dokunup metnini değiştirebilirsiniz
-
-Bu listeler de hesabınıza kaydedilir, cihazlar arasında senkronlanır ve
-yedeklemeye dahildir.
-
----
-
-## Günlük yapılacaklar listesi
-
-Bir alışkanlığı düzenlerken **Yapılacaklar listesi** kutusunu işaretlerseniz kartın
-altında o alışkanlığa ait bir liste açılır.
-
-- **Her günün listesi ayrıdır.** Bugün yazdığınız maddeler yalnızca bugüne aittir;
-  yarın kart boş bir listeyle açılır ve **dünkü liste dünde olduğu gibi durur** —
-  işaretleriyle birlikte.
-- Geçmiş bir güne gitmek için Bugün ekranındaki `‹` `›` oklarını veya hafta
-  şeridindeki günü kullanın.
-- Liste boş olan bir günde, daha önceki en yakın dolu günün listesini tek
-  dokunuşla kopyalayabilirsiniz. Metinler gelir, işaretler sıfırlanır.
-- Maddenin üstüne dokunup metnini değiştirebilir, metni tamamen silerseniz madde
-  listeden kalkar.
-
-### İki liste türü
-
-Düzenleyicide **Liste türü** ile seçersiniz:
-
-**Her gün yeni liste** (varsayılan) — Gün boş başlar, o güne ne yazarsanız orada
-kalır. Boş bir günde önceki günün listesini tek dokunuşla kopyalayabilirsiniz.
-Ders planı gibi her gün değişen listeler için.
-
-**Sabit liste** — Maddeler her gün aynı gelir; yeniden yazmanız gerekmez.
-Vitaminler, sabah rutini gibi tekrar eden listeler için.
-
-> Sabit listede de **işaretler güne özeldir**: bugün hepsini işaretlemeniz dünü
-> değiştirmez, yarın liste yeniden işaretsiz gelir.
-
-Sabit listede madde ekler, adını değiştirir veya silerseniz bu değişiklik
-alışkanlığa yazılır ve sonraki günlere yansır. Daha önce işaretlediğiniz günler
-o günkü hâliyle kalır — geçmiş kaydınız bozulmaz.
-
-### Liste alışkanlığı besleyebilir
-
-Düzenleyicide **İlerlemeyi liste belirlesin** seçeneğini açarsanız listedeki
-hareketler doğrudan alışkanlığa işlenir. Takip şekline göre düzenek değişir:
-
-| Takip şekli | Düzenek |
-|---|---|
-| **Sayaç** | İşaretledikçe sayaç ilerler. Örn. 4 maddelik vitamin listesinde her tik sayacı bir artırır, dördü de işaretlenince alışkanlık tamamlanır. |
-| **Süre** | Her maddenin yanında bir süre düğmesi çıkar. Girdiğiniz süreler toplanıp alışkanlığa yazılır. Örn. Matematik 1sa 30dk + Fizik 1sa + Kimya 30dk = 3sa, hedef 3 saatse alışkanlık tamamlanır. |
-| **Yaptım / yapmadım** | Bütün maddeler işaretlenince tamamlanmış sayılır. |
-
-Seçenek kapalıyken liste yalnızca bir not defteridir; alışkanlığı elle
-işaretlersiniz. Listesi boş olan günlerde elle giriş yine açıktır.
-
-Listeler de yedeklemeye dahildir ve cihazlar arasında senkronlanır.
-
----
-
 ## Uygulamayı başkasıyla paylaşma
 
 Kurulum bir kez yapıldı; **paylaştığınız kişinin Firebase ile hiçbir işi yok.**
@@ -421,7 +284,7 @@ https://metecanerdinc.github.io/github.io/
 - Firebase ayarları `config.js` içinde depoda durduğu için herkes hazır bağlantıyla açar
 - Herkes kendi e-postası ve şifresiyle kendi hesabını açar
 - `firestore.rules` her hesabı kendi `users/<uid>` klasörüne hapseder; **kimse
-  başkasının alışkanlıklarını göremez** — bu, arayüzde değil sunucuda zorunlu
+  başkasının kayıtlarını göremez** — bu, arayüzde değil sunucuda zorunlu
 - Firebase'e ait ayar düğmeleri, yapılandırma depodan geldiğinde uygulamada
   görünmez; paylaştığınız kişi bir kurulum ekranıyla karşılaşmaz
 
@@ -438,13 +301,13 @@ kendiliğinden oluşur; **Authentication → Users** listesinde görünürler.
 ## Firebase'siz denemek
 
 Kurulumu şimdi yapmak istemiyorsanız, açılış ekranındaki
-**"Şimdilik sadece bu cihazda kullan"** ile hemen başlayabilirsiniz. Veriler o
-tarayıcıda kalır, senkron olmaz. Sonradan **Ayarlar → Buluta geç** dediğinizde
-o cihazdaki verileri hesabınıza aktarmayı teklif eder.
+**"Hesapsız dene (yalnız bu cihaz)"** ile hemen başlayabilirsiniz. Veriler o
+tarayıcıda kalır, senkron olmaz ve hesaba geçtiğinizde taşınmaz.
 
 ---
 
 ## Yedekleme
 
-**Ayarlar → Veriler → Yedek al** ile her şeyi bir JSON dosyasına indirebilir,
-**Yedekten geri yükle** ile geri alabilirsiniz. Verileriniz size aittir.
+Kayıtlarınız Firestore'da `users/<hesap-kimliğiniz>/days/` altında, gün başına
+bir belge olarak durur. Firebase konsolundan (Firestore → Veri) görebilir,
+dışa aktarabilirsiniz. Uygulamanın içinde ayrı bir yedekleme ekranı yok.
