@@ -10,7 +10,7 @@
    geçmiş kayıtlar yerinde kalsın diye.
    ========================================================================== */
 
-export const BUILD = '2026-09-20a';
+export const BUILD = '2026-09-20b';
 
 export const BASLIK = "126'dan 105'e";
 
@@ -320,6 +320,12 @@ export const GUNLUK_KCAL = OGUNLER.reduce((s, o) => s + o.kcal, 0);
 /** Tarihin antrenman günü; yoksa null. */
 export function gununAntrenmani(d) {
   return ANTRENMANLAR.find((a) => a.gunNo === d.getDay()) || null;
+}
+
+/** "4 × 6-8" -> 4. Programın kaç set öngördüğü; sayaçta hedef olarak yazılır. */
+export function setSayisi(metin) {
+  const m = /^\s*(\d+)/.exec(String(metin || ''));
+  return m ? Number(m[1]) : 0;
 }
 
 /** "ustA:dbbench" — işaret ve ağırlık kayıtlarının anahtarı. */

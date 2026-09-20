@@ -14,7 +14,7 @@ import * as UtilNS from './util.js';
 import * as PlanNS from './plan.js';
 import * as StoreNS from './store.js';
 
-const BUILD = '2026-09-20a';
+const BUILD = '2026-09-20b';
 
 import {
   today, dateKey, parseKey, addDays, diffDays, gunEtiketi, kisaTarih, esc, sayi, yaz,
@@ -25,7 +25,7 @@ import {
   ALISVERIS_HAFTALIK, KURALLAR, YOL_HARITASI, YOL_NOT, LIF_NOTU, SU_NOTU,
   ANTRENMANLAR, HAFTA, ANTRENMAN_NOTU, ISINMA, ISINMA_NOTU, SOGUMA,
   ILK_IKI_HAFTA, CIFT_ILERLEME, ARTIS, ILERLEME_NOTU, DELOAD, FOOTER,
-  GUNLUK_KCAL, gununAntrenmani, hareketAnahtari,
+  GUNLUK_KCAL, gununAntrenmani, hareketAnahtari, setSayisi,
 } from './plan.js';
 
 import {
@@ -43,6 +43,7 @@ const state = {
   view: 'diyet',             // 'diyet' | 'spor'
   date: today(),
   woKey: null,               // Spor sekmesinde açık antrenman
+  odak: null,                // çizimden sonra odaklanılacak set alanı
   acik: new Set(),           // açılmış referans bölümleri
   online: navigator.onLine,
   fromCache: false,
@@ -266,10 +267,68 @@ function sonKayit(hKey, oncesi = state.date) {
     .sort((a, b) => (a[0] < b[0] ? 1 : -1));
 
   for (const [dk, g] of gunler) {
-    const k = g.wo?.[hKey];
-    if (k && (Number(k.kg) > 0 || Number(k.rep) > 0)) return { ...k, dk };
+    const setler = setleriOku(g.wo?.[hKey]);
+    if (setler.length) return { dk, setler };
   }
   return null;
+}
+
+/**
+ * Bir hareketin o günkü setleri.
+ *
+ * Tek set tutan ilk biçim ({kg, rep}) de okunur: kayıt anahtarı aynı kaldığı
+ * için eski günlerin verisi olduğu yerde duruyor, onu da göstermek gerekiyor.
+ * Yeni yazımlar hep `setler` dizisine gider.
+ */
+function setleriOku(kayit) {
+  if (Array.isArray(kayit?.setler)) {
+    return kayit.setler
+      .map((x) => ({ kg: Number(x?.kg) || 0, rep: Number(x?.rep) || 0 }))
+      .filter((x) => x.kg || x.rep);
+  }
+  const kg = Number(kayit?.kg) || 0;
+  const rep = Number(kayit?.rep) || 0;
+  return (kg || rep) ? [{ kg, rep }] : [];
+}
+
+/** Bir setin okunur hâli: "50 × 10", kilosuz girildiyse "10 tekrar". */
+function setYazi(x) {
+  if (!x.kg) return `${x.rep} tekrar`;
+  return `${yaz(x.kg)}${x.rep ? ` × ${x.rep}` : ' kg'}`;
+}
+
+/*  Kaydın tamamı yazılır, parçası değil: yerel depo ile bulut deposunun iç içe
+    birleştirme davranışı aynı kalsın diye. */
+function setleriYaz(k, setler, ok) {
+  return patch({ wo: { [k]: { ok: !!ok, setler } } });
+}
+
+/**
+ * Bir set satırının bir alanını yazar.
+ *
+ * Son satır her zaman boştur ve dizide karşılığı yoktur; oraya bir değer
+ * girilince dizinin sonuna yeni set eklenir, böylece altında bir boş satır
+ * daha açılır. İki alanı da boşaltılan satır listeden düşer — yanlış girilen
+ * seti silmenin en kısa yolu.
+ */
+function satirYaz(k, i, alan, ham) {
+  const kayit = gun().wo[k] || {};
+  const setler = setleriOku(kayit);
+
+  const v = alan === 'kg' ? sayi(ham) : Math.round(sayi(ham));
+  if (alan === 'kg' && (v < 0 || v > 500)) { toast('Ağırlık 0-500 kg arasında olmalı'); return; }
+  if (alan === 'rep' && (v < 0 || v > 100)) { toast('Tekrar 0-100 arasında olmalı'); return; }
+
+  if (i < setler.length) {
+    setler[i] = { ...setler[i], [alan]: v };
+    if (!setler[i].kg && !setler[i].rep) setler.splice(i, 1);
+  } else if (v > 0) {
+    setler.push({ kg: 0, rep: 0, [alan]: v });
+  } else {
+    return;                            // boş satırda boş değer: yazacak bir şey yok
+  }
+
+  setleriYaz(k, setler, kayit.ok);
 }
 
 function viewSpor() {
@@ -299,37 +358,61 @@ function viewSpor() {
     const k = hareketAnahtari(secili.key, h.key);
     const kayit = g.wo[k] || {};
     const on = !!kayit.ok;
+    const setler = setleriOku(kayit);
+    const hedefSet = setSayisi(h.set);
     const son = sonKayit(k);
+
+    /*  Listenin sonunda her zaman boş bir satır durur: bir set girilir
+        girilmez altında bir sonraki için yer açılmış olur, "set ekle"
+        düğmesine basmaya gerek kalmaz. */
+    const satir = (i, deger) => {
+      const bos = !deger;
+      return `
+      <div class="set-row ${bos ? 'bos' : ''}">
+        <span class="sn">${i + 1}</span>
+        <input class="input" inputmode="decimal" placeholder="kg"
+               value="${deger && deger.kg ? yaz(deger.kg) : ''}"
+               data-set="1" data-k="${esc(k)}" data-i="${i}" data-f="kg"
+               aria-label="${esc(h.ad)} ${i + 1}. set ağırlık" />
+        <span class="x">×</span>
+        <input class="input" inputmode="numeric" placeholder="tekrar"
+               value="${deger && deger.rep ? esc(String(deger.rep)) : ''}"
+               data-set="1" data-k="${esc(k)}" data-i="${i}" data-f="rep"
+               aria-label="${esc(h.ad)} ${i + 1}. set tekrar" />
+        ${bos
+          ? '<span class="set-del-yer"></span>'
+          : `<button class="set-del" data-act="set-del" data-k="${esc(k)}" data-i="${i}"
+                     aria-label="${i + 1}. seti sil">✕</button>`}
+      </div>`;
+    };
 
     return `
     <div class="ex ${on ? 'on' : ''}">
       <div class="ex-top">
-        <button class="tick ${on ? 'on' : ''}" data-act="wo-ok" data-k="${esc(k)}"
-                aria-pressed="${on}" aria-label="${esc(h.ad)} yapıldı">✓</button>
         <div class="grow">
           <div class="r-name">${esc(h.ad)}</div>
           <div class="r-sub"><b>${esc(h.set)}</b> · ${esc(h.dk)} dinlenme</div>
         </div>
+        <div class="set-say ${hedefSet && setler.length >= hedefSet ? 'full' : ''}">
+          ${setler.length}${hedefSet ? ` / ${hedefSet}` : ''} <span>set</span>
+        </div>
       </div>
 
-      <div class="ex-input">
-        <label class="num">
-          <span>kg</span>
-          <input class="input" inputmode="decimal" placeholder="—"
-                 value="${kayit.kg ? yaz(kayit.kg) : ''}"
-                 data-change="wo-kg" data-k="${esc(k)}" aria-label="${esc(h.ad)} ağırlık" />
-        </label>
-        <label class="num">
-          <span>tekrar</span>
-          <input class="input" inputmode="numeric" placeholder="—"
-                 value="${kayit.rep ? esc(String(kayit.rep)) : ''}"
-                 data-change="wo-rep" data-k="${esc(k)}" aria-label="${esc(h.ad)} tekrar" />
-        </label>
-        <div class="last">${son
-          ? `geçen (${esc(kisaTarih(parseKey(son.dk)))})<b>${son.kg ? `${yaz(son.kg)} kg` : ''}${
-              son.kg && son.rep ? ' × ' : ''}${son.rep || ''}</b>`
-          : '<span class="muted">ilk kayıt</span>'}</div>
+      <div class="sets">
+        ${setler.map((x, i) => satir(i, x)).join('')}
+        ${satir(setler.length, null)}
       </div>
+
+      <button class="all-done ${on ? 'on' : ''}" data-act="wo-ok" data-k="${esc(k)}"
+              aria-pressed="${on}">
+        <span class="box">${on ? '✓' : ''}</span>
+        <span>Tüm setleri yaptım</span>
+      </button>
+
+      <div class="last">${son
+        ? `geçen (${esc(kisaTarih(parseKey(son.dk)))}) — ${
+            son.setler.map((x) => esc(setYazi(x))).join(' · ')}`
+        : '<span class="muted">bu harekette ilk kaydın</span>'}</div>
 
       ${h.alt ? `<div class="ex-note alt">${esc(h.alt)}</div>` : ''}
       ${h.form ? `<div class="ex-note">${esc(h.form)}</div>` : ''}
@@ -403,6 +486,7 @@ function katlanir(key, baslik, icerik) {
 
 let bekleyenCizim = false;
 let cizimPlanli = false;
+let zorlaCizim = false;
 
 /**
  * Çizim isteği. Asıl iş bir sonraki kareye bırakılır.
@@ -414,8 +498,10 @@ let cizimPlanli = false;
  * yerine oturmuş oluyor ve aşağıdaki koruma doğru kararı verebiliyor.
  * Yan fayda: arka arkaya gelen yazımlar tek çizimde toplanıyor.
  */
-function render() {
-  if (!state.store || cizimPlanli) return;
+function render(zorla) {
+  if (!state.store) return;
+  if (zorla) { zorlaCizim = true; bekleyenCizim = false; }
+  if (cizimPlanli) return;
   cizimPlanli = true;
   requestAnimationFrame(() => { cizimPlanli = false; cizim(); });
 }
@@ -423,11 +509,15 @@ function render() {
 function cizim() {
   if (!state.store) return;
 
+  const zorla = zorlaCizim;
+  zorlaCizim = false;
+
   /*  Kullanıcı bir alana yazarken yeniden çizmek yazdığını siler: senkron
       anlık ve başka cihazdan da gelebiliyor. Odak bir girişteyse çizim
-      odak kaybına ertelenir. */
+      odak kaybına ertelenir — Enter'la yeni set satırı açmak gibi, çizimin
+      kendisi istenen sonuç olduğunda hariç. */
   const odak = document.activeElement;
-  if (odak && odak.tagName === 'INPUT' && odak.closest('#view')) {
+  if (!zorla && odak && odak.tagName === 'INPUT' && odak.closest('#view')) {
     if (!bekleyenCizim) {
       bekleyenCizim = true;
       odak.addEventListener('focusout', () => { bekleyenCizim = false; render(); }, { once: true });
@@ -448,7 +538,21 @@ function cizim() {
   $('#go-today').hidden = diffDays(state.date, today()) === 0;
 
   window.scrollTo(0, y);
+  odakYerlestir();
   senkronRozeti();
+}
+
+/** Çizim DOM'u baştan kurduğu için odak elle geri konur (Enter'dan sonra). */
+function odakYerlestir() {
+  const o = state.odak;
+  state.odak = null;
+  if (!o) return;
+
+  const el = $(`[data-set][data-k="${o.k}"][data-i="${o.i}"][data-f="${o.f}"]`);
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  el.select?.();
+  el.scrollIntoView({ block: 'nearest' });
 }
 
 function senkronRozeti() {
@@ -506,9 +610,14 @@ function bindApp() {
 
       case 'wo-ok': {
         const eski = g.wo[k] || {};
-        /*  Kaydın tamamı yazılır, parçası değil: yerel depo ile bulut deposunun
-            iç içe birleştirme davranışı aynı kalsın diye. */
-        return patch({ wo: { [k]: { ok: !eski.ok, kg: Number(eski.kg) || 0, rep: Number(eski.rep) || 0 } } });
+        return setleriYaz(k, setleriOku(eski), !eski.ok);
+      }
+
+      case 'set-del': {
+        const eski = g.wo[k] || {};
+        const setler = setleriOku(eski);
+        setler.splice(Number(b.dataset.i), 1);
+        return setleriYaz(k, setler, eski.ok);
       }
 
       case 'fold':
@@ -530,53 +639,64 @@ function bindApp() {
       ve bekleyen `change` hiç ateşlenmiyordu. Yazarken kaydedince kaybedilecek
       bir değer kalmıyor. */
   let yazmaTimer = null;
-  const kaydet = (el, hemen) => {
-    const k = el.dataset.k;
-    const g = gun();
+  const kaydet = (el) => {
+    if (el.dataset.set) return satirYaz(el.dataset.k, Number(el.dataset.i), el.dataset.f, el.value);
 
     if (el.dataset.change === 'tarti') {
       const v = sayi(el.value);
-      if (v && (v < 30 || v > 400)) { if (hemen) toast('Kilo 30-400 arasında olmalı'); return; }
+      if (v && (v < 30 || v > 400)) { toast('Kilo 30-400 arasında olmalı'); return; }
       return patch({ tarti: v });
-    }
-
-    /*  Kaydın tamamı yazılır, parçası değil: yerel depo ile bulut deposunun
-        iç içe birleştirme davranışı aynı kalsın diye. */
-    const eski = g.wo[k] || {};
-    if (el.dataset.change === 'wo-kg') {
-      const v = sayi(el.value);
-      if (v < 0 || v > 500) { if (hemen) toast('Ağırlık 0-500 kg arasında olmalı'); return; }
-      return patch({ wo: { [k]: { ok: !!eski.ok, kg: v, rep: Number(eski.rep) || 0 } } });
-    }
-    if (el.dataset.change === 'wo-rep') {
-      const v = Math.round(sayi(el.value));
-      if (v < 0 || v > 100) { if (hemen) toast('Tekrar 0-100 arasında olmalı'); return; }
-      return patch({ wo: { [k]: { ok: !!eski.ok, kg: Number(eski.kg) || 0, rep: v } } });
     }
   };
 
+  const alan = (e) => e.target.closest?.('[data-set], [data-change]');
+
   $('#screen-app').addEventListener('input', (e) => {
-    const el = e.target.closest('[data-change]');
+    const el = alan(e);
     if (!el) return;
     clearTimeout(yazmaTimer);
-    yazmaTimer = setTimeout(() => kaydet(el, false), 400);
+    yazmaTimer = setTimeout(() => { yazmaTimer = null; kaydet(el); }, 400);
   });
 
   $('#screen-app').addEventListener('change', (e) => {
-    const el = e.target.closest('[data-change]');
+    const el = alan(e);
     if (!el) return;
     clearTimeout(yazmaTimer);
-    kaydet(el, true);
+    yazmaTimer = null;
+    kaydet(el);
   });
 
   /*  Odak alandan çıkarken bekleyen gecikmeli yazımı hemen boşalt — kullanıcı
       yazdıktan 100 ms sonra tike basarsa değeri beklemeden kaydetmiş olalım. */
   $('#screen-app').addEventListener('focusout', (e) => {
-    const el = e.target.closest?.('[data-change]');
+    const el = alan(e);
     if (!el || !yazmaTimer) return;
     clearTimeout(yazmaTimer);
     yazmaTimer = null;
-    kaydet(el, false);
+    kaydet(el);
+  });
+
+  /*  Enter: kilodan tekrara, tekrardan bir alttaki setin kilosuna geçer.
+      Böylece "50 enter 10 enter" ile set set ilerlenebiliyor, aradaki her
+      dokunuşu ekranda aramak gerekmiyor. */
+  $('#screen-app').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const el = e.target.closest?.('[data-set]');
+    if (!el) return;
+    e.preventDefault();
+
+    clearTimeout(yazmaTimer);
+    yazmaTimer = null;
+    kaydet(el);
+
+    const i = Number(el.dataset.i);
+    state.odak = el.dataset.f === 'kg'
+      ? { k: el.dataset.k, i, f: 'rep' }
+      : { k: el.dataset.k, i: i + 1, f: 'kg' };
+
+    /*  Odak bir alanın içindeyken çizim normalde erteleniyor; burada yeni
+        satırın görünmesi işin kendisi, o yüzden zorlanıyor. */
+    render(true);
   });
 
   window.addEventListener('online',  () => { state.online = true;  senkronRozeti(); });

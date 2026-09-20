@@ -21,11 +21,14 @@ ve haftalık tartı alanı. Referans bölümleri (besin değerleri, çiğ↔piş
 karşılıkları, alışveriş listesi, kurallar, yol haritası) katlanmış durur.
 
 **Spor** — haftanın antrenman günleri (Üst A / Alt A / Üst B / Alt B). Gün
-şeridinden seçilir, o günkü gün kendiliğinden açılır. Her hareketin yanında:
+şeridinden seçilir, o günkü gün kendiliğinden açılır. Her harekette:
 
-- yapıldı tiki
-- **kg** ve **tekrar** alanı
-- geçen sefer aynı harekette ne girildiği
+- istenen sayıda **set satırı** — `kg × tekrar`. Listenin sonunda hep bir boş
+  satır durur; oraya bir değer girilince altında yenisi açılır. Enter kilodan
+  tekrara, tekrardan bir alttaki setin kilosuna geçirir
+- girilen set sayısı, programın öngördüğü sayıya karşı (`3 / 4 set`)
+- **Tüm setleri yaptım** kutusu
+- geçen sefer aynı harekette girilen setler
 
 Geçen seferki rakamın görünmesi programın ilerleme kuralının işlemesi için
 şart: "bütün setlerde üst sınır tekrarı iki antrenman üst üste tutarsa ağırlığı
@@ -40,7 +43,7 @@ Gün başına tek belge:
 ```
 users/<uid>/days/2026-09-20
   { date, diet:{...}, takviye:{...}, su, adim, tarti,
-    wo:{ "ustA:dbbench": { ok, kg, rep } } }
+    wo:{ "ustA:dbbench": { ok, setler:[{kg, rep}, …] } } }
 ```
 
 Bir antrenman sırasında onlarca küçük yazma oluyor ve hepsi aynı güne ait;
