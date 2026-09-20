@@ -1,640 +1,328 @@
 /* ==========================================================================
-   plan.js — kişiye özel diyet ve antrenman programı hesabı
+   plan.js — programın kendisi
    --------------------------------------------------------------------------
-   Girdi: profil (cinsiyet, yaş, boy, kilo, hareket, antrenman günü, hedef,
-   hız, kaçınılan besinler). Çıktı: kalori, makrolar, gramajlı öğünler,
-   antrenman bölünmesi ve günlük hedefler.
+   Burada hesap yok, yalnızca veri var: öğünler gramajıyla, antrenman günleri
+   set ve tekrarıyla. Program dışarıdan geliyor ve sabit; uygulamanın işi onu
+   hesaplamak değil, takip edilebilir hale getirmek.
 
-   Buradaki her sayının bir dayanağı var; sihir yok:
-
-   - Bazal metabolizma  : Mifflin-St Jeor (obezitede en az sapan denklem)
-   - Yürüyüş            : ~0,5 kcal/kg/km, 1 km ≈ 1300 adım, net pay ~%70
-   - Antrenman          : ~3,5 kcal/kg (bir saatlik ağırlık seansı)
-   - Açık               : hem haftalık kilo yüzdesinden hem de TDEE yüzdesinden
-                          hesaplanır, küçük olan kazanır — yağ oranı yüksekken
-                          hızlı vermek güvenli, zayıfken aynı hız kas yakar
-   - Protein            : 2,0 g/kg (kas hedefinde 2,2) — vücut ağırlığı değil,
-                          BKİ 25'e denk gelen ağırlık üzerinden. Obezitede
-                          gerçek kiloyla çarpmak anlamsız yüksek sayı verir
-   - Yağ                : 0,8 g/kg (aynı referans), en az kalorinin %20'si
-   - Lif                : 14 g / 1000 kcal
-   - Su                 : 30 ml/kg
+   Her satırın kalıcı bir anahtarı var. İşaretler ve girilen ağırlıklar bu
+   anahtara yazılıyor, sıra numarasına değil — programda bir satır değişirse
+   geçmiş kayıtlar yerinde kalsın diye.
    ========================================================================== */
 
-/* Sürüm damgası — app.js karışık sürüm yüklenmesini bununla yakalar. */
-export const BUILD = '2026-09-17a';
+export const BUILD = '2026-09-20a';
 
+export const BASLIK = "126'dan 105'e";
 
-/* ---------------------------------------------------------------- besinler */
-/* 100 g çiğ/ham başına: kcal, protein, karbonhidrat, yağ, lif (gram) */
+/* --------------------------------------------------------------- hedefler */
 
-const F = (kcal, p, c, f, fib = 0) => ({ kcal, p, c, f, fib });
-
-export const FOODS = {
-  yogurt:      { ad: 'yoğurt (yarım yağlı)',        ...F(60, 5.5, 7, 1.5) },
-  kefir:       { ad: 'kefir',                        ...F(55, 3.8, 4.5, 2) },
-  yulaf:       { ad: 'yulaf',                        ...F(389, 13.5, 66, 7, 10) },
-  whey:        { ad: 'whey protein',                 ...F(385, 80, 8, 4) },
-  bitkiselProtein: { ad: 'bitkisel protein tozu (bezelye/soya)', ...F(380, 75, 8, 5, 3) },
-  keten:       { ad: 'öğütülmüş keten/chia',         ...F(534, 18, 29, 42, 27) },
-  meyve:       { ad: 'meyve (çilek, kivi, elma)',    ...F(45, 0.8, 10, 0.3, 2) },
-  tavuk:       { ad: 'tavuk göğsü',                  ...F(110, 23, 0, 1.5) },
-  hindi:       { ad: 'hindi göğsü',                  ...F(112, 24, 0, 1.5) },
-  balik:       { ad: 'somon / uskumru',              ...F(200, 20, 0, 13) },
-  kiyma:       { ad: 'dana kıyma (%10 yağlı)',       ...F(190, 20, 0, 12) },
-  mercimek:    { ad: 'kuru mercimek',                ...F(350, 25, 60, 1, 30) },
-  nohut:       { ad: 'kuru nohut',                   ...F(364, 19, 61, 6, 17) },
-  yumurta:     { ad: 'yumurta',                      ...F(143, 12.5, 0.7, 10) },
-  yumurtaAk:   { ad: 'yumurta beyazı',               ...F(52, 11, 0.7, 0.2) },
-  bulgur:      { ad: 'bulgur',                       ...F(345, 12, 76, 1.5, 18) },
-  pirinc:      { ad: 'pirinç',                       ...F(360, 7, 79, 0.6, 1.5) },
-  patates:     { ad: 'patates',                      ...F(77, 2, 17, 0.1, 2) },
-  salata:      { ad: 'salata (marul, domates, salatalık)', ...F(20, 1.2, 3.5, 0.2, 1.5) },
-  sebze:       { ad: 'sebze yemeği',                 ...F(40, 2, 6, 0.5, 3) },
-  zeytinyagi:  { ad: 'zeytinyağı',                   ...F(900, 0, 0, 100) },
-  kakao:       { ad: 'şekersiz toz kakao',           ...F(230, 20, 58, 14, 33) },
-  ceviz:       { ad: 'ceviz / badem',                ...F(640, 18, 14, 60, 7) },
+export const HEDEF = {
+  kcal: 2000,
+  protein: 194,
+  haftalikKg: 1,
+  hafta: 22,
+  suL: 3.5,
+  suTik: 7,                 // her tik 500 ml
+  adimMin: 8000,
+  adimMax: 10000,
+  adimTik: 10,              // her tik 1.000 adım
 };
 
-/* --------------------------------------------------------------- seçenekler */
-
-export const CINSIYET = [['erkek', 'Erkek'], ['kadin', 'Kadın']];
-
-export const HAREKET = [
-  ['cokAz', 'Çok az',  'Masabaşı, günde 3.000 adımın altı',        1.15, 2500],
-  ['az',    'Az',      'Biraz yürüyorum, 3.000-6.000 adım',        1.20, 5000],
-  ['orta',  'Orta',    'Düzenli yürüyorum, 6.000-10.000 adım',     1.25, 8000],
-  ['cok',   'Çok',     'Ayakta iş / bol yürüyüş, 10.000 üstü',     1.32, 11000],
+/* Günün besin değerleri — öğünlerin toplamı, referans değerleriyle. */
+export const TOPLAM = [
+  ['Kalori',        '1971 kcal', '/ 2000', true],
+  ['Protein',       '197 g',     '/ 190',  false],
+  ['Karbonhidrat',  '176 g',     '/ 180',  false],
+  ['Yağ',           '57 g',      '/ 58',   true],
+  ['Lif',           '~19,5 g',   '/ 25-30', false],
+  ['Kalsiyum',      '~925 mg',   '/ 1000', false],
+  ['Su',            '3,5 L',     '',       false],
 ];
 
-export const HEDEF = [
-  ['ver',  'Kilo vermek'],
-  ['koru', 'Kiloyu korumak'],
-  ['kas',  'Kas yapmak'],
+/* ---------------------------------------------------------------- öğünler */
+
+export const OGUNLER = [
+  {
+    key: 'kahvalti', ad: 'Kahvaltı', emoji: '🍳',
+    kcal: 418, protein: 45,
+    satirlar: [
+      { key: 'cream', ad: 'Cream of rice',   gram: '40 g',  not: 'kuru',       kcal: 146 },
+      { key: 'sut',   ad: 'Yarım yağlı süt', gram: '200 ml', not: '',          kcal: 92 },
+      { key: 'whey',  ad: 'Whey protein',    gram: '45 g',  not: '1,5 ölçek',  kcal: 180 },
+    ],
+    not: "Whey'i OCAKTAN ALDIKTAN SONRA çırpıp sos olarak üstüne dök — "
+       + 'kaynarken atarsan topaklanır. Pişmiş toplam ~220 g.',
+  },
+  {
+    key: 'oglen', ad: 'Öğlen', emoji: '🍗',
+    kcal: 772, protein: 77,
+    satirlar: [
+      { key: 'bulgur',    ad: 'Bulgur',       gram: '140 g pişmiş', not: '50 g çiğ',  kcal: 171 },
+      { key: 'tavuk',     ad: 'Tavuk göğsü',  gram: '200 g pişmiş', not: '265 g çiğ', kcal: 305 },
+      { key: 'salatalik', ad: 'Salatalık',    gram: '1 adet',       not: '~200 g',    kcal: 30 },
+      { key: 'domates',   ad: 'Domates',      gram: '1 adet',       not: '~120 g',    kcal: 22 },
+      { key: 'lahana',    ad: 'Mor lahana',   gram: '100 g',        not: '',          kcal: 31 },
+      { key: 'zeytinyag', ad: 'Zeytinyağı',   gram: '15 g',         not: '1 yemek kaşığı', kcal: 135 },
+      { key: 'yogurt',    ad: 'Yoğurt',       gram: '150 g',        not: '',          kcal: 78 },
+    ],
+    not: 'Zeytinyağını TART, göz kararı dökme. Günlük yağının çoğu buradan geliyor.',
+  },
+  {
+    key: 'aksam', ad: 'Akşam', emoji: '🐟',
+    kcal: 781, protein: 74,
+    satirlar: [
+      { key: 'basmati',   ad: 'Basmati pirinç', gram: '150 g pişmiş', not: '50 g çiğ',  kcal: 180 },
+      { key: 'tavuk',     ad: 'Tavuk göğsü',    gram: '200 g pişmiş', not: '265 g çiğ', kcal: 305 },
+      { key: 'salatalik', ad: 'Salatalık',      gram: '1 adet',       not: '~200 g',    kcal: 30 },
+      { key: 'domates',   ad: 'Domates',        gram: '1 adet',       not: '~120 g',    kcal: 22 },
+      { key: 'lahana',    ad: 'Mor lahana',     gram: '100 g',        not: '',          kcal: 31 },
+      { key: 'zeytinyag', ad: 'Zeytinyağı',     gram: '15 g',         not: '1 yemek kaşığı', kcal: 135 },
+      { key: 'yogurt',    ad: 'Yoğurt',         gram: '150 g',        not: '',          kcal: 78 },
+    ],
+    not: 'Öğlenle aynı, tek fark bulgur yerine basmati. Zeytinyağı yine tartılacak.',
+  },
 ];
 
-export const HIZ = [
-  ['yavas',  'Yavaş',  'Rahat ilerler, sosyal hayatı en az bozar'],
-  ['normal', 'Normal', 'Çoğu kişi için en iyi denge'],
-  ['hizli',  'Hızlı',  'En yüksek güvenli hız — disiplin ister'],
+export const TAKVIYELER = [
+  { key: 'omega3', ad: 'Omega 3', ne: 'Öğlen veya akşam',
+    not: 'Hedef günde 1-2 g EPA + DHA. Etiketteki "balık yağı" rakamına değil, '
+       + 'EPA ve DHA rakamlarına bak — 1000 mg\'lık kapsülde genelde 300 mg EPA+DHA olur.' },
+  { key: 'd3k2', ad: 'D3 + K2', ne: 'Öğlen veya akşam',
+    not: 'Yağda çözünür, zeytinyağlı öğünle al. Kahvaltıda sadece 6 g yağ var, '
+       + 'orada emilimi düşük kalır.' },
+  { key: 'mag', ad: 'Magnezyum', ne: 'Akşam · yatmadan 1 saat önce',
+    not: 'Sitrat veya bisglisinat formu. Oksit alma, emilimi düşük. '
+       + 'Sitrat bağırsağı da rahatlatır.' },
 ];
 
-export const KACIN = [
-  ['balik',   'Balık yemem'],
-  ['kirmizi', 'Kırmızı et yemem'],
-  ['sut',     'Süt ürünü yemem'],
-  ['vejeteryan', 'Et ve balık yemem (vejetaryen)'],
+export const CIG_PISMIS = [
+  ['Bulgur (öğlen)',        '50 g çiğ → 140 g'],
+  ['Basmati (akşam)',       '50 g çiğ → 150 g'],
+  ['Tavuk göğsü',           '265 g çiğ → 200 g'],
+  ['Cream of rice + süt',   '40 g + 200 ml → ~220 g'],
 ];
 
-/* ------------------------------------------------------------- yardımcılar */
+export const ALISVERIS_GUNLUK = [
+  ['Tavuk göğsü', '530 g'], ['Bulgur · basmati', '50 + 50 g'],
+  ['Cream of rice', '40 g'], ['Yarım yağlı süt', '200 ml'],
+  ['Yoğurt', '300 g'], ['Whey', '45 g'],
+  ['Salatalık · domates', '2 + 2 adet'], ['Mor lahana', '200 g'],
+  ['Zeytinyağı', '30 g'],
+];
 
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-const round5 = (v) => Math.round(v / 5) * 5;
+export const ALISVERIS_HAFTALIK = [
+  ['Tavuk göğsü', '3,7 kg'], ['Bulgur · basmati', '350 + 350 g'],
+  ['Cream of rice', '280 g'], ['Yarım yağlı süt', '1,4 L'],
+  ['Yoğurt', '2,1 kg'], ['Whey', '~315 g'],
+  ['Salatalık · domates', '14 + 14 adet'], ['Mor lahana', '1,4 kg'],
+  ['Zeytinyağı', '210 ml'],
+];
 
-/**
- * Porsiyonlar 5 g'a, 100 g'ı geçenler 10 g'a yuvarlanır — mutfakta 187 g
- * tartılmaz. 3 gramın altı hiç yazılmaz: "5 g bulgur" satırı tabağa bir şey
- * katmaz ama günde dört öğünde toplanınca hesabı kaydırır.
- */
-function roundPortion(g) {
-  if (g < 3) return 0;
-  if (g >= 100) return Math.round(g / 10) * 10;
-  if (g >= 20) return round5(g);
-  return Math.round(g);
-}
+export const KURALLAR = [
+  'Ölçü daima ÇİĞ/KURU ağırlıktan. Pişmiş gram sadece porsiyonlamak için.',
+  'ZEYTİNYAĞINI TART. Bir fazla yemek kaşığı 124 kcal — günde iki fazla kaşık, '
+    + 'haftada 1 kg yerine 0,8 kg.',
+  'SIVI KALORİ YOK. Çay ve kahve şekersiz, gazlı ve meyve suyu yok.',
+  'Günde 3,5 L su.',
+  'Günde 8-10 bin adım. Hesabın içinde var, atmazsan açık 1100 değil 850 olur.',
+  'Antrenmana en yakın öğün kahvaltı olsun — cream of rice + whey hızlı sindirilir, '
+    + 'mideyi ağırlaştırmaz. Saati kaydıramıyorsan boş ver, kaloriye etkisi yok.',
+  'Tartı haftada bir: PAZARTESİ SABAH, aç karnına, tuvalet sonrası, aynı tartıda.',
+  'Toplu pişirilen cream of rice 3 günü geçmesin; pişince 2 saat içinde buzdolabına, '
+    + 'ayrı kaplara porsiyonlanmış halde.',
+  'Tartı her hafta düzgün 1,0 kg inmez. 2-3 HAFTALIK ORTALAMAYA bak, tek haftaya değil.',
+];
 
-const kcalOf = (food, g) => (food.kcal * g) / 100;
-const macroOf = (food, g, key) => (food[key] * g) / 100;
+export const YOL_HARITASI = [
+  ['126 → 117 kg', '2000 kcal · ~1,0 kg/hafta'],
+  ['117 → 108 kg', '~1900 kcal · ~0,8 kg/hafta'],
+  ['108 → 105 kg', '~1850 kcal · ~0,7 kg/hafta'],
+  ['105 kg · koruma', '~2600 kcal'],
+];
 
-/* ------------------------------------------------------------------ hesap */
+export const YOL_NOT = '117 kiloya inince haber ver. O noktada yağ deponun günlük '
+  + 'verebileceği enerji düşer; 1 kg/haftada ısrar edersek fark kastan gelmeye başlar. '
+  + 'Kaloriyi yeniden hesaplarız.';
 
-/**
- * Profilden günlük hedefleri çıkarır.
- * @param {{cinsiyet,yas,boy,kilo,hareket,antrenmanGun,hedef,hiz,kacin[]}} p
- */
-export function computeTargets(p) {
-  const kilo = Number(p.kilo), boy = Number(p.boy), yas = Number(p.yas);
-  const erkek = p.cinsiyet !== 'kadin';
-  const boyM = boy / 100;
-  const bki = kilo / (boyM * boyM);
+export const LIF_NOTU = 'Öğlen bulgur, akşam basmati. Bulgurun 50 g\'ında 9,2 g lif var, '
+  + 'basmatinin 0,7 g. Bir öğünü bulgura çevirmek lifi 11\'den 19,5 g\'a çıkardı — '
+  + 'bedava, kalori aynı, üstüne 3 g fazla protein.';
 
-  const bmr = Math.round(10 * kilo + 6.25 * boy - 5 * yas + (erkek ? 5 : -161));
-
-  const hareket = HAREKET.find((h) => h[0] === p.hareket) || HAREKET[0];
-  const [, , , tabanCarpan, mevcutAdim] = hareket;
-
-  /* Hedef adım: bulunduğu yerden ~3.000 fazlası, 8-12 bin arasında.
-     Kimseye ilk gün 12.000 yazmıyoruz; ulaşılmayan hedef hedef değildir. */
-  const adimHedef = clamp(Math.round((mevcutAdim + 3000) / 1000) * 1000, 8000, 12000);
-
-  /* Yürüyüşün net katkısı: 0,5 kcal/kg/km, 1 km ≈ 1300 adım, %70 net. */
-  const yuruyus = Math.round(adimHedef * kilo * 0.00027);
-
-  const antrenmanGun = clamp(Number(p.antrenmanGun) || 0, 0, 7);
-  const antrenman = Math.round((antrenmanGun * 3.5 * kilo) / 7);
-
-  const tdee = Math.round(bmr * tabanCarpan + yuruyus + antrenman);
-
-  /* --- açık / fazla ------------------------------------------------------ */
-
-  const uyarilar = [];
-  let kcal, haftalikKg;
-
-  if (p.hedef === 'kas') {
-    kcal = Math.round(tdee * 1.10);
-    haftalikKg = 0.25;
-  } else if (p.hedef === 'koru') {
-    kcal = tdee;
-    haftalikKg = 0;
-  } else {
-    /* Haftalık yüzde tavanı: yağ oranı yükseldikçe hızlı vermek güvenlidir,
-       zayıfken aynı hız kasa mal olur. */
-    const oranTavan = bki >= 30 ? 0.010 : bki >= 25 ? 0.0075 : 0.005;
-    const secilen = oranTavan * ({ yavas: 0.55, normal: 0.8, hizli: 1 }[p.hiz] ?? 0.8);
-
-    const oranAcik = (secilen * kilo * 7700) / 7;
-
-    /* TDEE yüzdesi tavanı — mutlak sayı büyük olsa da oransal açık sınırlı. */
-    const yuzdeTavan = bki >= 35 ? 0.30 : bki >= 30 ? 0.27 : bki >= 25 ? 0.22 : 0.18;
-    const yuzdeAcik = tdee * yuzdeTavan;
-
-    let acik = Math.min(oranAcik, yuzdeAcik);
-    if (acik < oranAcik - 40) {
-      uyarilar.push('Seçtiğin hız güvenli sınırın üzerindeydi; açık, kas kaybını '
-                  + 'önlemek için düşürüldü. Yavaş verilen kilo geri gelmeyen kilodur.');
-    }
-
-    kcal = Math.round(tdee - acik);
-
-    const taban = erkek ? 1600 : 1300;
-    if (kcal < taban) {
-      kcal = taban;
-      uyarilar.push(`Hesap ${taban} kcal'in altına indiği için tabana çekildi. `
-                  + 'Bu kalorinin altında mikro besinleri karşılamak mümkün değil.');
-    }
-    haftalikKg = Math.round(((tdee - kcal) * 7 / 7700) * 100) / 100;
-  }
-
-  /* --- makrolar ---------------------------------------------------------- */
-
-  /* Protein ve yağ referansı gerçek kilo değil, BKİ 25'e denk ağırlık:
-     130 kiloluk birine 130 × 2 = 260 g protein yazmak anlamsızdır. */
-  const refKilo = Math.min(kilo, boyM * boyM * 25);
-
-  /* Protein hem kiloya hem kaloriye bağlıdır. Sadece kiloya bakmak, kısa boylu
-     ama yüksek kalori alan birinde (referans ağırlık küçük çıkar) tabaktaki
-     yemeğin doğal proteininin bile altında bir hedef üretir. Kalorinin %18'i
-     bu durumda devreye girip hedefi gerçekçi seviyeye çeker. */
-  const protein = Math.round(Math.max(
-    refKilo * (p.hedef === 'kas' ? 2.2 : 2.0),
-    (kcal * 0.18) / 4,
-  ));
-  const yag = Math.round(Math.max(refKilo * 0.8, (kcal * 0.20) / 9));
-  const karb = Math.max(50, Math.round((kcal - protein * 4 - yag * 9) / 4));
-  const lif = clamp(Math.round((kcal / 1000) * 14), 25, 40);
-  const suL = clamp(Math.round((kilo * 30) / 500) / 2, 2, 4.5);   // 0,5 L adımlarla
-
-  if (bki < 20 && p.hedef === 'ver') {
-    uyarilar.push('Kilon zaten normalin altında. Buradan kilo vermek sağlık kazancı '
-                + 'getirmez; hedefini "kiloyu korumak" veya "kas yapmak" olarak '
-                + 'değiştirmeni öneririm.');
-  }
-
-  if (bki >= 30) {
-    uyarilar.push('Başlamadan kan tahlili yaptır: açlık glukoz + açlık insülini '
-                + '(HOMA-IR), HbA1c, TSH, D vitamini, B12, lipid, ALT/AST. '
-                + 'İnsülin direnci veya tiroit yavaşlığı varsa aynı program '
-                + 'çalışır ama beklentini doğru ayarlarsın.');
-  }
-
-  return {
-    bmr, tdee, kcal, protein, yag, karb, lif, suL,
-    adimHedef, antrenmanGun, bki: Math.round(bki * 10) / 10,
-    haftalikKg, aylikKg: Math.round(haftalikKg * 4.3 * 10) / 10,
-    refKilo: Math.round(refKilo), uyarilar,
-  };
-}
-
-/* ------------------------------------------------------------------ öğünler */
-
-/** Öğün başına en fazla bu kadar konur — 300 g mercimek kimsenin tabağına sığmaz. */
-const TAVAN = {
-  whey: 40, yumurtaAk: 250, yumurta: 150, tavuk: 250, hindi: 250,
-  balik: 220, kiyma: 220, mercimek: 90, nohut: 90, yogurt: 300,
-  bitkiselProtein: 45,
-};
-
-/** Kaçınılan besinlere göre öğünlerin protein kaynaklarını seçer. */
-function proteinKaynaklari(kacin = []) {
-  const yok = (x) => kacin.includes(x);
-  const vejeteryan = yok('vejeteryan');
-  const sutsuz = yok('sut');
-
-  const etler = [];
-  if (!vejeteryan) {
-    if (!yok('balik')) etler.push('balik');
-    if (!yok('kirmizi')) etler.push('kiyma');
-    etler.push('tavuk', 'hindi');
-  } else {
-    etler.push('mercimek', 'nohut');
-  }
-
-  /* Yedek kaynak: birincil tavana dayandığında proteini tamamlar. Yağsız ve
-     yoğun olmalı, yoksa kaloriyi doldurur. Sütsüzde bitkisel toz: bezelye ve
-     soya sütsüz, vejetaryen ve baklagilin aksine karbonhidrat taşımaz. */
-  const yedek = sutsuz ? 'bitkiselProtein' : 'whey';
-
-  return {
-    vejeteryan, sutsuz, yedek,
-    kahvaltiTaban: sutsuz ? 'yumurta' : 'yogurt',
-    kahvaltiProtein: sutsuz ? 'bitkiselProtein' : 'whey',
-    ogle: vejeteryan ? 'mercimek' : 'tavuk',
-    aksamRotasyon: etler,
-    araProtein: sutsuz ? 'bitkiselProtein' : 'whey',
-  };
-}
-
-/**
- * Öğünleri kurar.
- *
- * Tek geçişte çözülmez, çünkü kalemler birbirini etkiler: karbonhidrat kaynağı
- * da protein taşır (bulgurun 100 g'ı 12 g), mercimek gibi bir kaynak ise hem
- * protein hem karbonhidrattır. Bu yüzden protein çapası → yağ → karbonhidrat
- * sırası birkaç kez yinelenir; her turda bir öncekinin sonucu bilindiği için
- * sapma hızla kapanır.
- *
- * Sabit kalemler (sebze, salata, yoğurt, keten) ölçeklenmez — onlar zaten
- * doğru miktarda ve porsiyonu kişiye göre oynatmanın anlamı yok.
- */
-function buildMeals(t, kacin) {
-  const K = proteinKaynaklari(kacin);
-  const sut = !K.sutsuz;
-
-  const sablon = [
-    { ad: 'Kahvaltı', emoji: '🍳', kcalPay: 0.22, pPay: 0.20, karb: 'yulaf',
-      birincil: K.kahvaltiProtein,
-      sabit: [...(sut ? [['yogurt', 200]] : [['yumurta', 100]]), ['keten', 10], ['meyve', 100]] },
-
-    { ad: 'Öğle yemeği', emoji: '🍗', kcalPay: 0.29, pPay: 0.32, karb: 'bulgur',
-      birincil: K.ogle,
-      sabit: [['salata', 300], ...(sut ? [['yogurt', 150]] : [])] },
-
-    { ad: 'Akşam yemeği', emoji: '🐟', kcalPay: 0.33, pPay: 0.32, karb: 'pirinc',
-      birincil: K.aksamRotasyon[0],
-      sabit: [['sebze', 300], ...(sut ? [['yogurt', 150]] : [])] },
-
-    { ad: 'Ara öğün', emoji: '🍰', kcalPay: 0.16, pPay: 0.16, karb: 'yulaf',
-      birincil: K.araProtein,
-      sabit: [['kakao', 10]] },
-  ];
-
-  const karbPay = [0.22, 0.32, 0.34, 0.12];
-  const uyarilar = [];
-
-  /* Sabit kalemlerin katkısı turlar boyunca değişmez, bir kez hesapla. */
-  const sabitler = sablon.map((m) => {
-    const satir = m.sabit.map(([key, g]) => ({ key, g }));
-    const top = (k) => satir.reduce((s, x) => s + macroOf(FOODS[x.key], x.g, k), 0);
-    return { satir, kcal: satir.reduce((s, x) => s + kcalOf(FOODS[x.key], x.g), 0),
-             p: top('p'), f: top('f') };
-  });
-
-  let birincil = sablon.map(() => 0);
-  let yedek = sablon.map(() => 0);
-  let karb = sablon.map(() => 0);
-  let yag = 0;
-
-  for (let tur = 0; tur < 6; tur++) {
-    /* 1) Protein çapaları — karbonhidrat kaynağının proteini de düşülür. */
-    sablon.forEach((m, i) => {
-      const karbP = macroOf(FOODS[m.karb], karb[i], 'p');
-      const acik = t.protein * m.pPay - sabitler[i].p - karbP;
-      const bFood = FOODS[m.birincil];
-      birincil[i] = clamp((acik / bFood.p) * 100, 0, TAVAN[m.birincil] ?? 250);
-
-      const kalan = acik - macroOf(bFood, birincil[i], 'p');
-      const yFood = FOODS[K.yedek];
-      yedek[i] = kalan > 3 ? clamp((kalan / yFood.p) * 100, 0, TAVAN[K.yedek]) : 0;
-    });
-
-    /* 2) Yağ açığı zeytinyağıyla kapanır, öğle ve akşama bölünür. */
-    const yagVar = sablon.reduce((s, m, i) => s + sabitler[i].f
-      + macroOf(FOODS[m.birincil], birincil[i], 'f')
-      + macroOf(FOODS[K.yedek], yedek[i], 'f')
-      + macroOf(FOODS[m.karb], karb[i], 'f'), 0);
-    yag = clamp(((t.yag - yagVar) / FOODS.zeytinyagi.f) * 100, 0, 45);
-
-    /* 3) Kalan kalori karbonhidrat çapalarına dağılır. */
-    const proteinKcal = sablon.reduce((s, m, i) => s + sabitler[i].kcal
-      + kcalOf(FOODS[m.birincil], birincil[i])
-      + kcalOf(FOODS[K.yedek], yedek[i]), 0) + kcalOf(FOODS.zeytinyagi, yag);
-
-    const kalanKcal = t.kcal - proteinKcal;
-    sablon.forEach((m, i) => {
-      karb[i] = clamp((Math.max(0, kalanKcal) * karbPay[i] / FOODS[m.karb].kcal) * 100, 0, 260);
-    });
-
-    /* Protein kaynağı kalori hedefini tek başına aşıyorsa (yoğun baklagil
-       diyetlerinde olur) çapaları kırp — proteini %12'den fazla feda etmeden. */
-    if (kalanKcal < -20) {
-      const oran = Math.max(0.80, t.kcal / proteinKcal);
-      birincil = birincil.map((g) => g * oran);
-      yedek = yedek.map((g) => g * oran);
-      yag *= oran;   // yağ hedefi de bütçeye tabi; kalori sınırı önce gelir
-      if (tur === 5) {
-        uyarilar.push('Seçtiğin besin kısıtlarıyla protein hedefini kalori sınırında '
-                    + 'tutturmak zor. Porsiyonlar dengeye çekildi; protein biraz '
-                    + 'hedefin altında kalabilir.');
-      }
-    }
-  }
-
-  /* Yuvarla ve okunur satırlara çevir. */
-  const ogunler = sablon.map((m, i) => {
-    const satirlar = [];
-    const ekle = (key, g, not = '') => {
-      const gr = roundPortion(g);
-      if (gr > 0) {
-        satirlar.push({
-          key, g: gr, ad: FOODS[key].ad, not,
-          kcal: Math.round(kcalOf(FOODS[key], gr)),   // günlük sayaç bunu okur
-        });
-      }
-    };
-
-    sabitler[i].satir.forEach((x) => ekle(x.key, x.g));
-    ekle(m.birincil, birincil[i], i === 2 ? 'ÇİĞ — rotasyona göre değiştir' : 'ÇİĞ tartılacak');
-    if (yedek[i] >= 5 && K.yedek !== m.birincil) ekle(K.yedek, yedek[i]);
-    ekle(m.karb, karb[i], 'ÇİĞ tartılacak');
-    if (i === 1 || i === 2) ekle('zeytinyagi', yag / 2, 'TARTIYLA, şişeden dökme');
-
-    return { ad: m.ad, emoji: m.emoji, satirlar, rotasyon: i === 2 ? m.birincil : null };
-  });
-
-  reconcile(ogunler, t.kcal);
-
-  ogunler.forEach((o) => {
-    const top = (k) => o.satirlar.reduce((s, x) => s + macroOf(FOODS[x.key], x.g, k), 0);
-    o.kcal = Math.round(o.satirlar.reduce((s, x) => s + kcalOf(FOODS[x.key], x.g), 0));
-    o.p = Math.round(top('p'));
-    o.lif = Math.round(top('fib'));
-  });
-
-  return { ogunler, uyarilar };
-}
-
-/**
- * Yuvarlamadan sonra kalan sapmayı kapatır.
- *
- * Her porsiyon 5-10 grama yuvarlandığı için günde dört öğünde 100 kcal'e varan
- * kayma birikebilir. Burada fark, en az zarar veren kalemden kapatılır:
- * önce karbonhidrat (hedefin artığı zaten oradan geliyor), sonra zeytinyağı,
- * en son protein kaynağı — protein en değerli makro olduğu için en son ve
- * yalnızca %15'e kadar kırpılır.
- */
-function reconcile(ogunler, hedefKcal) {
-  const oncelik = ['yulaf', 'bulgur', 'pirinc', 'patates', 'zeytinyagi',
-                   'mercimek', 'nohut', 'tavuk', 'hindi', 'balik', 'kiyma',
-                   'whey', 'bitkiselProtein', 'yumurtaAk'];
-
-  for (let tur = 0; tur < 8; tur++) {
-    const toplam = ogunler.reduce((s, o) => s
-      + o.satirlar.reduce((a, x) => a + kcalOf(FOODS[x.key], x.g), 0), 0);
-    const fark = toplam - hedefKcal;
-    if (Math.abs(fark) <= Math.max(25, hedefKcal * 0.012)) return;
-
-    /* Sapmayı kapatabilecek, öncelik sırasında en önde gelen kalemi bul. */
-    let hedefSatir = null;
-    for (const key of oncelik) {
-      const adaylar = ogunler.flatMap((o) => o.satirlar.filter((x) => x.key === key));
-      if (!adaylar.length) continue;
-      hedefSatir = adaylar.sort((a, b) => b.g - a.g)[0];
-      break;
-    }
-    if (!hedefSatir) return;
-
-    const food = FOODS[hedefSatir.key];
-    const taban = ['whey', 'bitkiselProtein', 'tavuk', 'hindi', 'balik', 'kiyma',
-                   'mercimek', 'nohut', 'yumurtaAk'].includes(hedefSatir.key)
-      ? hedefSatir.g * 0.85 : 0;
-
-    const yeni = clamp(hedefSatir.g - (fark / food.kcal) * 100, taban, hedefSatir.g * 1.6);
-    const yuvarlanmis = roundPortion(yeni);
-    if (yuvarlanmis === hedefSatir.g) return;      // daha ileri gidemiyoruz
-
-    hedefSatir.g = yuvarlanmis;
-    const yer = ogunler.find((o) => o.satirlar.includes(hedefSatir));
-    if (yuvarlanmis === 0) yer.satirlar = yer.satirlar.filter((x) => x !== hedefSatir);
-  }
-}
+export const SU_NOTU = 'Su kalori eklemez. 150 g pişmiş pilavın kalorisi, içindeki '
+  + '50 g çiğ pirincin kalorisidir. Hesap her zaman çiğden yürür.';
 
 /* -------------------------------------------------------------- antrenman */
 
-/**
- * Hareket adları, kalıcı anahtarlarıyla.
- *
- * Anahtar ağırlık kaydının kimliğidir: hareketin adı değişse ya da başka bir
- * bölünmede başka bir günde geçse bile geçmiş kayıt aynı anahtarda durur.
- * O yüzden buradaki anahtarlar bir kez yazılır, bir daha değişmez.
- */
-const HRK_AD = {
-  squatpress:  'Squat veya Leg press',
-  legpress:    'Leg press',
-  squat:       'Squat',
-  goblet:      'Goblet squat veya Hack squat',
-  rdl:         'Romanian deadlift',
-  hipthrust:   'Hip thrust',
-  legcurl:     'Leg curl (yatarak)',
-  legcurlo:    'Leg curl (oturarak)',
-  legext:      'Leg extension',
-  calf:        'Calf raise (ayakta)',
-  calfo:       'Calf raise (oturarak)',
+/* gunNo: JS'in getDay() değeri — 1 Pazartesi, 5 Cuma. */
+export const ANTRENMANLAR = [
+  {
+    key: 'ustA', ad: 'Üst A', gunNo: 1, gunAd: 'Pazartesi',
+    meta: '18 set · ~60 dk',
+    hareketler: [
+      { key: 'dbbench', ad: 'Dambıl bench press, 15° eğim', set: '4 × 6-8', dk: '2-3 dk',
+        alt: 'yoksa: göğüs press makinesi → bar bench (güvenlik barlı rack\'te)',
+        form: 'Dirsekler gövdeyle 45-60°, asla 90°. Dipte göğse değdirme, biraz yukarıda dur.' },
+      { key: 'latpull', ad: 'Lat pulldown, geniş tutuş', set: '4 × 8-10', dk: '2 dk',
+        form: 'Göğsü yukarı çıkar, barı köprücük kemiğine çek. Geriye yatma.' },
+      { key: 'omuzpress', ad: 'Omuz press, oturarak', set: '3 × 8-10', dk: '2 dk',
+        alt: 'dambıl → yoksa: omuz press makinesi',
+        form: 'Sırtını desteğe yasla, bel boşluğu bırakma.' },
+      { key: 'dbrow', ad: 'Tek kol dambıl row, sehpa destekli', set: '3 × 10-12', dk: '90 sn',
+        alt: 'yoksa: göğüs destekli row makinesi',
+        form: 'Dirseği kalçaya doğru çek, gövdeyi döndürme.' },
+      { key: 'pushdown', ad: 'Triceps pushdown', set: '2 × 12', dk: '60 sn',
+        form: 'Dirsekler gövdede sabit.' },
+      { key: 'curl', ad: 'Biceps curl', set: '2 × 12', dk: '60 sn',
+        form: 'Belden sallama yok.' },
+    ],
+  },
+  {
+    key: 'altA', ad: 'Alt A', gunNo: 2, gunAd: 'Salı',
+    meta: 'arka zincir · 17 set',
+    hareketler: [
+      { key: 'legpress', ad: 'Leg press', set: '3 × 10-12', dk: '2-3 dk',
+        form: 'Kalça minderden kalkmaya başladığı yer senin alt sınırın. Dizi kilitleme.' },
+      { key: 'backext', ad: '45° back extension', set: '3 × 12', dk: '2 dk',
+        alt: 'hiper bench → yoksa: kısıtlı ROM dambıl RDL (diz kapağının hemen altına kadar)',
+        form: 'Sırt nötr, hareket kalçadan. Bel yuvarlanırsa dur.' },
+      { key: 'legcurl', ad: 'Leg curl, yatarak', set: '3 × 12', dk: '90 sn',
+        alt: 'yoksa: oturarak leg curl',
+        form: 'Kalçayı yerinden kaldırma.' },
+      { key: 'legext', ad: 'Leg extension', set: '2 × 12-15', dk: '60 sn',
+        form: 'Tepede 1 saniye sık.' },
+      { key: 'calf', ad: 'Calf raise, ayakta', set: '3 × 15', dk: '45 sn',
+        alt: 'yoksa: leg press makinesinde calf',
+        form: 'Kontrollü in, zıplama yok. Aşil tendonuna saygı.' },
+      { key: 'deadbug', ad: 'Dead bug', set: '3 × 8-10', dk: '45 sn',
+        alt: 'taraf başına',
+        form: 'Bel yere yapışık kalsın. Kalkarsa hareketi kısalt.' },
+    ],
+  },
+  {
+    key: 'ustB', ad: 'Üst B', gunNo: 4, gunAd: 'Perşembe',
+    meta: 'hacim / açı · 18 set',
+    hareketler: [
+      { key: 'incline', ad: 'Incline dambıl press, 30°', set: '4 × 8-10', dk: '2 dk',
+        alt: 'yoksa: eğimli göğüs press makinesi',
+        form: 'Dirsek açısı yine 45-60°.' },
+      { key: 'cablerow', ad: 'Seated cable row', set: '4 × 10-12', dk: '2 dk',
+        alt: 'yoksa: göğüs destekli row makinesi',
+        form: 'Kürekleri birleştir, gövdeyi sallama.' },
+      { key: 'lateral', ad: 'Lateral raise', set: '3 × 15', dk: '60 sn',
+        form: 'Hafif ağırlık, dirsek hafif bükülü, omuz seviyesini geçme.' },
+      { key: 'facepull', ad: 'Face pull', set: '3 × 15', dk: '60 sn',
+        alt: 'yoksa: reverse pec deck',
+        form: 'Halatı alına doğru çek, dirsekler yüksek.' },
+      { key: 'hammer', ad: 'Hammer curl', set: '2 × 12', dk: '60 sn' },
+      { key: 'overheadtri', ad: 'Overhead triceps extension', set: '2 × 12', dk: '60 sn',
+        alt: 'halat veya dambıl',
+        form: 'Dirsekler kulak hizasında sabit.' },
+    ],
+  },
+  {
+    key: 'altB', ad: 'Alt B', gunNo: 5, gunAd: 'Cuma',
+    meta: 'ön zincir + kalça · 16 set',
+    hareketler: [
+      { key: 'hack', ad: 'Hack squat makinesi', set: '4 × 10-12', dk: '2-3 dk',
+        alt: 'yoksa: Smith machine squat → topuk yükseltilmiş goblet squat (2-3 cm plaka üstünde)',
+        form: 'Belin desteği bırakmaya başladığı yer alt sınırın. Zorla derine inme.' },
+      { key: 'hipthrust', ad: 'Hip thrust', set: '3 × 10-12', dk: '2 dk',
+        alt: 'makine → yoksa: sehpaya yaslanıp barla, kalın ped şart',
+        form: 'Tepede kalçayı sık, beli aşırı germe. Çene göğse yakın.' },
+      { key: 'legcurlo', ad: 'Leg curl, oturarak', set: '3 × 12', dk: '90 sn',
+        alt: 'yoksa: yatarak leg curl' },
+      { key: 'calfo', ad: 'Calf raise, oturarak', set: '3 × 15', dk: '45 sn',
+        alt: 'yoksa: ayakta calf, hafif' },
+      { key: 'cablecrunch', ad: 'Cable crunch, dizüstü', set: '3 × 12-15', dk: '60 sn',
+        alt: 'yoksa: reverse crunch (dizler bükülü, kalçayı yerden kaldır)',
+        form: 'Karnı kıvır, kalçadan bükülme.' },
+    ],
+  },
+];
 
-  bench:       'Bench press',
-  dbbench:     'Dumbbell bench press',
-  incline:     'Incline dumbbell press (30°)',
-  omuzpress:   'Omuz press (oturarak)',
-  lateral:     'Lateral raise',
-  pushdown:    'Triceps pushdown',
-  overheadtri: 'Overhead triceps extension',
+/* Haftanın günleri — getDay() sırasıyla, Pazar 0. */
+export const HAFTA = [
+  { gunNo: 1, kisa: 'PZT', ikon: '⚖️', etiket: 'ÜST A' },
+  { gunNo: 2, kisa: 'SAL', ikon: '🏋️', etiket: 'ALT A' },
+  { gunNo: 3, kisa: 'ÇAR', ikon: '🚶', etiket: 'YÜRÜ' },
+  { gunNo: 4, kisa: 'PER', ikon: '🏋️', etiket: 'ÜST B' },
+  { gunNo: 5, kisa: 'CUM', ikon: '🏋️', etiket: 'ALT B' },
+  { gunNo: 6, kisa: 'CMT', ikon: '·',  etiket: '' },
+  { gunNo: 0, kisa: 'PAZ', ikon: '·',  etiket: '' },
+];
 
-  latpull:     'Lat pulldown',
-  cablerow:    'Seated cable row',
-  dbrow:       'Dumbbell row (tek kol)',
-  barrow:      'Barbell row',
-  facepull:    'Face pull',
-  curl:        'Biceps curl',
-  hammer:      'Hammer curl',
+export const ANTRENMAN_NOTU = 'Haftalık toplam 69 set. Vaktin yoksa İLK 3 HAREKETİ YAP, '
+  + 'gerisini at — kas koruyan şey bileşik hareketlerdir.';
 
-  plank:       'Plank',
-  legraise:    'Lying leg raise',
+export const ISINMA = [
+  'Bisiklet/eliptik 5 dk, hafif terleyene kadar',
+  'Kol daireleri — 10 ileri, 10 geri',
+  'Bel rotasyonu — 10 (taraf başına)',
+  'Duvara diz değdirme (ayak bileği) — 10 (taraf başına)',
+  'Diz üstü lunge esnetme (kalça ön) — 20 sn (taraf başına)',
+  'Günün ilk hareketinde 2 hazırlık seti — çok hafif 10 tekrar, sonra orta 5 tekrar. '
+    + 'Çalışma seti sayılmaz.',
+];
+
+export const ISINMA_NOTU = 'Senin kilonda ısınmadan ilk sete girmek, eklem ağrısının '
+  + 'bir numaralı sebebi. Atlama.';
+
+export const SOGUMA = [
+  'Hafif bisiklet 5-10 dk (isteğe bağlı, toparlanmaya yardım eder)',
+  'Diz üstü lunge esnetme — 30 sn × 2 taraf',
+  'Ayak bileği esnetme — 30 sn × 2 taraf',
+  'Foam roller sırtüstü, göğüs açma — 30 sn',
+];
+
+export const ILK_IKI_HAFTA = {
+  baslik: 'İlk 2 hafta — ağırlık arama, ağırlık BUL',
+  giris: 'Her harekette üst sınır tekrarını rahatça yapabildiğin bir ağırlıkla başla. '
+       + 'Set bittiğinde "3-4 tekrar daha yapabilirdim" demelisin. Bilmiyorsan: '
+       + 'makinede en hafif kademe, dambılda 8-10 kg, barda boş bar.',
+  adimlar: [
+    '5+ tekrar yedekte kaldıysa → BİR SONRAKİ SETTE ağırlığı artır, çekinme',
+    '3-4 tekrar yedekte kaldıysa → doğru ağırlık, orada kal',
+    'Forma hakim olamıyorsan → ağırlık fazla, düşür',
+  ],
+  kapanis: 'Bu iki hafta hareketleri öğrenme haftası. 3. HAFTADAN İTİBAREN '
+         + 'çift ilerleme kuralına geç.',
 };
 
-/** Bir antrenman satırı: hangi hareket, kaç set, kaç tekrar, ne kadar dinlenme. */
-function g(key, set, tekrar, dk) {
-  const ad = HRK_AD[key];
-  if (!ad) throw new Error(`plan.js: bilinmeyen hareket anahtarı "${key}"`);
-  return { key, ad, set, tekrar, dk };
+export const CIFT_ILERLEME = 'Bütün setlerde üst sınır tekrarı, iki antrenman üst üste, '
+  + '1-2 tekrar yedekte kalacak şekilde tutturursan → ağırlığı artır.';
+
+export const ARTIS = [
+  ['Üst vücut bileşik (press, row, pulldown)', '+2,5 kg'],
+  ['Üst vücut izolasyon', '+1-2 kg'],
+  ['Alt vücut bileşik (leg press, hack squat, hip thrust)', '+5 kg'],
+  ['Alt vücut izolasyon', '+2,5 kg'],
+];
+
+export const ILERLEME_NOTU = 'Hiçbir sette başarısızlığa gitme — her zaman 1-2 tekrar '
+  + 'yedekte kalsın. 6 tekrarın altına inme, 1RM denemesi yok. Takılırsan (aynı ağırlıkta '
+  + '3 antrenman üst üste ilerleyemediysen) %10 hafiflet, baştan tırman.';
+
+export const DELOAD = 'Her 6 haftada bir, 1 hafta: bütün hareketlerde set sayısını yarıya '
+  + 'indir, ağırlıkları aynı tut. Erken deload: aynı ağırlıkta tekrarlar 2 antrenman üst '
+  + 'üste düşüyorsa, kas ağrısı 72 saati geçiyorsa, veya EKLEM ağrısı (kas değil) '
+  + 'başladıysa — o haftayı deload yap.';
+
+export const FOOTER = 'Bu plan gerçek bir diyetisyen muayenesinin yerini tutmaz. Tiroid, '
+  + 'insülin direnci, ilaç kullanımı gibi bir durumun varsa plan aynı kalır ama bir hekim '
+  + 'görüşü şart. Ayrıca bir kere kan tahlili yaptır: açlık şekeri, HbA1c, lipid paneli, '
+  + 'karaciğer enzimleri, TSH, D vitamini.';
+
+/* -------------------------------------------------------------- yardımcılar */
+
+/** Bir günün öğün satırlarının toplam kalorisi (hepsi işaretlenirse). */
+export const GUNLUK_KCAL = OGUNLER.reduce((s, o) => s + o.kcal, 0);
+
+/** Tarihin antrenman günü; yoksa null. */
+export function gununAntrenmani(d) {
+  return ANTRENMANLAR.find((a) => a.gunNo === d.getDay()) || null;
 }
 
-/*  Set ve tekrar aralıkları hareketin işine göre: bileşik hareketlerde az
-    tekrar–çok dinlenme (yük taşımak için), izolasyonda çok tekrar–az dinlenme
-    (eklem yerine kası yormak için). Diyetteyken hacim değil, ağırlığın
-    düşmemesi korur — bu yüzden ilk hareket hep en ağır olanı. */
-const HAREKETLER = {
-  fullBodyA: [
-    g('squatpress', 3, '8-10', '2-3 dk'), g('bench', 3, '6-8', '2-3 dk'),
-    g('latpull', 3, '8-10', '2 dk'), g('rdl', 3, '10', '2 dk'),
-    g('omuzpress', 3, '10', '90 sn'), g('plank', 3, '30-45 sn', '45 sn'),
-  ],
-  fullBodyB: [
-    g('legpress', 3, '10-12', '2-3 dk'), g('incline', 3, '8-10', '2 dk'),
-    g('cablerow', 3, '10-12', '2 dk'), g('legcurl', 3, '12', '90 sn'),
-    g('lateral', 3, '15', '60 sn'), g('curl', 3, '12', '60 sn'),
-  ],
-  fullBodyC: [
-    g('goblet', 3, '10-12', '2-3 dk'), g('dbbench', 3, '8-10', '2 dk'),
-    g('barrow', 3, '8-10', '2 dk'), g('legext', 3, '15', '60 sn'),
-    g('omuzpress', 3, '10', '90 sn'), g('pushdown', 3, '12', '60 sn'),
-  ],
-
-  ustA: [
-    g('bench', 4, '6-8', '2-3 dk'), g('latpull', 4, '8-10', '2 dk'),
-    g('omuzpress', 3, '8-10', '2 dk'), g('dbrow', 3, '10-12', '90 sn'),
-    g('pushdown', 3, '12', '60 sn'), g('curl', 3, '12', '60 sn'),
-  ],
-  altA: [
-    g('legpress', 4, '10-12', '2-3 dk'), g('rdl', 3, '8-10', '2 dk'),
-    g('legcurl', 3, '12', '90 sn'), g('legext', 3, '12-15', '60 sn'),
-    g('calf', 4, '15', '45 sn'), g('plank', 3, '30-45 sn', '45 sn'),
-  ],
-  ustB: [
-    g('incline', 4, '8-10', '2 dk'), g('cablerow', 4, '10-12', '2 dk'),
-    g('lateral', 3, '15', '60 sn'), g('facepull', 3, '15', '60 sn'),
-    g('hammer', 3, '12', '60 sn'), g('overheadtri', 3, '12', '60 sn'),
-  ],
-  altB: [
-    g('goblet', 4, '10-12', '2-3 dk'), g('hipthrust', 3, '10-12', '2 dk'),
-    g('legcurlo', 3, '12', '90 sn'), g('legext', 3, '15', '60 sn'),
-    g('calfo', 4, '15', '45 sn'), g('legraise', 3, '12', '60 sn'),
-  ],
-
-  itis: [
-    g('bench', 4, '6-8', '2-3 dk'), g('omuzpress', 4, '8-10', '2 dk'),
-    g('incline', 3, '10', '2 dk'), g('lateral', 3, '15', '60 sn'),
-    g('pushdown', 3, '12', '60 sn'),
-  ],
-  cekis: [
-    g('latpull', 4, '8-10', '2 dk'), g('barrow', 4, '8-10', '2 dk'),
-    g('cablerow', 3, '10-12', '90 sn'), g('facepull', 3, '15', '60 sn'),
-    g('curl', 3, '12', '60 sn'), g('hammer', 3, '12', '60 sn'),
-  ],
-  bacak: [
-    g('squatpress', 4, '8-10', '2-3 dk'), g('rdl', 4, '8-10', '2 dk'),
-    g('legpress', 3, '12', '90 sn'), g('legcurl', 3, '12', '90 sn'),
-    g('calf', 4, '15', '45 sn'),
-  ],
-};
-
-/** Bir hareket satırının okunur hâli: "Bench press — 4 × 6-8 · 2-3 dk" */
-export function hareketMetni(x) {
-  return `${x.ad} — ${x.set} × ${x.tekrar} · ${x.dk}`;
-}
-
-/*  İlerleme kuralı her bölünmede aynı, o yüzden tek yerde duruyor. Sayısı
-    yazılı bir hedefi olmayan program takip edilmez: "ağır çalış" ölçülemez,
-    "geçen hafta 8 tekrar yaptıysan bu hafta 2,5 kg ekle" ölçülür. */
-export const ILERLEME = 'Çift ilerleme: tekrar aralığının üst ucunu tüm setlerde '
-  + 'tamamladığın hafta ağırlığa 2,5 kg ekle, tekrarlar alt uca düşsün, oradan '
-  + 'tekrar tırman. Setleri başarısızlığa götürme — rezervde 1-2 tekrar kalsın; '
-  + 'yalnızca izolasyon hareketlerinin son setinde sonuna kadar git.';
-
-/** Antrenman günü sayısına göre bölünme. */
-export function buildTraining(gun) {
-  const n = clamp(Number(gun) || 0, 0, 7);
-  if (n <= 1) {
-    return { ad: 'Haftada 1 gün yetmez', gunler: [{ ad: 'Full body', hareketler: HAREKETLER.fullBodyA }],
-             not: 'Kas korumak için haftada en az 2, tercihen 3 gün gerekir. '
-                + 'Şimdilik full body ile başla, üçüncü güne çık.' };
-  }
-  if (n === 2) {
-    return { ad: 'Full body ×2', gunler: [
-      { ad: 'Full body A', hareketler: HAREKETLER.fullBodyA },
-      { ad: 'Full body B', hareketler: HAREKETLER.fullBodyB },
-    ], not: 'İki gün arasında en az 2 gün olsun.' };
-  }
-  if (n === 3) {
-    return { ad: 'Full body ×3', gunler: [
-      { ad: 'Full body A', hareketler: HAREKETLER.fullBodyA },
-      { ad: 'Full body B', hareketler: HAREKETLER.fullBodyB },
-      { ad: 'Full body C', hareketler: HAREKETLER.fullBodyC },
-    ], not: 'Diyetteyken en verimli bölünme bu: her kas grubu haftada 3 kez uyarılır. '
-          + 'Pazartesi–Çarşamba–Cuma gibi aralarında birer gün olacak şekilde dağıt.' };
-  }
-  if (n === 4) {
-    return { ad: 'Üst / Alt ×2', gunler: [
-      { ad: 'Üst A', hareketler: HAREKETLER.ustA },
-      { ad: 'Alt A', hareketler: HAREKETLER.altA },
-      { ad: 'Üst B', hareketler: HAREKETLER.ustB },
-      { ad: 'Alt B', hareketler: HAREKETLER.altB },
-    ], not: 'Pazartesi Üst A, Salı Alt A, Perşembe Üst B, Cuma Alt B. '
-          + 'Arka arkaya iki üst ya da iki alt gün gelmesin; her kas haftada 2 kez çalışır.' };
-  }
-  return { ad: 'İtiş / Çekiş / Bacak', gunler: [
-    { ad: 'İtiş A', hareketler: HAREKETLER.itis },
-    { ad: 'Çekiş A', hareketler: HAREKETLER.cekis },
-    { ad: 'Bacak A', hareketler: HAREKETLER.bacak },
-    { ad: 'İtiş B', hareketler: HAREKETLER.itis },
-    { ad: 'Çekiş B', hareketler: HAREKETLER.cekis },
-    ...(n >= 6 ? [{ ad: 'Bacak B', hareketler: HAREKETLER.bacak }] : []),
-  ], not: 'Bu hacim toparlanma ister: uyku 7+ saat olmazsa 4 güne düş.' };
-}
-
-/* --------------------------------------------------------------- rotasyon */
-
-const ROT_AD = {
-  balik: 'Somon / uskumru / levrek', kiyma: 'Dana kıyma (%10 yağlı)',
-  tavuk: 'Tavuk göğsü', hindi: 'Hindi göğsü', mercimek: 'Mercimek yemeği',
-};
-
-function aksamRotasyonu(kacin, gram) {
-  const K = proteinKaynaklari(kacin);
-  const gunler = [['Pazartesi', 'Pzt'], ['Salı', 'Sal'], ['Çarşamba', 'Çar'],
-                  ['Perşembe', 'Per'], ['Cuma', 'Cum'], ['Cumartesi', 'Cmt'], ['Pazar', 'Paz']];
-  const kaynaklar = K.aksamRotasyon;
-  return gunler.map(([gun, kisa], i) => {
-    const key = kaynaklar[i % kaynaklar.length];
-    const oran = FOODS[kaynaklar[0]].p / FOODS[key].p;
-    return { gun, kisa, key, ad: ROT_AD[key] || FOODS[key].ad, g: roundPortion(gram * oran) };
-  });
-}
-
-/* ------------------------------------------------------------------- plan */
-
-/** Profilden tam programı üretir. */
-export function buildPlan(profile) {
-  const t = computeTargets(profile);
-  const { ogunler, uyarilar } = buildMeals(t, profile.kacin || []);
-  t.uyarilar = [...t.uyarilar, ...uyarilar];
-  const antrenman = buildTraining(profile.antrenmanGun);
-
-  const aksam = ogunler[2];
-  const aksamProtein = aksam.satirlar.find((x) => x.key === aksam.rotasyon);
-  const rotasyon = aksamRotasyonu(profile.kacin || [], aksamProtein?.g || 180);
-
-  const toplam = {
-    kcal: ogunler.reduce((s, o) => s + o.kcal, 0),
-    p: ogunler.reduce((s, o) => s + o.p, 0),
-    lif: ogunler.reduce((s, o) => s + o.lif, 0),
-  };
-
-  return { profile, hedef: t, ogunler, antrenman, rotasyon, toplam };
-}
-
-/** Lif rampası — hedefe bir günde çıkmak şişkinlik ve kramp yapar. */
-export function fiberRamp(hedefLif) {
-  const bas = 15;
-  const adim = (hedefLif - bas) / 3;
-  return [1, 2, 3, 4].map((h) => [`${h}. hafta`,
-    `${Math.round(bas + adim * (h - 1))} g${h === 1 ? ' — sebzeyi yarım porsiyon başlat' : ''}`]);
+/** "ustA:dbbench" — işaret ve ağırlık kayıtlarının anahtarı. */
+export function hareketAnahtari(antrenmanKey, hareketKey) {
+  return `${antrenmanKey}:${hareketKey}`;
 }
