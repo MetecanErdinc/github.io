@@ -292,6 +292,39 @@ main {
 .ekstra-head { background: var(--amber-soft); }
 .ekstra-head .ch-title, .ekstra-head .ch-meta { color: var(--amber); }
 
+.watch-head { background: var(--surface2); }
+.watch-head .ch-title, .watch-head .ch-meta { color: var(--ink2); }
+
+.watch-grid { display: grid; grid-template-columns: 1fr 1fr; }
+.watch-grid > div {
+  padding: 14px 8px; text-align: center;
+  display: flex; flex-direction: column; gap: 2px;
+  border-right: 1px solid var(--line);
+}
+.watch-grid > div:last-child { border-right: 0; }
+.watch-grid b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.watch-grid span {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink3);
+}
+
+.watch-line {
+  margin-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--ink3);
+}
+
+.kopya { border: 1px solid var(--line); border-radius: 9px; padding: 10px 11px; margin-bottom: 8px; }
+.kopya-ust {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 6px;
+}
+.kopya-ust span { font-size: 12.5px; font-weight: 600; color: var(--ink2); }
+.kopya code {
+  display: block; font-family: var(--mono); font-size: 11px; line-height: 1.5;
+  color: var(--ink); word-break: break-all;
+  background: var(--surface2); padding: 8px 9px; border-radius: 7px;
+}
+.kopya .tiny-note { margin-top: 6px; }
+
 .kardiyo-head { background: var(--plum-soft); }
 .kardiyo-head .ch-title, .kardiyo-head .ch-meta { color: var(--plum); }
 

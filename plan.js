@@ -10,7 +10,7 @@
    geçmiş kayıtlar yerinde kalsın diye.
    ========================================================================== */
 
-export const BUILD = '2026-09-22a';
+export const BUILD = '2026-09-22b';
 
 export const BASLIK = "126'dan 105'e";
 
@@ -259,6 +259,11 @@ export function kardiyoAdi(tur) {
 export const KARDIYO_NOTU = 'Kardiyonun yaktığı kalori günlük hedefe EKLENMEZ. '
   + 'Adım hedefi zaten hesabın içinde ve yakılanı geri yemek, açığı kapatmanın '
   + 'en hızlı yolu. Burası ne yaptığını takip etmek için, izin almak için değil.';
+
+export const WATCH_NOTU = 'Saatin yazdığı aktif kalori günlük hedefe EKLENMEZ. '
+  + 'İki sebep: Apple Watch koşu dışındaki işlerde tipik olarak %20-40 yüksek '
+  + 'sayıyor, ve 8-10 bin adım zaten 2000 kcal hesabının içinde. Üstüne eklemek '
+  + 'aynı kaloriyi iki kez saymak olur. Burası ne yaptığını görmek için.';
 
 /* Haftanın günleri — getDay() sırasıyla, Pazar 0. */
 export const HAFTA = [

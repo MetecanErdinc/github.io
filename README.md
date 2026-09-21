@@ -35,6 +35,9 @@ Geçen seferki rakamın görünmesi programın ilerleme kuralının işlemesi i�
 şart: "bütün setlerde üst sınır tekrarı iki antrenman üst üste tutarsa ağırlığı
 artır" kuralı ancak kayıt tutulursa çalışır.
 
+Saat verisi geldiği gün üstte **⌚ Apple Watch** kartı çıkar: günün aktif
+kalorisi ve adımı. Bu kalori günlük hedefe eklenmez (bkz. `APPLE-WATCH.md`).
+
 Altında **kardiyo** bölümü: tür (bant, dışarıda, bisiklet, eliptik), süre ve
 istenirse hız ile eğim. Yakılan kalori günlük hedefe eklenmez — adım hedefi
 zaten hesabın içinde ve yakılanı geri yemek açığı kapatmanın en hızlı yolu.
@@ -61,6 +64,7 @@ users/<uid>/days/2026-09-20
   { date, diet:{...}, takviye:{...}, su, adim, tarti,
     ekstra:[{id, ad, kcal, p, k, y}, …],
     kardiyo:[{id, tur, dk, hiz, egim}, …],
+    watch:{kcal, adim, guncel} | null,
     wo:{ "ustA:dbbench": { ok, setler:[{kg, rep}, …] } } }
 ```
 
@@ -89,10 +93,16 @@ sessizce düşer.
 | `sw.js` | Service worker — uygulama kodu için önce ağ, Firebase SDK için önce önbellek |
 | `config.js` | Firebase ayarları (gizli değildir, tarayıcıda görünür) |
 | `firestore.rules` | Her hesap yalnızca kendi `users/<uid>` klasörüne erişir |
+| `APPLE-WATCH.md` | Sağlık verisini taşıyan Kısayol otomasyonunun kurulumu |
 | `habits/index.html` | Eski adresten köke yönlendirme |
 
 ## Notlar
 
+- **Apple Watch**: Sağlık verisine yalnızca yerel uygulamalar erişebildiği için
+  veriyi telefondaki Kısayollar otomasyonu taşıyor; Firestore'un REST arayüzünden
+  hesaba giriş yapıp gün belgesindeki `watch` alanını yazıyor. Uygulama bu alana
+  hiç yazmaz, yalnızca okur. Kurulum `APPLE-WATCH.md` dosyasında; ⚙ menüsündeki
+  "Apple Watch bağlantısı" hesaba ait URL ve gövdeleri kopyalanabilir gösterir.
 - **Hesapsız mod**: giriş ekranındaki "Hesapsız dene" seçeneği veriyi yalnızca o
   tarayıcıda tutar. Senkron yok, başka cihazda görünmez.
 - **Karışık sürüm koruması**: her modül bir `BUILD` damgası taşır. Service worker

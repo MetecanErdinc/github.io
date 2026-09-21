@@ -15,7 +15,7 @@
    bağlantısında sıra sıra gecikirdi.
    ========================================================================== */
 
-export const BUILD = '2026-09-22a';
+export const BUILD = '2026-09-22b';
 
 import { dateKey, addDays, today } from './util.js';
 
@@ -132,6 +132,14 @@ function normalize(v, dk) {
     wo: (v && typeof v.wo === 'object' && v.wo) || {},
     ekstra: Array.isArray(v?.ekstra) ? v.ekstra : [],
     kardiyo: Array.isArray(v?.kardiyo) ? v.kardiyo : [],
+    /*  Apple Watch'tan gelen günlük toplamlar. Uygulama buraya yazmıyor;
+        telefondaki Kısayol otomasyonu Firestore'un REST arayüzünden
+        dolduruyor. Bu yüzden alanlar savunmacı okunuyor. */
+    watch: (v && typeof v.watch === 'object' && v.watch) ? {
+      kcal: Number(v.watch.kcal) || 0,
+      adim: Number(v.watch.adim) || 0,
+      guncel: String(v.watch.guncel || ''),
+    } : null,
     su: Number(v?.su) || 0,
     adim: Number(v?.adim) || 0,
     tarti: Number(v?.tarti) || 0,

@@ -10,7 +10,7 @@
    hiçbir servise bağlanmadan da aynı raporu üretiyor.
    ========================================================================== */
 
-export const BUILD = '2026-09-22a';
+export const BUILD = '2026-09-22b';
 
 import { dateKey, addDays, haftaBasi, haftaEtiketi, yaz, GUN_ADI } from './util.js';
 import { HEDEF, OGUNLER, TAKVIYELER, ANTRENMANLAR, setSayisi, hareketAnahtari,
@@ -98,6 +98,8 @@ export function haftalikRapor(days, tarih) {
       toplam: o.kcal + e.kcal,
       kardiyoDk: (Array.isArray(g?.kardiyo) ? g.kardiyo : [])
         .reduce((t, x) => t + (Number(x.dk) || 0), 0),
+      watchKcal: Number(g?.watch?.kcal) || 0,
+      watchAdim: Number(g?.watch?.adim) || 0,
       su: Number(g?.su) || 0,
       adim: Number(g?.adim) || 0,
       tarti: Number(g?.tarti) || 0,
@@ -202,6 +204,18 @@ export function haftalikRapor(days, tarih) {
       .reduce((u, x) => u + (Number(x.dk) || 0), 0), 0),
   };
 
+  /* ----------------------------------------------------------------- saat */
+
+  const watchGunler = gunlukler.filter((x) => x.watchKcal || x.watchAdim);
+  const watch = {
+    gun: watchGunler.length,
+    ortKcal: watchGunler.length
+      ? say(watchGunler.reduce((t, x) => t + x.watchKcal, 0) / watchGunler.length) : 0,
+    ortAdim: watchGunler.length
+      ? say(watchGunler.reduce((t, x) => t + x.watchAdim, 0) / watchGunler.length) : 0,
+    toplamKcal: say(watchGunler.reduce((t, x) => t + x.watchKcal, 0)),
+  };
+
   const antrenman = {
     yapilan: antrenmanlar.filter((x) => x.yapildi).length,
     hedef: ANTRENMANLAR.length,
@@ -229,7 +243,7 @@ export function haftalikRapor(days, tarih) {
 
   const rapor = {
     bas, etiket: haftaEtiketi(bas),
-    gunlukler, diyet, antrenman, kardiyo, tarti,
+    gunlukler, diyet, antrenman, kardiyo, watch, tarti,
     bitti: dateKey(addDays(bas, 6)) < dateKey(new Date()),
   };
   rapor.yorumlar = yorumla(rapor, days, bas);
@@ -379,6 +393,14 @@ function yorumla(r, days, bas) {
       + ' Yakılan kalori günlük hedefe eklenmiyor — adım hedefi zaten hesabın içinde.');
   }
 
+  /* --- saat */
+  const w = r.watch;
+  if (w.gun) {
+    ekle('iyi', `Apple Watch ${w.gun} gün veri göndermiş: ortalama ${w.ortKcal} aktif kcal, `
+      + `${w.ortAdim.toLocaleString('tr-TR')} adım. Bu kalori hedefe eklenmiyor — `
+      + 'saat yüksek sayıyor ve adım zaten hesabın içinde.');
+  }
+
   /* --- tartı */
   if (!t.kayitlar.length) {
     ekle('uyari', 'Bu hafta tartıya çıkmamışsın. Tartı pazartesi sabah, aç karnına, '
@@ -471,6 +493,13 @@ export function raporMetni(r) {
     }
   }
 
+  if (r.watch.gun) {
+    s.push('');
+    s.push('APPLE WATCH');
+    s.push(`  ${r.watch.gun} gün veri · ortalama ${r.watch.ortKcal} aktif kcal `
+      + `· ${r.watch.ortAdim} adım (hedefe eklenmiyor)`);
+  }
+
   s.push('');
   s.push('TARTI');
   s.push(r.tarti.kayitlar.length
@@ -483,6 +512,7 @@ export function raporMetni(r) {
     s.push(`  ${g.gunAd.padEnd(10)} ${g.toplam ? `${g.toplam} kcal` : 'kayıt yok'}`
       + (g.ekstraKcal ? ` (kaçamak ${g.ekstraKcal})` : '')
       + (g.kardiyoDk ? ` · kardiyo ${g.kardiyoDk} dk` : '')
+      + (g.watchKcal ? ` · saat ${say(g.watchKcal)} kcal` : '')
       + (g.tarti ? ` · tartı ${yaz(g.tarti)}` : ''));
   }
   s.push('');

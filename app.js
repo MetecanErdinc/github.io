@@ -15,7 +15,7 @@ import * as PlanNS from './plan.js';
 import * as StoreNS from './store.js';
 import * as RaporNS from './rapor.js';
 
-const BUILD = '2026-09-22a';
+const BUILD = '2026-09-22b';
 
 import {
   today, dateKey, parseKey, addDays, diffDays, gunEtiketi, kisaTarih, esc, sayi, yaz,
@@ -30,7 +30,7 @@ import {
   ANTRENMANLAR, HAFTA, ANTRENMAN_NOTU, ISINMA, ISINMA_NOTU, SOGUMA,
   ILK_IKI_HAFTA, CIFT_ILERLEME, ARTIS, ILERLEME_NOTU, DELOAD, FOOTER,
   GUNLUK_KCAL, gununAntrenmani, hareketAnahtari, setSayisi,
-  KARDIYO_TURLERI, KARDIYO_NOTU, kardiyoAdi,
+  KARDIYO_TURLERI, KARDIYO_NOTU, kardiyoAdi, WATCH_NOTU,
 } from './plan.js';
 
 import {
@@ -52,13 +52,15 @@ const state = {
   acik: new Set(),           // açılmış referans bölümleri
   online: navigator.onLine,
   fromCache: false,
+  config: null,
 };
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 /* Bugünün belgesi yoksa boş bir iskelet — okuyan taraf hep aynı şekli görsün. */
-const BOS_GUN = { diet: {}, takviye: {}, wo: {}, ekstra: [], kardiyo: [], su: 0, adim: 0, tarti: 0 };
+const BOS_GUN = { diet: {}, takviye: {}, wo: {}, ekstra: [], kardiyo: [],
+                  watch: null, su: 0, adim: 0, tarti: 0 };
 
 function gun(d = state.date) {
   return state.days.get(dateKey(d)) || BOS_GUN;
@@ -112,6 +114,35 @@ function ogunKcal(d = state.date) {
     }
   }
   return sum;
+}
+
+/* ------------------------------------------------------------ Apple Watch */
+
+/**
+ * Telefondaki Kısayol otomasyonunun yazdığı günlük toplamlar.
+ *
+ * Uygulama bu alana yazmaz, yalnızca okur: yazan taraf Kısayol, Firestore'un
+ * REST arayüzünden. Bu yüzden hiç gelmemiş olabilir ve her okuma buna hazır.
+ */
+function watchVerisi(d = state.date) {
+  const w = gun(d).watch;
+  return (w && (w.kcal || w.adim)) ? w : null;
+}
+
+/** Saatin adımının sayaç karşılığı — her tik 1.000 adım. */
+function watchTik(w) {
+  return w ? Math.min(HEDEF.adimTik, Math.round(w.adim / 1000)) : 0;
+}
+
+/**
+ * Sayacın ekranda görünen değeri.
+ *
+ * Adım sayacı elle dokunulmadıysa saatten okunur; elle bir değer girildiği an
+ * (g.adim > 0) o kazanır — otomatik veri kullanıcının kendi girdisini ezmemeli.
+ */
+function sayacDegeri(alan, g = gun()) {
+  if (alan !== 'adim') return Number(g[alan]) || 0;
+  return Number(g.adim) || watchTik(watchVerisi());
 }
 
 /* ------------------------------------------------------ kaçamak / ekstra */
@@ -230,6 +261,8 @@ function ekstraDialog(mevcut) {
 
 function viewDiyet() {
   const g = gun();
+  const w = watchVerisi();
+  const adimDeger = sayacDegeri('adim', g);
   const ek = ekstralar();
   const ekTop = ekstraToplam(ek);
   const yenen = yenenKcal();
@@ -265,12 +298,13 @@ function viewDiyet() {
     </section>`;
   };
 
-  const sayacHtml = (etiket, ikon, alan, deger, hedefTik, altYazi) => `
+  const sayacHtml = (etiket, ikon, alan, deger, hedefTik, altYazi, ek) => `
     <section class="card">
       <div class="counter-row">
         <div class="grow">
           <div class="r-name">${ikon} ${esc(etiket)}</div>
           <div class="r-sub">${esc(altYazi)}</div>
+          ${ek || ''}
         </div>
         <div class="counter">
           <button data-act="say-" data-alan="${alan}" aria-label="azalt">−</button>
@@ -321,8 +355,10 @@ function viewDiyet() {
     </section>
 
     ${sayacHtml('Su', '💧', 'su', g.su, HEDEF.suTik, `Her tik 500 ml · hedef ${yaz(HEDEF.suL)} L`)}
-    ${sayacHtml('Adım', '🚶', 'adim', g.adim, HEDEF.adimTik,
-        `Her tik 1.000 adım · hedef ${HEDEF.adimMin / 1000}-${HEDEF.adimMax / 1000} bin`)}
+    ${sayacHtml('Adım', '🚶', 'adim', adimDeger, HEDEF.adimTik,
+        `Her tik 1.000 adım · hedef ${HEDEF.adimMin / 1000}-${HEDEF.adimMax / 1000} bin`,
+        w && w.adim ? `<div class="watch-line">⌚ ${w.adim.toLocaleString('tr-TR')} adım${
+          g.adim ? ' · sayacı elle değiştirdin' : ' · sayaç buradan doluyor'}</div>` : '')}
 
     <section class="card">
       <div class="card-head"><div class="ch-title">💊 Takviyeler</div></div>
@@ -611,6 +647,7 @@ function viewSpor() {
   const yapilan = secili.hareketler.filter((h) => g.wo[hareketAnahtari(secili.key, h.key)]?.ok).length;
   const kardiyo = kardiyolar();
   const kardiyoDk = kardiyo.reduce((t, x) => t + (Number(x.dk) || 0), 0);
+  const w = watchVerisi();
 
   const hareketHtml = (h) => {
     const k = hareketAnahtari(secili.key, h.key);
@@ -694,6 +731,19 @@ function viewSpor() {
       </div>
       ${secili.hareketler.map(hareketHtml).join('')}
     </section>
+
+    ${w ? `
+      <section class="card">
+        <div class="card-head watch-head">
+          <div class="ch-title">⌚ Apple Watch</div>
+          <div class="ch-meta">${w.guncel ? `${esc(saatDk(w.guncel))} güncellendi` : 'bugün'}</div>
+        </div>
+        <div class="watch-grid">
+          <div><b>${w.kcal ? w.kcal.toLocaleString('tr-TR') : '—'}</b><span>aktif kcal</span></div>
+          <div><b>${w.adim ? w.adim.toLocaleString('tr-TR') : '—'}</b><span>adım</span></div>
+        </div>
+        <div class="card-note">${esc(WATCH_NOTU)}</div>
+      </section>` : ''}
 
     <section class="card">
       <div class="card-head kardiyo-head">
@@ -874,14 +924,17 @@ function bindApp() {
       case 'takviye':
         return patch({ takviye: { [k]: !g.takviye[k] } });
 
+      /*  Artış ekranda YAZAN değerden devam eder. Adım sayacı saatten dolmuş
+          olabiliyor; ham alanı temel alsaydık 9'u gören kullanıcı +'ya basınca
+          1'e düşerdi. Sıfıra kadar azaltmak sayacı saate geri bırakır. */
       case 'say+': {
         const alan = b.dataset.alan;
         const tavan = alan === 'su' ? HEDEF.suTik : HEDEF.adimTik;
-        return patch({ [alan]: Math.min(tavan, (g[alan] || 0) + 1) });
+        return patch({ [alan]: Math.min(tavan, sayacDegeri(alan, g) + 1) });
       }
       case 'say-': {
         const alan = b.dataset.alan;
-        return patch({ [alan]: Math.max(0, (g[alan] || 0) - 1) });
+        return patch({ [alan]: Math.max(0, sayacDegeri(alan, g) - 1) });
       }
 
       case 'wo-day':
@@ -1025,6 +1078,9 @@ function menuAc() {
     <button class="btn primary btn-wide" data-x="rapor" style="margin-top:14px">
       📈 Haftalık rapor
     </button>
+    <button class="btn btn-wide" data-x="watch" style="margin-top:8px">
+      ⌚ Apple Watch bağlantısı
+    </button>
 
     <div class="modal-actions">
       ${yerel ? '' : '<button class="btn ghost" data-x="cikis">Çıkış yap</button>'}
@@ -1041,12 +1097,99 @@ function menuAc() {
       const b = e.target.closest('[data-x]');
       if (!b) return;
       if (b.dataset.x === 'rapor') { closeModal(); return raporAc(haftaBasi(state.date)); }
+      if (b.dataset.x === 'watch') { closeModal(); return watchDialog(); }
       if (b.dataset.x === 'cikis') {
         closeModal();
         await state.fb?.sdk.auth.signOut(state.fb.auth);
         return;
       }
       closeModal();
+    });
+  });
+}
+
+/* ==========================================================================
+   Apple Watch bağlantısı
+   ========================================================================== */
+
+/**
+ * Kısayol otomasyonunun ihtiyaç duyduğu değerler.
+ *
+ * Sağlık verisine yalnızca cihaza kurulu uygulamalar erişebiliyor; bir web
+ * sayfası Ana Ekrana eklenmiş olsa da erişemiyor. Bu yüzden veriyi telefondaki
+ * Kısayol taşıyor: Firebase'in REST arayüzünden bu hesapla giriş yapıp günün
+ * belgesine yazıyor. Yeni bir sunucu, yeni bir güvenlik kuralı ya da ücretli
+ * plan gerekmiyor — mevcut kural (kendi users/<uid> klasörün) yeterli.
+ */
+function watchDialog() {
+  const cfg = state.config;
+  const uid = state.user?.uid;
+
+  if (!cfg || !uid) {
+    openModal(`
+      <div class="modal-head"><h3>⌚ Apple Watch bağlantısı</h3>
+        <button class="icon-btn" data-x="kapat" aria-label="kapat">✕</button></div>
+      <p class="tiny-note">Bu bağlantı hesapla girilen modda çalışıyor. Şu an
+        hesapsız moddasın; veriyi taşıyacak Kısayol'un yazacağı bir hesap yok.</p>
+      <div class="modal-actions"><button class="btn" data-x="kapat">Kapat</button></div>`,
+    (m) => m.addEventListener('click', (e) => { if (e.target.closest('[data-x]')) closeModal(); }));
+    return;
+  }
+
+  const girisUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${cfg.apiKey}`;
+  const girisGovde = `{"email":"${state.user.email}","password":"ŞİFREN","returnSecureToken":true}`;
+  const yazUrl = `https://firestore.googleapis.com/v1/projects/${cfg.projectId}`
+    + `/databases/(default)/documents/users/${uid}/days/`;
+  const yazKuyruk = '?updateMask.fieldPaths=watch&updateMask.fieldPaths=date';
+  const yazGovde = '{"fields":{"date":{"stringValue":"TARIH"},"watch":{"mapValue":{"fields":{'
+    + '"kcal":{"doubleValue":KALORI},"adim":{"doubleValue":ADIM},'
+    + '"guncel":{"stringValue":"ZAMAN"}}}}}}';
+
+  const satir = (baslik, deger, aciklama) => `
+    <div class="kopya">
+      <div class="kopya-ust">
+        <span>${esc(baslik)}</span>
+        <button class="chip" data-kopya="${esc(deger)}">kopyala</button>
+      </div>
+      <code>${esc(deger)}</code>
+      ${aciklama ? `<p class="tiny-note">${aciklama}</p>` : ''}
+    </div>`;
+
+  openModal(`
+    <div class="modal-head"><h3>⌚ Apple Watch bağlantısı</h3>
+      <button class="icon-btn" data-x="kapat" aria-label="kapat">✕</button></div>
+
+    <p class="tiny-note">Sağlık verisine yalnızca cihaza kurulu uygulamalar
+      erişebiliyor, web sayfaları erişemiyor. Bu yüzden veriyi telefonundaki
+      <b>Kısayollar</b> uygulaması taşıyor: günde bir çalışıp aktif kaloriyi ve
+      adımı buraya yazıyor. Tıkla tıkla kurulum <b>APPLE-WATCH.md</b> dosyasında;
+      aşağıdakiler o kurulumun senin hesabına ait değerleri.</p>
+
+    <div class="section-h" style="margin-top:12px">1 · Giriş isteği</div>
+    ${satir('URL (POST)', girisUrl)}
+    ${satir('Gövde', girisGovde, 'ŞİFREN yazan yere kendi şifreni yaz. '
+      + 'Bu metin yalnızca senin telefonundaki Kısayol\'un içinde durur.')}
+
+    <div class="section-h" style="margin-top:12px">2 · Yazma isteği</div>
+    ${satir('URL (PATCH) — sonuna tarih eklenecek', yazUrl + 'TARIH' + yazKuyruk,
+      'TARIH yerine Kısayol\'daki <b>yyyy-MM-dd</b> biçimli tarih gelecek.')}
+    ${satir('Gövde', yazGovde,
+      'KALORI, ADIM ve ZAMAN yerine Kısayol değişkenleri gelecek.')}
+
+    <p class="tiny-note" style="margin-top:12px">Kısayol senin hesabınla giriş
+      yapıp yalnızca kendi klasörüne yazıyor; mevcut güvenlik kuralları aynen
+      geçerli. Yeni bir sunucu ya da ücretli plan gerekmiyor.</p>
+
+    <div class="modal-actions"><button class="btn" data-x="kapat">Kapat</button></div>`,
+  (m) => {
+    m.addEventListener('click', async (e) => {
+      const k = e.target.closest('[data-kopya]');
+      if (k) {
+        try { await navigator.clipboard.writeText(k.dataset.kopya); toast('Kopyalandı'); }
+        catch { toast('Kopyalanamadı — metni seçip elle kopyala', 4000); }
+        return;
+      }
+      if (e.target.closest('[data-x]')) closeModal();
     });
   });
 }
@@ -1137,6 +1280,17 @@ function raporAc(bas) {
           </div>`).join('')}
       </div>
 
+      ${r.watch.gun ? `
+        <div class="section-h">Apple Watch</div>
+        <div class="pairs">
+          <div class="pair"><span>Ortalama aktif kalori</span>
+            <span class="v">${r.watch.ortKcal.toLocaleString('tr-TR')} kcal
+              <em>${r.watch.gun} günde</em></span></div>
+          <div class="pair"><span>Ortalama adım</span>
+            <span class="v">${r.watch.ortAdim.toLocaleString('tr-TR')}</span></div>
+        </div>
+        <p class="tiny-note">Bu kalori günlük hedefe eklenmiyor.</p>` : ''}
+
       ${r.kardiyo.toplamDk ? `
         <div class="section-h">Kardiyo</div>
         <div class="pairs">
@@ -1199,6 +1353,12 @@ function raporAc(bas) {
       closeModal();
     });
   });
+}
+
+/** ISO zaman damgasından "18:04" — bozuksa boş döner. */
+function saatDk(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
 }
 
 /** Rapordaki set gösterimi: "62,5 kg × 8" */
@@ -1373,6 +1533,8 @@ async function boot() {
              + 'Hesapsız modda devam edebilirsin.');
     return;
   }
+
+  state.config = config;
 
   try {
     state.fb = await initFirebase(config);
