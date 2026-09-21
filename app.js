@@ -13,12 +13,16 @@
 import * as UtilNS from './util.js';
 import * as PlanNS from './plan.js';
 import * as StoreNS from './store.js';
+import * as RaporNS from './rapor.js';
 
-const BUILD = '2026-09-20b';
+const BUILD = '2026-09-21b';
 
 import {
   today, dateKey, parseKey, addDays, diffDays, gunEtiketi, kisaTarih, esc, sayi, yaz,
+  haftaBasi, haftaEtiketi,
 } from './util.js';
+
+import { haftalikRapor, raporMetni } from './rapor.js';
 
 import {
   BASLIK, HEDEF, TOPLAM, OGUNLER, TAKVIYELER, CIG_PISMIS, ALISVERIS_GUNLUK,
@@ -53,7 +57,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 /* Bugünün belgesi yoksa boş bir iskelet — okuyan taraf hep aynı şekli görsün. */
-const BOS_GUN = { diet: {}, takviye: {}, wo: {}, su: 0, adim: 0, tarti: 0 };
+const BOS_GUN = { diet: {}, takviye: {}, wo: {}, ekstra: [], su: 0, adim: 0, tarti: 0 };
 
 function gun(d = state.date) {
   return state.days.get(dateKey(d)) || BOS_GUN;
@@ -98,7 +102,7 @@ function toast(msg, ms = 2600) {
    ========================================================================== */
 
 /** O gün işaretlenen öğün satırlarının kalorisi. */
-function yenenKcal(d = state.date) {
+function ogunKcal(d = state.date) {
   const isaret = gun(d).diet;
   let sum = 0;
   for (const o of OGUNLER) {
@@ -109,8 +113,124 @@ function yenenKcal(d = state.date) {
   return sum;
 }
 
+/* ------------------------------------------------------ kaçamak / ekstra */
+
+/**
+ * Plan dışı yenenler.
+ *
+ * Planı işaretlemek tek başına yetmiyor: asıl kilo aldıran şey listede
+ * olmayan. Kaçamağı yazacak yer olmayınca insan ya hiç yazmıyor ya da
+ * "bugün olmadı" deyip günü boş bırakıyor; ikisi de kaydı işe yaramaz
+ * yapıyor. Kaloriyi ve varsa makroları buraya girip sayaca dahil ediyoruz.
+ */
+function ekstralar(d = state.date) {
+  const x = gun(d).ekstra;
+  return Array.isArray(x) ? x : [];
+}
+
+function ekstraToplam(liste) {
+  return liste.reduce((t, x) => ({
+    kcal: t.kcal + (Number(x.kcal) || 0),
+    p: t.p + (Number(x.p) || 0),
+    k: t.k + (Number(x.k) || 0),
+    y: t.y + (Number(x.y) || 0),
+  }), { kcal: 0, p: 0, k: 0, y: 0 });
+}
+
+function ekstraYaz(liste, d = state.date) {
+  return patch({ ekstra: liste }, d);
+}
+
+const yeniId = () => 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/** Öğün tikleri + kaçamaklar. Sayaç bu rakama göre düşer. */
+function yenenKcal(d = state.date) {
+  return ogunKcal(d) + ekstraToplam(ekstralar(d)).kcal;
+}
+
+/** " · 12 P · 40 K · 11 Y" — hiç makro girilmediyse boş döner. */
+function makroYazi(t) {
+  if (!t.p && !t.k && !t.y) return '';
+  return ` · ${t.p} P · ${t.k} K · ${t.y} Y`;
+}
+
+/**
+ * Kaçamak giriş penceresi.
+ *
+ * Kalori dışındaki alanlar isteğe bağlı: paketin arkasını okuyacak hâlde
+ * olmayan biri en azından kaloriyi girsin, hiç girmemekten iyidir.
+ */
+function ekstraDialog(mevcut) {
+  const x = mevcut || { ad: '', kcal: '', p: '', k: '', y: '' };
+  const v = (n) => (n === '' || n === undefined || n === null || n === 0) ? '' : yaz(n);
+
+  openModal(`
+    <div class="modal-head"><h3>${mevcut ? 'Kaçamağı düzenle' : 'Kaçamak ekle'}</h3>
+      <button class="icon-btn" data-x="kapat" aria-label="kapat">✕</button></div>
+
+    <div class="stack">
+      <label class="field"><span>Ne yedin</span>
+        <input id="ex-ad" class="input" maxlength="60" placeholder="Pizza, 2 dilim"
+               value="${esc(x.ad || '')}" /></label>
+
+      <label class="field"><span>Kalori</span>
+        <input id="ex-kcal" class="input" inputmode="decimal" placeholder="0"
+               value="${v(x.kcal)}" /></label>
+
+      <div class="makro-3">
+        <label class="field"><span>Protein (g)</span>
+          <input id="ex-p" class="input" inputmode="decimal" placeholder="—" value="${v(x.p)}" /></label>
+        <label class="field"><span>Karb. (g)</span>
+          <input id="ex-k" class="input" inputmode="decimal" placeholder="—" value="${v(x.k)}" /></label>
+        <label class="field"><span>Yağ (g)</span>
+          <input id="ex-y" class="input" inputmode="decimal" placeholder="—" value="${v(x.y)}" /></label>
+      </div>
+
+      <p class="tiny-note">Yalnızca kaloriyi bilsen de yeter, diğerleri boş kalabilir.</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" data-x="kapat">Vazgeç</button>
+      <button class="btn primary" data-x="kaydet">Kaydet</button>
+    </div>`, (m) => {
+    $('#ex-ad', m)?.focus();
+
+    m.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); $('[data-x="kaydet"]', m).click(); }
+    });
+
+    m.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-x]');
+      if (!b) return;
+      if (b.dataset.x !== 'kaydet') return closeModal();
+
+      const kcal = Math.round(sayi($('#ex-kcal', m).value));
+      if (kcal <= 0) { toast('Kaç kalori olduğunu yaz'); return; }
+      if (kcal > 10000) { toast('Kalori 10.000\'den küçük olmalı'); return; }
+
+      const kayit = {
+        id: mevcut?.id || yeniId(),
+        ad: $('#ex-ad', m).value.trim().slice(0, 60) || 'Kaçamak',
+        kcal,
+        p: Math.round(sayi($('#ex-p', m).value)),
+        k: Math.round(sayi($('#ex-k', m).value)),
+        y: Math.round(sayi($('#ex-y', m).value)),
+      };
+
+      const liste = ekstralar();
+      const i = liste.findIndex((z) => z.id === kayit.id);
+      if (i >= 0) liste[i] = kayit; else liste.push(kayit);
+
+      closeModal();
+      ekstraYaz(liste);
+    });
+  });
+}
+
 function viewDiyet() {
   const g = gun();
+  const ek = ekstralar();
+  const ekTop = ekstraToplam(ek);
   const yenen = yenenKcal();
   const kalan = HEDEF.kcal - yenen;
   const asti = kalan < 0;
@@ -165,10 +285,39 @@ function viewDiyet() {
         <span>kcal ${asti ? 'aşıldı' : 'kaldı'}</span></div>
       <div class="bar"><i style="width:${oran}%" class="${asti ? 'over' : ''}"></i></div>
       <div class="kcal-sub">Hedef ${HEDEF.kcal.toLocaleString('tr-TR')} ·
-        yenen ${yenen.toLocaleString('tr-TR')} · planın tamamı ${GUNLUK_KCAL.toLocaleString('tr-TR')} kcal</div>
+        yenen ${yenen.toLocaleString('tr-TR')}${ekTop.kcal
+          ? ` (öğün ${ogunKcal().toLocaleString('tr-TR')} + kaçamak ${ekTop.kcal.toLocaleString('tr-TR')})`
+          : ''} · planın tamamı ${GUNLUK_KCAL.toLocaleString('tr-TR')} kcal</div>
     </section>
 
     ${OGUNLER.map(ogunHtml).join('')}
+
+    <section class="card">
+      <div class="card-head ekstra-head">
+        <div class="ch-title">🍫 Kaçamak ve ekstralar</div>
+        <div class="ch-meta">${ek.length
+          ? `${ekTop.kcal.toLocaleString('tr-TR')} kcal${makroYazi(ekTop)}`
+          : 'plan dışı ne yediysen'}</div>
+      </div>
+
+      ${ek.map((x) => `
+        <div class="row">
+          <div class="grow" data-act="ekstra-duzenle" data-id="${esc(x.id)}" style="cursor:pointer">
+            <div class="r-name">${esc(x.ad || 'Kaçamak')}</div>
+            <div class="r-sub">${(Number(x.p) || Number(x.k) || Number(x.y))
+              ? `${Number(x.p) || 0} g P · ${Number(x.k) || 0} g K · ${Number(x.y) || 0} g Y`
+              : 'besin değeri girilmedi'}</div>
+          </div>
+          <div class="r-kcal">${(Number(x.kcal) || 0).toLocaleString('tr-TR')}</div>
+          <button class="set-del" data-act="ekstra-sil" data-id="${esc(x.id)}"
+                  aria-label="${esc(x.ad || 'kaçamak')} sil">✕</button>
+        </div>`).join('')}
+
+      <button class="btn ghost btn-block" data-act="ekstra-ekle">＋ Kaçamak ekle</button>
+      ${ek.length ? '' : `
+        <div class="card-note">Planda olmayan her şey buraya: çayın şekeri, bir dilim
+          pizza, kuruyemiş. Yazmadığın kalori, olmayan kalori değil.</div>`}
+    </section>
 
     ${sayacHtml('Su', '💧', 'su', g.su, HEDEF.suTik, `Her tik 500 ml · hedef ${yaz(HEDEF.suL)} L`)}
     ${sayacHtml('Adım', '🚶', 'adim', g.adim, HEDEF.adimTik,
@@ -214,6 +363,15 @@ function viewDiyet() {
             <span>${esc(k)}</span><span class="v">${esc(v)} <em>${esc(t)}</em></span>
           </div>`).join('')}
       </div>
+      <p class="tiny-note">Planın tamamı yendiğinde. Bugün işaretlediğin kadarı değil.</p>
+      ${ekTop.kcal ? `
+        <div class="pairs">
+          <div class="pair head"><b>Bugünkü kaçamak</b><span class="v">bunun üstüne</span></div>
+          <div class="pair"><span>Kalori</span>
+            <span class="v">+${ekTop.kcal.toLocaleString('tr-TR')} kcal</span></div>
+          <div class="pair"><span>Protein · karbonhidrat · yağ</span>
+            <span class="v">+${ekTop.p} · +${ekTop.k} · +${ekTop.y} g</span></div>
+        </div>` : ''}
       <p class="flag">${esc(LIF_NOTU)}</p>`)}
 
     ${katlanir('cig', '⚖️ Çiğ ↔ Pişmiş', () => `
@@ -620,6 +778,15 @@ function bindApp() {
         return setleriYaz(k, setler, eski.ok);
       }
 
+      case 'ekstra-ekle':
+        return ekstraDialog(null);
+
+      case 'ekstra-duzenle':
+        return ekstraDialog(ekstralar().find((x) => x.id === b.dataset.id) || null);
+
+      case 'ekstra-sil':
+        return ekstraYaz(ekstralar().filter((x) => x.id !== b.dataset.id));
+
       case 'fold':
         if (state.acik.has(k)) state.acik.delete(k); else state.acik.add(k);
         return render();
@@ -724,6 +891,10 @@ function menuAc() {
         <button data-tema="${v}" aria-pressed="${tema === v}">${l}</button>`).join('')}
     </div>
 
+    <button class="btn primary btn-wide" data-x="rapor" style="margin-top:14px">
+      📈 Haftalık rapor
+    </button>
+
     <div class="modal-actions">
       ${yerel ? '' : '<button class="btn ghost" data-x="cikis">Çıkış yap</button>'}
       <button class="btn" data-x="kapat">Kapat</button>
@@ -738,6 +909,7 @@ function menuAc() {
       }
       const b = e.target.closest('[data-x]');
       if (!b) return;
+      if (b.dataset.x === 'rapor') { closeModal(); return raporAc(haftaBasi(state.date)); }
       if (b.dataset.x === 'cikis') {
         closeModal();
         await state.fb?.sdk.auth.signOut(state.fb.auth);
@@ -746,6 +918,147 @@ function menuAc() {
       closeModal();
     });
   });
+}
+
+/* ==========================================================================
+   Haftalık rapor
+   ========================================================================== */
+
+/**
+ * Haftanın raporu.
+ *
+ * Yorumlar rapor.js'te kural olarak duruyor; uygulama çevrimdışıyken de,
+ * hiçbir servise bağlanmadan da aynı raporu üretiyor. "Kopyala" düğmesi ham
+ * rakamlarla birlikte düz metni panoya alır — daha derin bir okuma için
+ * birine göndermek üzere.
+ */
+function raporAc(bas) {
+  const r = haftalikRapor(state.days, bas);
+  const buHafta = dateKey(bas) === dateKey(haftaBasi(today()));
+
+  const ikon = { iyi: '✅', uyari: '⚠️', kotu: '⛔' };
+
+  const gunSatiri = (g) => `
+    <div class="pair ${g.toplam ? '' : 'sonuk'}">
+      <span>${esc(g.gunAd)}</span>
+      <span class="v">${g.toplam
+        ? `${g.toplam.toLocaleString('tr-TR')} kcal${g.ekstraKcal ? ` <em>+${g.ekstraKcal} kaçamak</em>` : ''}`
+        : '<em>kayıt yok</em>'}${g.tarti ? ` <em>· ${yaz(g.tarti)} kg</em>` : ''}</span>
+    </div>`;
+
+  const hareketSatiri = (h) => `
+    <div class="pair">
+      <span>${esc(h.ad)}<br><em class="mini">${esc(h.gun)}</em></span>
+      <span class="v ${h.durum === 'arttı' ? 'iyi' : h.durum === 'düştü' ? 'kotu' : ''}">
+        ${esc(setSetYazi(h.bu))}
+        <em>${h.gecen ? `geçen ${esc(setSetYazi(h.gecen))}` : 'ilk hafta'}</em>
+      </span>
+    </div>`;
+
+  openModal(`
+    <div class="modal-head">
+      <button class="icon-btn" data-x="onceki" aria-label="önceki hafta">‹</button>
+      <h3 style="text-align:center">📈 ${esc(r.etiket)}
+        <span class="mini">${r.bitti ? 'hafta bitti' : 'hafta sürüyor'}</span></h3>
+      <button class="icon-btn" data-x="sonraki" aria-label="sonraki hafta"
+              ${buHafta ? 'disabled style="opacity:.3"' : ''}>›</button>
+      <button class="icon-btn" data-x="kapat" aria-label="kapat">✕</button>
+    </div>
+
+    <div class="rapor">
+      <div class="rapor-ozet">
+        <div><b>${r.diyet.ortKcal.toLocaleString('tr-TR')}</b><span>ort. kcal/gün</span></div>
+        <div><b>${r.antrenman.yapilan}/${r.antrenman.hedef}</b>
+          <span>antrenman · ${r.antrenman.toplamSet}/${r.antrenman.hedefSet} set</span></div>
+        <div><b>${r.tarti.degisim === null ? '—' : `${r.tarti.degisim > 0 ? '+' : ''}${yaz(r.tarti.degisim)}`}</b><span>kg değişim</span></div>
+      </div>
+
+      <div class="section-h">Değerlendirme</div>
+      <div class="yorumlar">
+        ${r.yorumlar.map((v) => `
+          <div class="yorum ${esc(v.tip)}"><span>${ikon[v.tip]}</span><p>${esc(v.metin)}</p></div>`).join('')}
+      </div>
+
+      <div class="section-h">Gün gün</div>
+      <div class="pairs">${r.gunlukler.map(gunSatiri).join('')}</div>
+
+      <div class="section-h">Diyet</div>
+      <div class="pairs">
+        <div class="pair"><span>Kayıt girilen gün</span><span class="v">${r.diyet.yazilanGun} / 7</span></div>
+        <div class="pair"><span>Plan tutturma</span><span class="v">%${r.diyet.tutma}</span></div>
+        <div class="pair"><span>Protein <em class="mini">yaklaşık</em></span>
+          <span class="v">${r.diyet.ortProtein} g <em>/ ${r.diyet.planProtein}</em></span></div>
+        <div class="pair"><span>Kaçamak</span>
+          <span class="v">${r.diyet.ekstraKcal.toLocaleString('tr-TR')} kcal <em>${r.diyet.ekstraAdet} adet</em></span></div>
+        <div class="pair"><span>Su · adım</span>
+          <span class="v">${yaz(r.diyet.ortSu)} tik · ${yaz(r.diyet.ortAdim)} bin</span></div>
+        <div class="pair"><span>Takviye</span><span class="v">%${r.diyet.takviyeOran}</span></div>
+      </div>
+
+      <div class="section-h">Antrenman</div>
+      <div class="pairs">
+        ${r.antrenman.gunler.map((g) => `
+          <div class="pair ${g.yapildi ? '' : 'sonuk'}">
+            <span>${esc(g.ad)}</span>
+            <span class="v">${g.yapildi
+              ? `${g.setAdet} / ${g.hedefSet} set <em>${esc(g.gunAd)}</em>`
+              : '<em>yapılmadı</em>'}</span>
+          </div>`).join('')}
+      </div>
+
+      ${r.antrenman.hareketler.length ? `
+        <div class="section-h">En iyi setler</div>
+        <div class="pairs">${r.antrenman.hareketler.map(hareketSatiri).join('')}</div>` : ''}
+
+      <p class="tiny-note">Protein satır bazında bilinmiyor; öğünün yenen kalorisine
+        oranlanarak hesaplanıyor, o yüzden yaklaşık. Ortalamalar yalnızca kayıt
+        girilen günlerden alınıyor.</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" data-x="kopyala">Kopyala</button>
+      <button class="btn" data-x="kapat">Kapat</button>
+    </div>`, (m) => {
+    m.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-x]');
+      if (!b || b.disabled) return;
+
+      if (b.dataset.x === 'onceki') return raporAc(addDays(bas, -7));
+      if (b.dataset.x === 'sonraki') return raporAc(addDays(bas, 7));
+
+      if (b.dataset.x === 'kopyala') {
+        const metin = raporMetni(r);
+        try {
+          await navigator.clipboard.writeText(metin);
+          toast('Rapor kopyalandı');
+        } catch {
+          /*  Pano izni yoksa (iOS'ta kullanıcı hareketi dışında çağrılırsa
+              oluyor) metni seçilebilir hâlde göster — kopyalamak yine mümkün. */
+          openModal(`
+            <div class="modal-head"><h3>Raporu kopyala</h3>
+              <button class="icon-btn" data-x="kapat" aria-label="kapat">✕</button></div>
+            <p class="tiny-note">Pano izni alınamadı. Aşağıdaki metni seçip kopyala.</p>
+            <textarea class="input" rows="14" readonly
+                      style="font-family:var(--mono);font-size:12px">${esc(metin)}</textarea>
+            <div class="modal-actions"><button class="btn" data-x="kapat">Kapat</button></div>`,
+          (m2) => {
+            $('textarea', m2).select();
+            m2.addEventListener('click', (e2) => {
+              if (e2.target.closest('[data-x="kapat"]')) closeModal();
+            });
+          });
+        }
+        return;
+      }
+      closeModal();
+    });
+  });
+}
+
+/** Rapordaki set gösterimi: "62,5 kg × 8" */
+function setSetYazi(x) {
+  if (!x) return '—';
+  return x.kg ? `${yaz(x.kg)} kg${x.rep ? ` × ${x.rep}` : ''}` : `${x.rep} tekrar`;
 }
 
 /* ----------------------------------------------------------------- kip -- */
@@ -865,7 +1178,10 @@ function startLocal() { baglaStore(new LocalStore()); }
 
 /** Modüllerden biri eski sürümde kaldıysa uygulamayı açmadan önce tazele. */
 function surumUyusmazligi() {
-  const m = { 'util.js': UtilNS.BUILD, 'plan.js': PlanNS.BUILD, 'store.js': StoreNS.BUILD };
+  const m = {
+    'util.js': UtilNS.BUILD, 'plan.js': PlanNS.BUILD,
+    'store.js': StoreNS.BUILD, 'rapor.js': RaporNS.BUILD,
+  };
   return Object.entries(m).filter(([, v]) => v !== BUILD).map(([k]) => k);
 }
 

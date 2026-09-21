@@ -2,7 +2,7 @@
    util.js — tarih ve küçük yardımcılar
    ========================================================================== */
 
-export const BUILD = '2026-09-20b';
+export const BUILD = '2026-09-21b';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
@@ -37,6 +37,23 @@ export function addDays(d, n) {
 export function diffDays(a, b) {
   return Math.round((a.setHours ? new Date(a).setHours(0, 0, 0, 0) : a)
                   - (b.setHours ? new Date(b).setHours(0, 0, 0, 0) : b)) / 86400000;
+}
+
+/** Haftanın başı — pazartesi. Programın tartı günü de pazartesi. */
+export function haftaBasi(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const g = x.getDay();                 // 0 pazar
+  x.setDate(x.getDate() - (g === 0 ? 6 : g - 1));
+  return x;
+}
+
+/** "14-20 Eylül" — hafta aralığı, ay aynıysa bir kez yazılır. */
+export function haftaEtiketi(bas) {
+  const son = addDays(bas, 6);
+  return bas.getMonth() === son.getMonth()
+    ? `${bas.getDate()}-${son.getDate()} ${AY_ADI[bas.getMonth()]}`
+    : `${bas.getDate()} ${AY_ADI[bas.getMonth()]} - ${son.getDate()} ${AY_ADI[son.getMonth()]}`;
 }
 
 /** "20 Eylül Cumartesi" — bugün ve dün özel yazılır. */

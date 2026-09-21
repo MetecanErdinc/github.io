@@ -287,6 +287,16 @@ main {
 }
 .set-del:hover { border-color: var(--danger); color: var(--danger); }
 
+.btn-block { width: 100%; margin: 10px 14px 12px; width: calc(100% - 28px); }
+
+.ekstra-head { background: var(--amber-soft); }
+.ekstra-head .ch-title, .ekstra-head .ch-meta { color: var(--amber); }
+
+.makro-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.makro-3 .input { text-align: center; }
+
+.tiny-note { margin: 0; font-size: 12px; color: var(--ink3); line-height: 1.5; }
+
 .all-done {
   display: flex; align-items: center; gap: 9px; width: 100%;
   margin-top: 10px; padding: 9px 11px;
@@ -420,6 +430,64 @@ ol.rules li::marker, ol.steps li::marker { color: var(--accent); font-family: va
 .modal-head h3 { margin: 0; font-size: 17px; flex: 1; }
 .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
 .modal-actions .btn { flex: 1; }
+
+/* ------------------------------------------------------ haftalık rapor -- */
+
+.modal-head h3 .mini {
+  display: block; font-family: var(--mono); font-size: 10px; font-weight: 500;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink3);
+}
+.mini { font-family: var(--mono); font-size: 10.5px; color: var(--ink3); font-style: normal; }
+
+.btn-wide { width: 100%; }
+
+.rapor { display: flex; flex-direction: column; gap: 12px; }
+
+.rapor-ozet {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--line);
+  border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+}
+.rapor-ozet > div {
+  background: var(--surface); padding: 12px 8px; text-align: center;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.rapor-ozet b {
+  font-size: 22px; font-weight: 800; letter-spacing: -.01em;
+  font-variant-numeric: tabular-nums;
+}
+.rapor-ozet span {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink3);
+}
+
+.section-h {
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink3);
+  padding-bottom: 6px; border-bottom: 1px solid var(--line); margin-top: 4px;
+}
+
+.yorumlar { display: flex; flex-direction: column; gap: 7px; }
+.yorum {
+  display: flex; gap: 9px; align-items: flex-start;
+  padding: 10px 12px; border-radius: 9px;
+  border: 1px solid var(--line); border-left-width: 3px;
+  background: var(--surface);
+}
+.yorum p { margin: 0; font-size: 13px; line-height: 1.5; }
+.yorum.iyi   { border-left-color: var(--accent); background: var(--accent-soft); }
+.yorum.uyari { border-left-color: var(--amber);  background: var(--amber-soft); }
+.yorum.kotu  { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); }
+
+.rapor .pair { align-items: flex-start; }
+.rapor .pair.sonuk { opacity: .5; }
+.rapor .pair .v { text-align: right; }
+.rapor .pair .v em {
+  display: block; font-style: normal; font-weight: 400;
+  font-size: 10.5px; color: var(--ink3);
+}
+.rapor .pair .v.iyi { color: var(--accent); }
+.rapor .pair .v.kotu { color: var(--danger); }
 
 .toast {
   position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom));
