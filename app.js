@@ -15,7 +15,7 @@ import * as PlanNS from './plan.js';
 import * as StoreNS from './store.js';
 import * as RaporNS from './rapor.js';
 
-const BUILD = '2026-09-21b';
+const BUILD = '2026-09-22a';
 
 import {
   today, dateKey, parseKey, addDays, diffDays, gunEtiketi, kisaTarih, esc, sayi, yaz,
@@ -30,6 +30,7 @@ import {
   ANTRENMANLAR, HAFTA, ANTRENMAN_NOTU, ISINMA, ISINMA_NOTU, SOGUMA,
   ILK_IKI_HAFTA, CIFT_ILERLEME, ARTIS, ILERLEME_NOTU, DELOAD, FOOTER,
   GUNLUK_KCAL, gununAntrenmani, hareketAnahtari, setSayisi,
+  KARDIYO_TURLERI, KARDIYO_NOTU, kardiyoAdi,
 } from './plan.js';
 
 import {
@@ -57,7 +58,7 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 /* Bugünün belgesi yoksa boş bir iskelet — okuyan taraf hep aynı şekli görsün. */
-const BOS_GUN = { diet: {}, takviye: {}, wo: {}, ekstra: [], su: 0, adim: 0, tarti: 0 };
+const BOS_GUN = { diet: {}, takviye: {}, wo: {}, ekstra: [], kardiyo: [], su: 0, adim: 0, tarti: 0 };
 
 function gun(d = state.date) {
   return state.days.get(dateKey(d)) || BOS_GUN;
@@ -411,6 +412,103 @@ function viewDiyet() {
    Spor
    ========================================================================== */
 
+/* ------------------------------------------------------------- kardiyo -- */
+
+function kardiyolar(d = state.date) {
+  const x = gun(d).kardiyo;
+  return Array.isArray(x) ? x : [];
+}
+
+function kardiyoYaz(liste, d = state.date) {
+  return patch({ kardiyo: liste }, d);
+}
+
+/** "32 dk · 5,5 km/s · %8" — girilmeyen alanlar yazılmaz. */
+function kardiyoYazi(x) {
+  const p = [`${Number(x.dk) || 0} dk`];
+  if (Number(x.hiz)) p.push(`${yaz(x.hiz)} km/s`);
+  if (Number(x.egim)) p.push(`%${yaz(x.egim)}`);
+  return p.join(' · ');
+}
+
+function kardiyoDialog(mevcut) {
+  const x = mevcut || { tur: 'bant', dk: '', hiz: '', egim: '' };
+  const v = (n) => (!n ? '' : yaz(n));
+
+  openModal(`
+    <div class="modal-head"><h3>${mevcut ? 'Kardiyoyu düzenle' : 'Kardiyo ekle'}</h3>
+      <button class="icon-btn" data-x="kapat" aria-label="kapat">✕</button></div>
+
+    <div class="stack">
+      <div class="field"><span>Ne yaptın</span>
+        <div class="chips" id="kd-tur">
+          ${KARDIYO_TURLERI.map(([k, ad]) => `
+            <button type="button" class="chip" data-v="${k}"
+                    aria-pressed="${k === x.tur}">${esc(ad)}</button>`).join('')}
+        </div>
+      </div>
+
+      <label class="field"><span>Süre (dakika)</span>
+        <input id="kd-dk" class="input" inputmode="numeric" placeholder="30"
+               value="${v(x.dk)}" /></label>
+
+      <div class="makro-3" style="grid-template-columns:1fr 1fr">
+        <label class="field"><span>Hız (km/s)</span>
+          <input id="kd-hiz" class="input" inputmode="decimal" placeholder="—" value="${v(x.hiz)}" /></label>
+        <label class="field"><span>Eğim (%)</span>
+          <input id="kd-egim" class="input" inputmode="decimal" placeholder="—" value="${v(x.egim)}" /></label>
+      </div>
+
+      <p class="tiny-note">Hız ve eğim isteğe bağlı — bisiklette ya da elipstikte
+        boş bırakabilirsin. Zorunlu olan tek alan süre.</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" data-x="kapat">Vazgeç</button>
+      <button class="btn primary" data-x="kaydet">Kaydet</button>
+    </div>`, (m) => {
+    $('#kd-dk', m)?.focus();
+
+    $('#kd-tur', m).addEventListener('click', (e) => {
+      const b = e.target.closest('[data-v]');
+      if (!b) return;
+      $$('[data-v]', $('#kd-tur', m)).forEach((z) => z.setAttribute('aria-pressed', String(z === b)));
+    });
+
+    m.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); $('[data-x="kaydet"]', m).click(); }
+    });
+
+    m.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-x]');
+      if (!b) return;
+      if (b.dataset.x !== 'kaydet') return closeModal();
+
+      const dk = Math.round(sayi($('#kd-dk', m).value));
+      if (dk <= 0) { toast('Kaç dakika yaptığını yaz'); return; }
+      if (dk > 300) { toast('Süre 300 dakikadan kısa olmalı'); return; }
+
+      const hiz = sayi($('#kd-hiz', m).value);
+      const egim = sayi($('#kd-egim', m).value);
+      if (hiz < 0 || hiz > 30) { toast('Hız 0-30 km/s arasında olmalı'); return; }
+      if (egim < 0 || egim > 30) { toast('Eğim 0-30 arasında olmalı'); return; }
+
+      const kayit = {
+        id: mevcut?.id || yeniId(),
+        tur: $('#kd-tur [aria-pressed="true"]', m)?.dataset.v || 'bant',
+        dk, hiz, egim,
+      };
+
+      const liste = kardiyolar();
+      const i = liste.findIndex((z) => z.id === kayit.id);
+      if (i >= 0) liste[i] = kayit; else liste.push(kayit);
+
+      closeModal();
+      kardiyoYaz(liste);
+    });
+  });
+}
+
 /**
  * Bir hareketin en son girilen ağırlığı — bugünden geriye doğru ilk kayıt.
  *
@@ -511,6 +609,8 @@ function viewSpor() {
     </div>`;
 
   const yapilan = secili.hareketler.filter((h) => g.wo[hareketAnahtari(secili.key, h.key)]?.ok).length;
+  const kardiyo = kardiyolar();
+  const kardiyoDk = kardiyo.reduce((t, x) => t + (Number(x.dk) || 0), 0);
 
   const hareketHtml = (h) => {
     const k = hareketAnahtari(secili.key, h.key);
@@ -593,6 +693,28 @@ function viewSpor() {
           ${yapilan}/${secili.hareketler.length}</div>
       </div>
       ${secili.hareketler.map(hareketHtml).join('')}
+    </section>
+
+    <section class="card">
+      <div class="card-head kardiyo-head">
+        <div class="ch-title">🏃 Kardiyo</div>
+        <div class="ch-meta">${kardiyo.length
+          ? `${kardiyoDk} dk · ${kardiyo.length} kayıt`
+          : 'bugün kardiyo yok'}</div>
+      </div>
+
+      ${kardiyo.map((x) => `
+        <div class="row">
+          <div class="grow" data-act="kardiyo-duzenle" data-id="${esc(x.id)}" style="cursor:pointer">
+            <div class="r-name">${esc(kardiyoAdi(x.tur))}</div>
+            <div class="r-sub">${esc(kardiyoYazi(x))}</div>
+          </div>
+          <button class="set-del" data-act="kardiyo-sil" data-id="${esc(x.id)}"
+                  aria-label="${esc(kardiyoAdi(x.tur))} sil">✕</button>
+        </div>`).join('')}
+
+      <button class="btn ghost btn-block" data-act="kardiyo-ekle">＋ Kardiyo ekle</button>
+      ${kardiyo.length ? '' : `<div class="card-note">${esc(KARDIYO_NOTU)}</div>`}
     </section>
 
     <p class="flag">${esc(ANTRENMAN_NOTU)}</p>
@@ -777,6 +899,15 @@ function bindApp() {
         setler.splice(Number(b.dataset.i), 1);
         return setleriYaz(k, setler, eski.ok);
       }
+
+      case 'kardiyo-ekle':
+        return kardiyoDialog(null);
+
+      case 'kardiyo-duzenle':
+        return kardiyoDialog(kardiyolar().find((x) => x.id === b.dataset.id) || null);
+
+      case 'kardiyo-sil':
+        return kardiyoYaz(kardiyolar().filter((x) => x.id !== b.dataset.id));
 
       case 'ekstra-ekle':
         return ekstraDialog(null);
@@ -1005,6 +1136,21 @@ function raporAc(bas) {
               : '<em>yapılmadı</em>'}</span>
           </div>`).join('')}
       </div>
+
+      ${r.kardiyo.toplamDk ? `
+        <div class="section-h">Kardiyo</div>
+        <div class="pairs">
+          <div class="pair"><span>Toplam</span>
+            <span class="v">${r.kardiyo.toplamDk} dk
+              <em>${r.kardiyo.gun} günde ${r.kardiyo.seans} seans${r.kardiyo.oncekiDk
+                ? ` · geçen hafta ${r.kardiyo.oncekiDk} dk` : ''}</em></span></div>
+          ${r.kardiyo.kayitlar.map((x) => `
+            <div class="pair"><span>${esc(x.gunAd)}<br><em class="mini">${esc(kardiyoAdi(x.tur))}</em></span>
+              <span class="v">${Number(x.dk) || 0} dk
+                <em>${Number(x.hiz) ? `${yaz(x.hiz)} km/s` : ''}${
+                  Number(x.hiz) && Number(x.egim) ? ' · ' : ''}${
+                  Number(x.egim) ? `%${yaz(x.egim)}` : ''}</em></span></div>`).join('')}
+        </div>` : ''}
 
       ${r.antrenman.hareketler.length ? `
         <div class="section-h">En iyi setler</div>

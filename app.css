@@ -292,6 +292,15 @@ main {
 .ekstra-head { background: var(--amber-soft); }
 .ekstra-head .ch-title, .ekstra-head .ch-meta { color: var(--amber); }
 
+.kardiyo-head { background: var(--plum-soft); }
+.kardiyo-head .ch-title, .kardiyo-head .ch-meta { color: var(--plum); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .chip { padding: 8px 12px; font-size: 13px; }
+.chips .chip[aria-pressed="true"] {
+  background: var(--accent); border-color: var(--accent); color: #fff;
+}
+
 .makro-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .makro-3 .input { text-align: center; }
 

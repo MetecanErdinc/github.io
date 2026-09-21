@@ -10,7 +10,7 @@
    geçmiş kayıtlar yerinde kalsın diye.
    ========================================================================== */
 
-export const BUILD = '2026-09-21b';
+export const BUILD = '2026-09-22a';
 
 export const BASLIK = "126'dan 105'e";
 
@@ -242,6 +242,23 @@ export const ANTRENMANLAR = [
     ],
   },
 ];
+
+/*  Kardiyo türleri. Hız ve eğim yalnızca bantta ve dışarıda anlamlı; diğer
+    ikisinde boş bırakılabilsin diye alanların hiçbiri zorunlu değil. */
+export const KARDIYO_TURLERI = [
+  ['bant',     'Yürüyüş bandı'],
+  ['disarida', 'Dışarıda yürüyüş'],
+  ['bisiklet', 'Bisiklet'],
+  ['eliptik',  'Eliptik'],
+];
+
+export function kardiyoAdi(tur) {
+  return (KARDIYO_TURLERI.find((x) => x[0] === tur) || [])[1] || 'Kardiyo';
+}
+
+export const KARDIYO_NOTU = 'Kardiyonun yaktığı kalori günlük hedefe EKLENMEZ. '
+  + 'Adım hedefi zaten hesabın içinde ve yakılanı geri yemek, açığı kapatmanın '
+  + 'en hızlı yolu. Burası ne yaptığını takip etmek için, izin almak için değil.';
 
 /* Haftanın günleri — getDay() sırasıyla, Pazar 0. */
 export const HAFTA = [
