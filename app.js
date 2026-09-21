@@ -13,12 +13,16 @@
 import * as UtilNS from './util.js';
 import * as PlanNS from './plan.js';
 import * as StoreNS from './store.js';
+import * as RaporNS from './rapor.js';
 
-const BUILD = '2026-09-21a';
+const BUILD = '2026-09-21b';
 
 import {
   today, dateKey, parseKey, addDays, diffDays, gunEtiketi, kisaTarih, esc, sayi, yaz,
+  haftaBasi, haftaEtiketi,
 } from './util.js';
+
+import { haftalikRapor, raporMetni } from './rapor.js';
 
 import {
   BASLIK, HEDEF, TOPLAM, OGUNLER, TAKVIYELER, CIG_PISMIS, ALISVERIS_GUNLUK,
@@ -887,6 +891,10 @@ function menuAc() {
         <button data-tema="${v}" aria-pressed="${tema === v}">${l}</button>`).join('')}
     </div>
 
+    <button class="btn primary btn-wide" data-x="rapor" style="margin-top:14px">
+      📈 Haftalık rapor
+    </button>
+
     <div class="modal-actions">
       ${yerel ? '' : '<button class="btn ghost" data-x="cikis">Çıkış yap</button>'}
       <button class="btn" data-x="kapat">Kapat</button>
@@ -901,6 +909,7 @@ function menuAc() {
       }
       const b = e.target.closest('[data-x]');
       if (!b) return;
+      if (b.dataset.x === 'rapor') { closeModal(); return raporAc(haftaBasi(state.date)); }
       if (b.dataset.x === 'cikis') {
         closeModal();
         await state.fb?.sdk.auth.signOut(state.fb.auth);
@@ -909,6 +918,147 @@ function menuAc() {
       closeModal();
     });
   });
+}
+
+/* ==========================================================================
+   Haftalık rapor
+   ========================================================================== */
+
+/**
+ * Haftanın raporu.
+ *
+ * Yorumlar rapor.js'te kural olarak duruyor; uygulama çevrimdışıyken de,
+ * hiçbir servise bağlanmadan da aynı raporu üretiyor. "Kopyala" düğmesi ham
+ * rakamlarla birlikte düz metni panoya alır — daha derin bir okuma için
+ * birine göndermek üzere.
+ */
+function raporAc(bas) {
+  const r = haftalikRapor(state.days, bas);
+  const buHafta = dateKey(bas) === dateKey(haftaBasi(today()));
+
+  const ikon = { iyi: '✅', uyari: '⚠️', kotu: '⛔' };
+
+  const gunSatiri = (g) => `
+    <div class="pair ${g.toplam ? '' : 'sonuk'}">
+      <span>${esc(g.gunAd)}</span>
+      <span class="v">${g.toplam
+        ? `${g.toplam.toLocaleString('tr-TR')} kcal${g.ekstraKcal ? ` <em>+${g.ekstraKcal} kaçamak</em>` : ''}`
+        : '<em>kayıt yok</em>'}${g.tarti ? ` <em>· ${yaz(g.tarti)} kg</em>` : ''}</span>
+    </div>`;
+
+  const hareketSatiri = (h) => `
+    <div class="pair">
+      <span>${esc(h.ad)}<br><em class="mini">${esc(h.gun)}</em></span>
+      <span class="v ${h.durum === 'arttı' ? 'iyi' : h.durum === 'düştü' ? 'kotu' : ''}">
+        ${esc(setSetYazi(h.bu))}
+        <em>${h.gecen ? `geçen ${esc(setSetYazi(h.gecen))}` : 'ilk hafta'}</em>
+      </span>
+    </div>`;
+
+  openModal(`
+    <div class="modal-head">
+      <button class="icon-btn" data-x="onceki" aria-label="önceki hafta">‹</button>
+      <h3 style="text-align:center">📈 ${esc(r.etiket)}
+        <span class="mini">${r.bitti ? 'hafta bitti' : 'hafta sürüyor'}</span></h3>
+      <button class="icon-btn" data-x="sonraki" aria-label="sonraki hafta"
+              ${buHafta ? 'disabled style="opacity:.3"' : ''}>›</button>
+      <button class="icon-btn" data-x="kapat" aria-label="kapat">✕</button>
+    </div>
+
+    <div class="rapor">
+      <div class="rapor-ozet">
+        <div><b>${r.diyet.ortKcal.toLocaleString('tr-TR')}</b><span>ort. kcal/gün</span></div>
+        <div><b>${r.antrenman.yapilan}/${r.antrenman.hedef}</b>
+          <span>antrenman · ${r.antrenman.toplamSet}/${r.antrenman.hedefSet} set</span></div>
+        <div><b>${r.tarti.degisim === null ? '—' : `${r.tarti.degisim > 0 ? '+' : ''}${yaz(r.tarti.degisim)}`}</b><span>kg değişim</span></div>
+      </div>
+
+      <div class="section-h">Değerlendirme</div>
+      <div class="yorumlar">
+        ${r.yorumlar.map((v) => `
+          <div class="yorum ${esc(v.tip)}"><span>${ikon[v.tip]}</span><p>${esc(v.metin)}</p></div>`).join('')}
+      </div>
+
+      <div class="section-h">Gün gün</div>
+      <div class="pairs">${r.gunlukler.map(gunSatiri).join('')}</div>
+
+      <div class="section-h">Diyet</div>
+      <div class="pairs">
+        <div class="pair"><span>Kayıt girilen gün</span><span class="v">${r.diyet.yazilanGun} / 7</span></div>
+        <div class="pair"><span>Plan tutturma</span><span class="v">%${r.diyet.tutma}</span></div>
+        <div class="pair"><span>Protein <em class="mini">yaklaşık</em></span>
+          <span class="v">${r.diyet.ortProtein} g <em>/ ${r.diyet.planProtein}</em></span></div>
+        <div class="pair"><span>Kaçamak</span>
+          <span class="v">${r.diyet.ekstraKcal.toLocaleString('tr-TR')} kcal <em>${r.diyet.ekstraAdet} adet</em></span></div>
+        <div class="pair"><span>Su · adım</span>
+          <span class="v">${yaz(r.diyet.ortSu)} tik · ${yaz(r.diyet.ortAdim)} bin</span></div>
+        <div class="pair"><span>Takviye</span><span class="v">%${r.diyet.takviyeOran}</span></div>
+      </div>
+
+      <div class="section-h">Antrenman</div>
+      <div class="pairs">
+        ${r.antrenman.gunler.map((g) => `
+          <div class="pair ${g.yapildi ? '' : 'sonuk'}">
+            <span>${esc(g.ad)}</span>
+            <span class="v">${g.yapildi
+              ? `${g.setAdet} / ${g.hedefSet} set <em>${esc(g.gunAd)}</em>`
+              : '<em>yapılmadı</em>'}</span>
+          </div>`).join('')}
+      </div>
+
+      ${r.antrenman.hareketler.length ? `
+        <div class="section-h">En iyi setler</div>
+        <div class="pairs">${r.antrenman.hareketler.map(hareketSatiri).join('')}</div>` : ''}
+
+      <p class="tiny-note">Protein satır bazında bilinmiyor; öğünün yenen kalorisine
+        oranlanarak hesaplanıyor, o yüzden yaklaşık. Ortalamalar yalnızca kayıt
+        girilen günlerden alınıyor.</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn ghost" data-x="kopyala">Kopyala</button>
+      <button class="btn" data-x="kapat">Kapat</button>
+    </div>`, (m) => {
+    m.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-x]');
+      if (!b || b.disabled) return;
+
+      if (b.dataset.x === 'onceki') return raporAc(addDays(bas, -7));
+      if (b.dataset.x === 'sonraki') return raporAc(addDays(bas, 7));
+
+      if (b.dataset.x === 'kopyala') {
+        const metin = raporMetni(r);
+        try {
+          await navigator.clipboard.writeText(metin);
+          toast('Rapor kopyalandı');
+        } catch {
+          /*  Pano izni yoksa (iOS'ta kullanıcı hareketi dışında çağrılırsa
+              oluyor) metni seçilebilir hâlde göster — kopyalamak yine mümkün. */
+          openModal(`
+            <div class="modal-head"><h3>Raporu kopyala</h3>
+              <button class="icon-btn" data-x="kapat" aria-label="kapat">✕</button></div>
+            <p class="tiny-note">Pano izni alınamadı. Aşağıdaki metni seçip kopyala.</p>
+            <textarea class="input" rows="14" readonly
+                      style="font-family:var(--mono);font-size:12px">${esc(metin)}</textarea>
+            <div class="modal-actions"><button class="btn" data-x="kapat">Kapat</button></div>`,
+          (m2) => {
+            $('textarea', m2).select();
+            m2.addEventListener('click', (e2) => {
+              if (e2.target.closest('[data-x="kapat"]')) closeModal();
+            });
+          });
+        }
+        return;
+      }
+      closeModal();
+    });
+  });
+}
+
+/** Rapordaki set gösterimi: "62,5 kg × 8" */
+function setSetYazi(x) {
+  if (!x) return '—';
+  return x.kg ? `${yaz(x.kg)} kg${x.rep ? ` × ${x.rep}` : ''}` : `${x.rep} tekrar`;
 }
 
 /* ----------------------------------------------------------------- kip -- */
@@ -1028,7 +1178,10 @@ function startLocal() { baglaStore(new LocalStore()); }
 
 /** Modüllerden biri eski sürümde kaldıysa uygulamayı açmadan önce tazele. */
 function surumUyusmazligi() {
-  const m = { 'util.js': UtilNS.BUILD, 'plan.js': PlanNS.BUILD, 'store.js': StoreNS.BUILD };
+  const m = {
+    'util.js': UtilNS.BUILD, 'plan.js': PlanNS.BUILD,
+    'store.js': StoreNS.BUILD, 'rapor.js': RaporNS.BUILD,
+  };
   return Object.entries(m).filter(([, v]) => v !== BUILD).map(([k]) => k);
 }
 

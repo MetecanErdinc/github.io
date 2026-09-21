@@ -15,7 +15,7 @@
    bağlantısında sıra sıra gecikirdi.
    ========================================================================== */
 
-export const BUILD = '2026-09-21a';
+export const BUILD = '2026-09-21b';
 
 import { dateKey, addDays, today } from './util.js';
 

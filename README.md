@@ -37,6 +37,17 @@ artır" kuralı ancak kayıt tutulursa çalışır.
 
 Isınma, soğuma, ilerleme ve deload bölümleri de katlanmış olarak burada.
 
+**Haftalık rapor** (⚙ menüsünden) — haftanın kayıtlarını çözümler: ortalama
+kalori, plan tutturma, yaklaşık protein, kaçamak toplamı, su/adım, yapılan
+antrenman ve set oranı, hareket başına en iyi setin geçen haftaya göre durumu,
+tartı değişimi. Üstüne değerlendirme yazar: rakam tek başına bilgi değil,
+"hedefin 340 üstünde, bu haftada ~0,3 kg eksik kayıp demek" bilgi.
+
+Değerlendirme kuralları `rapor.js` içinde duruyor; rapor çevrimdışıyken de,
+hiçbir servise bağlanmadan da çıkar. **Kopyala** düğmesi ham rakamlarla
+birlikte düz metni panoya alır — daha derin bir okuma için birine göndermek
+üzere.
+
 ## Veri
 
 Gün başına tek belge:
@@ -65,6 +76,7 @@ sessizce düşer.
 | Dosya | İş |
 |---|---|
 | `plan.js` | Programın kendisi: öğünler, antrenman günleri, kurallar. Hesap yok, sadece veri |
+| `rapor.js` | Haftalık raporun hesabı ve değerlendirme kuralları |
 | `store.js` | Firebase bağlantısı, giriş ve gün belgesi deposu (bulut + yerel) |
 | `util.js` | Tarih ve küçük yardımcılar |
 | `app.js` | Arayüz: iki sekme, çizim, olaylar |
