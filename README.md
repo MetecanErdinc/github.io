@@ -35,12 +35,16 @@ Geçen seferki rakamın görünmesi programın ilerleme kuralının işlemesi i�
 şart: "bütün setlerde üst sınır tekrarı iki antrenman üst üste tutarsa ağırlığı
 artır" kuralı ancak kayıt tutulursa çalışır.
 
+Altında **kardiyo** bölümü: tür (bant, dışarıda, bisiklet, eliptik), süre ve
+istenirse hız ile eğim. Yakılan kalori günlük hedefe eklenmez — adım hedefi
+zaten hesabın içinde ve yakılanı geri yemek açığı kapatmanın en hızlı yolu.
+
 Isınma, soğuma, ilerleme ve deload bölümleri de katlanmış olarak burada.
 
 **Haftalık rapor** (⚙ menüsünden) — haftanın kayıtlarını çözümler: ortalama
 kalori, plan tutturma, yaklaşık protein, kaçamak toplamı, su/adım, yapılan
 antrenman ve set oranı, hareket başına en iyi setin geçen haftaya göre durumu,
-tartı değişimi. Üstüne değerlendirme yazar: rakam tek başına bilgi değil,
+kardiyo süresi, tartı değişimi. Üstüne değerlendirme yazar: rakam tek başına bilgi değil,
 "hedefin 340 üstünde, bu haftada ~0,3 kg eksik kayıp demek" bilgi.
 
 Değerlendirme kuralları `rapor.js` içinde duruyor; rapor çevrimdışıyken de,
@@ -56,6 +60,7 @@ Gün başına tek belge:
 users/<uid>/days/2026-09-20
   { date, diet:{...}, takviye:{...}, su, adim, tarti,
     ekstra:[{id, ad, kcal, p, k, y}, …],
+    kardiyo:[{id, tur, dk, hiz, egim}, …],
     wo:{ "ustA:dbbench": { ok, setler:[{kg, rep}, …] } } }
 ```
 

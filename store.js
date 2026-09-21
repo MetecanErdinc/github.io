@@ -15,7 +15,7 @@
    bağlantısında sıra sıra gecikirdi.
    ========================================================================== */
 
-export const BUILD = '2026-09-21b';
+export const BUILD = '2026-09-22a';
 
 import { dateKey, addDays, today } from './util.js';
 
@@ -131,6 +131,7 @@ function normalize(v, dk) {
     takviye: (v && typeof v.takviye === 'object' && v.takviye) || {},
     wo: (v && typeof v.wo === 'object' && v.wo) || {},
     ekstra: Array.isArray(v?.ekstra) ? v.ekstra : [],
+    kardiyo: Array.isArray(v?.kardiyo) ? v.kardiyo : [],
     su: Number(v?.su) || 0,
     adim: Number(v?.adim) || 0,
     tarti: Number(v?.tarti) || 0,
