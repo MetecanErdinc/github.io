@@ -15,7 +15,7 @@
    bağlantısında sıra sıra gecikirdi.
    ========================================================================== */
 
-export const BUILD = '2026-09-20b';
+export const BUILD = '2026-09-21a';
 
 import { dateKey, addDays, today } from './util.js';
 
@@ -116,13 +116,21 @@ export function authErrorMessage(err) {
 
 /* ------------------------------------------------------------- depolar -- */
 
-/** Gün belgesini normalleştirir — eksik alanlar hep aynı şekilde boş gelsin. */
+/**
+ * Gün belgesini normalleştirir — eksik alanlar hep aynı şekilde boş gelsin.
+ *
+ * Alanlar tek tek sayılır, belge olduğu gibi geçirilmez: okuyan taraf her
+ * günde aynı şekli görsün ve eski/bozuk bir belge arayüzü patlatmasın diye.
+ * Bunun bedeli, yeni bir alan eklerken BURAYA DA eklemeyi unutmak — unutulursa
+ * değer yazılır ama okunurken sessizce düşer.
+ */
 function normalize(v, dk) {
   return {
     date: dk,
     diet: (v && typeof v.diet === 'object' && v.diet) || {},
     takviye: (v && typeof v.takviye === 'object' && v.takviye) || {},
     wo: (v && typeof v.wo === 'object' && v.wo) || {},
+    ekstra: Array.isArray(v?.ekstra) ? v.ekstra : [],
     su: Number(v?.su) || 0,
     adim: Number(v?.adim) || 0,
     tarti: Number(v?.tarti) || 0,

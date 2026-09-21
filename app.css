@@ -287,6 +287,16 @@ main {
 }
 .set-del:hover { border-color: var(--danger); color: var(--danger); }
 
+.btn-block { width: 100%; margin: 10px 14px 12px; width: calc(100% - 28px); }
+
+.ekstra-head { background: var(--amber-soft); }
+.ekstra-head .ch-title, .ekstra-head .ch-meta { color: var(--amber); }
+
+.makro-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.makro-3 .input { text-align: center; }
+
+.tiny-note { margin: 0; font-size: 12px; color: var(--ink3); line-height: 1.5; }
+
 .all-done {
   display: flex; align-items: center; gap: 9px; width: 100%;
   margin-top: 10px; padding: 9px 11px;

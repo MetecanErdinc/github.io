@@ -16,8 +16,9 @@ Bu depoda iki uygulama var:
 ## İki sekme
 
 **Diyet** — üç öğün, her satır gramajıyla ve kalorisiyle. Yedikçe işaretlenir,
-tepedeki sayaç kalan kaloriyi gösterir. Altında su ve adım sayaçları, takviyeler
-ve haftalık tartı alanı. Referans bölümleri (besin değerleri, çiğ↔pişmiş
+tepedeki sayaç kalan kaloriyi gösterir. Altında **kaçamak** bölümü: plan dışı
+yenenin adı, kalorisi ve istenirse protein/karbonhidrat/yağı girilir, aynı
+sayaçtan düşer. Sonra su ve adım sayaçları, takviyeler ve haftalık tartı alanı. Referans bölümleri (besin değerleri, çiğ↔pişmiş
 karşılıkları, alışveriş listesi, kurallar, yol haritası) katlanmış durur.
 
 **Spor** — haftanın antrenman günleri (Üst A / Alt A / Üst B / Alt B). Gün
@@ -43,6 +44,7 @@ Gün başına tek belge:
 ```
 users/<uid>/days/2026-09-20
   { date, diet:{...}, takviye:{...}, su, adim, tarti,
+    ekstra:[{id, ad, kcal, p, k, y}, …],
     wo:{ "ustA:dbbench": { ok, setler:[{kg, rep}, …] } } }
 ```
 
@@ -53,6 +55,10 @@ işaretini ezmez.
 
 İşaretler ve ağırlıklar hareketin **kalıcı anahtarına** yazılır, sıra numarasına
 değil — programda bir satır değişse bile geçmiş kayıtlar yerinde kalır.
+
+`store.js` içindeki `normalize()` gün belgesinin alanlarını tek tek sayar; yeni
+bir alan eklerken oraya da eklemek gerekir, yoksa değer yazılır ama okunurken
+sessizce düşer.
 
 ## Dosyalar
 

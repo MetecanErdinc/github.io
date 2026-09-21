@@ -10,7 +10,7 @@
    geçmiş kayıtlar yerinde kalsın diye.
    ========================================================================== */
 
-export const BUILD = '2026-09-20b';
+export const BUILD = '2026-09-21a';
 
 export const BASLIK = "126'dan 105'e";
 
@@ -90,9 +90,12 @@ export const TAKVIYELER = [
   { key: 'd3k2', ad: 'D3 + K2', ne: 'Öğlen veya akşam',
     not: 'Yağda çözünür, zeytinyağlı öğünle al. Kahvaltıda sadece 6 g yağ var, '
        + 'orada emilimi düşük kalır.' },
-  { key: 'mag', ad: 'Magnezyum', ne: 'Akşam · yatmadan 1 saat önce',
-    not: 'Sitrat veya bisglisinat formu. Oksit alma, emilimi düşük. '
+  /* Kullandığın magnezyum sabah ve akşam ayrı tablet; ikisi ayrı işaretlenir. */
+  { key: 'magSabah', ad: 'Magnezyum — sabah', ne: 'Sabah',
+    not: 'Sitrat + taurat + malat, yanında B6 (P-5-P), folik asit ve B12. '
        + 'Sitrat bağırsağı da rahatlatır.' },
+  { key: 'magAksam', ad: 'Magnezyum — akşam', ne: 'Akşam · yatmadan 1 saat önce',
+    not: 'Bisglisinat (oksitsiz) + B6 (P-5-P). Oksit formundan kaçın, emilimi düşük.' },
 ];
 
 export const CIG_PISMIS = [
