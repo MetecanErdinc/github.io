@@ -172,6 +172,32 @@ main {
 .r-sub { font-size: 12.5px; color: var(--ink2); font-family: var(--mono); }
 .r-sub b { color: var(--accent); }
 .r-note { font-size: 12.5px; color: var(--ink2); margin-top: 4px; line-height: 1.45; }
+/*  Makro satırı gramajın altında, bir tık soluk: göz önce "ne kadar" sorusuna
+    (gramaj) sonra "neden" sorusuna (makro) gitsin. */
+.r-makro {
+  margin-top: 2px;
+  font-family: var(--mono); font-size: 11px; color: var(--ink3);
+  font-variant-numeric: tabular-nums;
+}
+.row.on .r-makro { opacity: .65; }
+
+.makro-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px; margin-top: 14px;
+}
+.mb { display: flex; flex-direction: column; gap: 4px; }
+.mb-say {
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.mb-say span { font-size: 9.5px; font-weight: 500; color: var(--ink3); }
+.mb-cizgi { height: 4px; background: var(--surface2); border-radius: 999px; overflow: hidden; }
+.mb-cizgi i { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .2s; }
+.mb-ad {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink3);
+}
+
 .r-kcal {
   flex: 0 0 auto; font-family: var(--mono); font-size: 13px;
   font-weight: 700; color: var(--ink2); padding-top: 2px;
@@ -291,6 +317,39 @@ main {
 
 .ekstra-head { background: var(--amber-soft); }
 .ekstra-head .ch-title, .ekstra-head .ch-meta { color: var(--amber); }
+
+.watch-head { background: var(--surface2); }
+.watch-head .ch-title, .watch-head .ch-meta { color: var(--ink2); }
+
+.watch-grid { display: grid; grid-template-columns: 1fr 1fr; }
+.watch-grid > div {
+  padding: 14px 8px; text-align: center;
+  display: flex; flex-direction: column; gap: 2px;
+  border-right: 1px solid var(--line);
+}
+.watch-grid > div:last-child { border-right: 0; }
+.watch-grid b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.watch-grid span {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink3);
+}
+
+.watch-line {
+  margin-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--ink3);
+}
+
+.kopya { border: 1px solid var(--line); border-radius: 9px; padding: 10px 11px; margin-bottom: 8px; }
+.kopya-ust {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-bottom: 6px;
+}
+.kopya-ust span { font-size: 12.5px; font-weight: 600; color: var(--ink2); }
+.kopya code {
+  display: block; font-family: var(--mono); font-size: 11px; line-height: 1.5;
+  color: var(--ink); word-break: break-all;
+  background: var(--surface2); padding: 8px 9px; border-radius: 7px;
+}
+.kopya .tiny-note { margin-top: 6px; }
 
 .kardiyo-head { background: var(--plum-soft); }
 .kardiyo-head .ch-title, .kardiyo-head .ch-meta { color: var(--plum); }
@@ -508,6 +567,9 @@ ol.rules li::marker, ol.steps li::marker { color: var(--accent); font-family: va
 }
 
 @media (max-width: 360px) {
+  .r-makro { font-size: 10.5px; }
+  .makro-bar { gap: 6px; }
+  .mb-say { font-size: 12.5px; }
   .num .input { width: 68px; }
   .set-row .input { font-size: 16px; padding: 8px 4px; }
   .week .e { display: none; }

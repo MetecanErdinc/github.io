@@ -10,11 +10,11 @@
    hiçbir servise bağlanmadan da aynı raporu üretiyor.
    ========================================================================== */
 
-export const BUILD = '2026-09-22a';
+export const BUILD = '2026-09-22c';
 
 import { dateKey, addDays, haftaBasi, haftaEtiketi, yaz, GUN_ADI } from './util.js';
 import { HEDEF, OGUNLER, TAKVIYELER, ANTRENMANLAR, setSayisi, hareketAnahtari,
-         kardiyoAdi } from './plan.js';
+         kardiyoAdi, makroTopla, GUNLUK_MAKRO } from './plan.js';
 
 /** 1 kg yağ ≈ 7700 kcal. Kalori farkını kiloya çevirirken kullanılır. */
 const KG_KCAL = 7700;
@@ -31,22 +31,22 @@ function haftaninGunleri(days, bas) {
   });
 }
 
-/** Bir günde işaretlenen öğün satırlarının kalorisi ve yaklaşık proteini. */
+/**
+ * Bir günde işaretlenen öğün satırlarının kalorisi ve makroları.
+ *
+ * Makrolar satır bazında biliniyor, o yüzden doğrudan toplanıyor. (Önceden
+ * öğün toplamından orantılanıyordu ve rapor bunu "yaklaşık" diye işaretliyordu;
+ * satır değerleri geldiğinden beri gerek kalmadı.)
+ */
 function ogunToplami(g) {
-  let kcal = 0;
-  let protein = 0;
+  const secili = [];
   for (const o of OGUNLER) {
-    let oKcal = 0;
     for (const s of o.satirlar) {
-      if (g?.diet?.[`${o.key}.${s.key}`]) oKcal += s.kcal;
+      if (g?.diet?.[`${o.key}.${s.key}`]) secili.push(s);
     }
-    kcal += oKcal;
-    /*  Protein satır bazında değil öğün bazında biliniyor; yenen kalorinin
-        öğün içindeki payıyla orantılanıyor. Yaklaşık olduğu raporda yazıyor —
-        satır başına protein uydurmaktansa yöntemi söylemek doğru. */
-    if (oKcal) protein += (o.protein * oKcal) / o.kcal;
   }
-  return { kcal, protein };
+  const t = makroTopla(secili);
+  return { kcal: t.kcal, protein: t.p, karb: t.k, yag: t.y, lif: t.lif };
 }
 
 function ekstraToplami(g) {
@@ -54,8 +54,10 @@ function ekstraToplami(g) {
   return liste.reduce((t, x) => ({
     kcal: t.kcal + (Number(x.kcal) || 0),
     p: t.p + (Number(x.p) || 0),
+    k: t.k + (Number(x.k) || 0),
+    y: t.y + (Number(x.y) || 0),
     adet: t.adet + 1,
-  }), { kcal: 0, p: 0, adet: 0 });
+  }), { kcal: 0, p: 0, k: 0, y: 0, adet: 0 });
 }
 
 /** Bir hareketin o haftaki en iyi seti: önce ağırlık, eşitse tekrar. */
@@ -93,11 +95,14 @@ export function haftalikRapor(days, tarih) {
     const e = ekstraToplami(g);
     return {
       d, dk, gunAd: GUN_ADI[d.getDay()],
-      ogunKcal: o.kcal, protein: o.protein,
-      ekstraKcal: e.kcal, ekstraAdet: e.adet, ekstraP: e.p,
+      ogunKcal: o.kcal, protein: o.protein, karb: o.karb, yag: o.yag, lif: o.lif,
+      ekstraKcal: e.kcal, ekstraAdet: e.adet,
+      ekstraP: e.p, ekstraK: e.k, ekstraY: e.y,
       toplam: o.kcal + e.kcal,
       kardiyoDk: (Array.isArray(g?.kardiyo) ? g.kardiyo : [])
         .reduce((t, x) => t + (Number(x.dk) || 0), 0),
+      watchKcal: Number(g?.watch?.kcal) || 0,
+      watchAdim: Number(g?.watch?.adim) || 0,
       su: Number(g?.su) || 0,
       adim: Number(g?.adim) || 0,
       tarti: Number(g?.tarti) || 0,
@@ -120,13 +125,22 @@ export function haftalikRapor(days, tarih) {
   const ortAktif = (f) => (aktif.length ? aktif.reduce((s, x) => s + f(x), 0) / aktif.length : 0);
 
   const planKcal = OGUNLER.reduce((s, o) => s + o.kcal, 0);
-  const planProtein = OGUNLER.reduce((s, o) => s + o.protein, 0);
+  const planProtein = say(GUNLUK_MAKRO.p);
 
   const diyet = {
     yazilanGun: yazilan.length,
     ortKcal: say(ort((x) => x.toplam)),
     ortOgunKcal: say(ort((x) => x.ogunKcal)),
     ortProtein: say(ort((x) => x.protein + x.ekstraP)),
+    /*  Kaçamak makroları proteinde sayılıyorsa diğerlerinde de sayılmalı;
+        yoksa aynı tabloda bir satır günün tamamını, diğeri yalnızca planı
+        anlatır. Lif kaçamakta sorulmadığı için tek istisna o. */
+    ortKarb: say(ort((x) => x.karb + x.ekstraK)),
+    ortYag: say(ort((x) => x.yag + x.ekstraY)),
+    ortLif: say(ort((x) => x.lif)),
+    planKarb: say(GUNLUK_MAKRO.k),
+    planYag: say(GUNLUK_MAKRO.y),
+    planLif: say(GUNLUK_MAKRO.lif),
     hedefKcal: HEDEF.kcal,
     planProtein: say(planProtein),
     tutma: planKcal ? Math.round((ort((x) => x.ogunKcal) / planKcal) * 100) : 0,
@@ -202,6 +216,18 @@ export function haftalikRapor(days, tarih) {
       .reduce((u, x) => u + (Number(x.dk) || 0), 0), 0),
   };
 
+  /* ----------------------------------------------------------------- saat */
+
+  const watchGunler = gunlukler.filter((x) => x.watchKcal || x.watchAdim);
+  const watch = {
+    gun: watchGunler.length,
+    ortKcal: watchGunler.length
+      ? say(watchGunler.reduce((t, x) => t + x.watchKcal, 0) / watchGunler.length) : 0,
+    ortAdim: watchGunler.length
+      ? say(watchGunler.reduce((t, x) => t + x.watchAdim, 0) / watchGunler.length) : 0,
+    toplamKcal: say(watchGunler.reduce((t, x) => t + x.watchKcal, 0)),
+  };
+
   const antrenman = {
     yapilan: antrenmanlar.filter((x) => x.yapildi).length,
     hedef: ANTRENMANLAR.length,
@@ -229,7 +255,7 @@ export function haftalikRapor(days, tarih) {
 
   const rapor = {
     bas, etiket: haftaEtiketi(bas),
-    gunlukler, diyet, antrenman, kardiyo, tarti,
+    gunlukler, diyet, antrenman, kardiyo, watch, tarti,
     bitti: dateKey(addDays(bas, 6)) < dateKey(new Date()),
   };
   rapor.yorumlar = yorumla(rapor, days, bas);
@@ -294,10 +320,10 @@ function yorumla(r, days, bas) {
 
   /* --- protein */
   if (d.ortProtein < d.planProtein * 0.85) {
-    ekle('uyari', `Protein ortalaması ~${d.ortProtein} g (hedef ${d.planProtein}). `
+    ekle('uyari', `Protein ortalaması ${d.ortProtein} g (hedef ${d.planProtein}). `
       + 'Diyetteyken kası koruyan tek makro bu — kalori açığından önce burayı kapat.');
   } else {
-    ekle('iyi', `Protein ~${d.ortProtein} g/gün. Yeterli.`);
+    ekle('iyi', `Protein ${d.ortProtein} g/gün. Yeterli.`);
   }
 
   /* --- plan tutturma */
@@ -379,6 +405,14 @@ function yorumla(r, days, bas) {
       + ' Yakılan kalori günlük hedefe eklenmiyor — adım hedefi zaten hesabın içinde.');
   }
 
+  /* --- saat */
+  const w = r.watch;
+  if (w.gun) {
+    ekle('iyi', `Apple Watch ${w.gun} gün veri göndermiş: ortalama ${w.ortKcal} aktif kcal, `
+      + `${w.ortAdim.toLocaleString('tr-TR')} adım. Bu kalori hedefe eklenmiyor — `
+      + 'saat yüksek sayıyor ve adım zaten hesabın içinde.');
+  }
+
   /* --- tartı */
   if (!t.kayitlar.length) {
     ekle('uyari', 'Bu hafta tartıya çıkmamışsın. Tartı pazartesi sabah, aç karnına, '
@@ -442,7 +476,9 @@ export function raporMetni(r) {
   s.push(`  Ortalama alınan: ${d.ortKcal} kcal/gün (hedef ${d.hedefKcal})`);
   s.push(`  Bunun ${d.ortOgunKcal} kcal'i plandan, kalanı kaçamaktan`);
   s.push(`  Plan tutturma: %${d.tutma}`);
-  s.push(`  Protein (yaklaşık): ${d.ortProtein} g/gün (plan ${d.planProtein})`);
+  s.push(`  Protein: ${d.ortProtein} g/gün (plan ${d.planProtein})`);
+  s.push(`  Karbonhidrat ${d.ortKarb} · yağ ${d.ortYag} · lif ${d.ortLif} g/gün `
+    + `(plan ${d.planKarb} · ${d.planYag} · ${d.planLif})`);
   s.push(`  Kaçamak: ${d.ekstraGun} günde ${d.ekstraAdet} adet, ${d.ekstraKcal} kcal`);
   s.push(`  Su: ${yaz(d.ortSu)}/${HEDEF.suTik} tik · Adım: ${yaz(d.ortAdim)} bin · Takviye: %${d.takviyeOran}`);
   s.push('');
@@ -471,6 +507,13 @@ export function raporMetni(r) {
     }
   }
 
+  if (r.watch.gun) {
+    s.push('');
+    s.push('APPLE WATCH');
+    s.push(`  ${r.watch.gun} gün veri · ortalama ${r.watch.ortKcal} aktif kcal `
+      + `· ${r.watch.ortAdim} adım (hedefe eklenmiyor)`);
+  }
+
   s.push('');
   s.push('TARTI');
   s.push(r.tarti.kayitlar.length
@@ -483,6 +526,7 @@ export function raporMetni(r) {
     s.push(`  ${g.gunAd.padEnd(10)} ${g.toplam ? `${g.toplam} kcal` : 'kayıt yok'}`
       + (g.ekstraKcal ? ` (kaçamak ${g.ekstraKcal})` : '')
       + (g.kardiyoDk ? ` · kardiyo ${g.kardiyoDk} dk` : '')
+      + (g.watchKcal ? ` · saat ${say(g.watchKcal)} kcal` : '')
       + (g.tarti ? ` · tartı ${yaz(g.tarti)}` : ''));
   }
   s.push('');
