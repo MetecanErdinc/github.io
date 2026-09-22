@@ -10,7 +10,7 @@
    geçmiş kayıtlar yerinde kalsın diye.
    ========================================================================== */
 
-export const BUILD = '2026-09-22c';
+export const BUILD = '2026-09-23a';
 
 export const BASLIK = "126'dan 105'e";
 

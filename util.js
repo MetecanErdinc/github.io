@@ -2,7 +2,7 @@
    util.js — tarih ve küçük yardımcılar
    ========================================================================== */
 
-export const BUILD = '2026-09-22c';
+export const BUILD = '2026-09-23a';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 

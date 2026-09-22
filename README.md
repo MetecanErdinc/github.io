@@ -123,6 +123,13 @@ yuvarlamaları yüzünden ikisi birkaç kalori ayrışıyor ve o ayrımda otorit
   hesaba giriş yapıp gün belgesindeki `watch` alanını yazıyor. Uygulama bu alana
   hiç yazmaz, yalnızca okur. Kurulum `APPLE-WATCH.md` dosyasında; ⚙ menüsündeki
   "Apple Watch bağlantısı" hesaba ait URL ve gövdeleri kopyalanabilir gösterir.
+- **Güncelleme**: sekme telefonda günlerce açık kalıp hiç yeniden yüklenmediği
+  için yeni sürüm yayına girse de eskisi görünebiliyordu. Sekme öne geldiğinde
+  service worker güncellemesi denetleniyor; yenisi devraldığında üstte
+  kapatılabilir bir şerit çıkıyor (zorla yenilemek, o an girilmekte olan seti
+  ya da kaçamağı götürebilir). ⚙ menüsündeki "Yeni sürümü indir" aynı işi tek
+  dokunuşla yapar: kaydı ve önbellekleri silip yeniden açar. Kayıtlar buluttaki
+  hesapta durduğu için bundan etkilenmez.
 - **Hesapsız mod**: giriş ekranındaki "Hesapsız dene" seçeneği veriyi yalnızca o
   tarayıcıda tutar. Senkron yok, başka cihazda görünmez.
 - **Karışık sürüm koruması**: her modül bir `BUILD` damgası taşır. Service worker

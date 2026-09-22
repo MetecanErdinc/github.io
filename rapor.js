@@ -10,7 +10,7 @@
    hiçbir servise bağlanmadan da aynı raporu üretiyor.
    ========================================================================== */
 
-export const BUILD = '2026-09-22c';
+export const BUILD = '2026-09-23a';
 
 import { dateKey, addDays, haftaBasi, haftaEtiketi, yaz, GUN_ADI } from './util.js';
 import { HEDEF, OGUNLER, TAKVIYELER, ANTRENMANLAR, setSayisi, hareketAnahtari,
