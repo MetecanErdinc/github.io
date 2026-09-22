@@ -15,7 +15,7 @@ import * as PlanNS from './plan.js';
 import * as StoreNS from './store.js';
 import * as RaporNS from './rapor.js';
 
-const BUILD = '2026-09-22c';
+const BUILD = '2026-09-23a';
 
 import {
   today, dateKey, parseKey, addDays, diffDays, gunEtiketi, kisaTarih, esc, sayi, yaz,
@@ -86,6 +86,31 @@ async function patch(p, d = state.date) {
   } catch (err) {
     toast('Kaydedilemedi: ' + (err?.message || err), 5000);
   }
+}
+
+/* ------------------------------------------------------------ güncelleme */
+
+let yenilemeSeridi = false;
+
+/**
+ * Yeni sürüm indi: kullanıcı hazır olduğunda yenilesin.
+ *
+ * Şerit EKRANIN ÜSTÜNDE duruyor, altında değil: alt kısım kartların kendi
+ * düğmelerinin olduğu yer ve oraya konan bir şerit dokunuşları yutuyordu.
+ * Kapatılabilir olması da şart — zorla yenilemek kullanıcının o an girdiği
+ * bir seti ya da kaçamağı götürebilir.
+ */
+function guncellemeSeridi() {
+  const el = document.createElement('div');
+  el.className = 'update-bar';
+  el.innerHTML = '<span>Yeni sürüm hazır</span>'
+    + '<button data-act="yenile">Yenile</button>'
+    + '<button class="kapat" data-act="kapat" aria-label="kapat">✕</button>';
+  el.addEventListener('click', (e) => {
+    if (e.target.closest('[data-act="yenile"]')) return location.reload();
+    if (e.target.closest('[data-act="kapat"]')) el.remove();
+  });
+  document.body.appendChild(el);
 }
 
 /* ---------------------------------------------------------------- bildirim */
@@ -1125,6 +1150,9 @@ function menuAc() {
     <button class="btn btn-wide" data-x="watch" style="margin-top:8px">
       ⌚ Apple Watch bağlantısı
     </button>
+    <button class="btn btn-wide" data-x="guncelle" style="margin-top:8px">
+      ⬇︎ Yeni sürümü indir
+    </button>
 
     <div class="modal-actions">
       ${yerel ? '' : '<button class="btn ghost" data-x="cikis">Çıkış yap</button>'}
@@ -1142,6 +1170,13 @@ function menuAc() {
       if (!b) return;
       if (b.dataset.x === 'rapor') { closeModal(); return raporAc(haftaBasi(state.date)); }
       if (b.dataset.x === 'watch') { closeModal(); return watchDialog(); }
+      if (b.dataset.x === 'guncelle') {
+        b.disabled = true;
+        b.textContent = 'İndiriliyor…';
+        await onbellegiBosalt();
+        location.reload();
+        return;
+      }
       if (b.dataset.x === 'cikis') {
         closeModal();
         await state.fb?.sdk.auth.signOut(state.fb.auth);
@@ -1540,6 +1575,16 @@ function surumUyusmazligi() {
 
 const KURTARMA = 'diyet.build.recovered';
 
+/** Service worker kaydını ve tüm önbellekleri siler. */
+async function onbellegiBosalt() {
+  try {
+    const regs = await navigator.serviceWorker?.getRegistrations?.() || [];
+    await Promise.all(regs.map((r) => r.unregister()));
+    const keys = await caches?.keys?.() || [];
+    await Promise.all(keys.map((k) => caches.delete(k)));
+  } catch { /* desteklenmiyorsa zaten önbellek de yok */ }
+}
+
 async function guardBuild() {
   const eksik = surumUyusmazligi();
   if (!eksik.length) return true;
@@ -1551,12 +1596,7 @@ async function guardBuild() {
 
   try { sessionStorage.setItem(KURTARMA, '1'); } catch {}
   $('#loading-text').textContent = 'Güncelleme tamamlanıyor…';
-  try {
-    const regs = await navigator.serviceWorker?.getRegistrations?.() || [];
-    await Promise.all(regs.map((r) => r.unregister()));
-    const keys = await caches?.keys?.() || [];
-    await Promise.all(keys.map((k) => caches.delete(k)));
-  } catch {}
+  await onbellegiBosalt();
   location.reload();
   return false;
 }
@@ -1570,6 +1610,28 @@ async function boot() {
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
+
+    /*  Telefonda uygulama sekmesi günlerce açık kalıyor ve hiç yeniden
+        yüklenmiyor; yeni sürüm yayına girse de kullanıcı eskisini görmeye
+        devam ediyordu. Sekme öne geldiğinde güncelleme sorulur, yenisi
+        devraldığında da haber verilir — zorla yeniden yükleyip kullanıcının
+        yazmakta olduğu bir şeyi kaybetmek yerine dokunacağı bir şerit. */
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      navigator.serviceWorker.getRegistration()
+        .then((r) => r?.update())
+        .catch(() => {});
+    });
+
+    /*  İlk kurulumda da controllerchange ateşleniyor: ortada güncellenen bir
+        şey yokken "yeni sürüm hazır" demek olurdu. Sayfa açılırken zaten bir
+        denetleyici varsa devralan gerçekten YENİ bir sürümdür. */
+    const denetleyiciVardi = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!denetleyiciVardi || yenilemeSeridi) return;
+      yenilemeSeridi = true;
+      guncellemeSeridi();
+    });
   }
 
   if (getMode() === 'local') { startLocal(); return; }

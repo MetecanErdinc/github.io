@@ -557,6 +557,26 @@ ol.rules li::marker, ol.steps li::marker { color: var(--accent); font-family: va
 .rapor .pair .v.iyi { color: var(--accent); }
 .rapor .pair .v.kotu { color: var(--danger); }
 
+/*  Şerit üstte: alt kısım kartların düğmelerinin olduğu yer ve oraya konan
+    bir şerit dokunuşları yutuyordu. */
+.update-bar {
+  position: fixed; left: 50%; top: calc(8px + env(safe-area-inset-top));
+  transform: translateX(-50%); z-index: 150;
+  display: flex; align-items: center; gap: 8px;
+  max-width: calc(100vw - 24px);
+  padding: 7px 7px 7px 15px; border-radius: 999px;
+  background: var(--accent); color: #fff;
+  font-size: 13.5px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .3);
+}
+.update-bar button {
+  flex: 0 0 auto;
+  border: 0; border-radius: 999px; padding: 7px 14px;
+  background: rgba(255, 255, 255, .22); color: #fff;
+  font: 700 13px inherit; font-family: inherit; cursor: pointer;
+}
+.update-bar .kapat { padding: 7px 10px; background: none; font-size: 14px; }
+
 .toast {
   position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom));
   transform: translateX(-50%); z-index: 200;
