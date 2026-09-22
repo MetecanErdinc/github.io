@@ -15,7 +15,9 @@ Bu depoda iki uygulama var:
 
 ## İki sekme
 
-**Diyet** — üç öğün, her satır gramajıyla ve kalorisiyle. Yedikçe işaretlenir,
+**Diyet** — üç öğün, her satır gramajı, kalorisi ve makrolarıyla (protein,
+karbonhidrat, yağ, lif). Tepede günün makro çubukları: işaretlediklerinden ve
+kaçamaklarından gelen toplam, planın tamamına karşı. Yedikçe işaretlenir,
 tepedeki sayaç kalan kaloriyi gösterir. Altında **kaçamak** bölümü: plan dışı
 yenenin adı, kalorisi ve istenirse protein/karbonhidrat/yağı girilir, aynı
 sayaçtan düşer. Sonra su ve adım sayaçları, takviyeler ve haftalık tartı alanı. Referans bölümleri (besin değerleri, çiğ↔pişmiş
@@ -84,7 +86,7 @@ sessizce düşer.
 
 | Dosya | İş |
 |---|---|
-| `plan.js` | Programın kendisi: öğünler, antrenman günleri, kurallar. Hesap yok, sadece veri |
+| `plan.js` | Programın kendisi: öğünler (satır başına makrolarıyla), antrenman günleri, kurallar |
 | `rapor.js` | Haftalık raporun hesabı ve değerlendirme kuralları |
 | `store.js` | Firebase bağlantısı, giriş ve gün belgesi deposu (bulut + yerel) |
 | `util.js` | Tarih ve küçük yardımcılar |
@@ -95,6 +97,24 @@ sessizce düşer.
 | `firestore.rules` | Her hesap yalnızca kendi `users/<uid>` klasörüne erişir |
 | `APPLE-WATCH.md` | Sağlık verisini taşıyan Kısayol otomasyonunun kurulumu |
 | `habits/index.html` | Eski adresten köke yönlendirme |
+
+## Satır başına makrolar
+
+Plan makroları öğün toplamı olarak veriyor, satır bazında değil. `plan.js`
+içindeki satır değerleri standart besin bileşim tablolarından ve plandaki
+gramajlardan türetildi; doğruluklarının ölçüsü planın kendi rakamları:
+
+| | türetilen | plan |
+|---|---|---|
+| Öğün proteinleri | 45,2 · 76,6 · 74,2 | 45 · 77 · 74 |
+| Günlük protein | 196 | 197 |
+| Günlük karbonhidrat | 175 | 176 |
+| Günlük yağ | 57,8 | 57 |
+| Günlük lif | 19,4 | ~19,5 |
+
+Planın metin içinde tek tek verdiği iki rakam da tutuyor: kahvaltıdaki 6 g yağ
+ve bulgurun 9,2 g lifi. Satır kalorisi türetilmiyor, plandan alınıyor — Atwater
+yuvarlamaları yüzünden ikisi birkaç kalori ayrışıyor ve o ayrımda otorite plan.
 
 ## Notlar
 

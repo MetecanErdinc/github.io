@@ -10,7 +10,7 @@
    geçmiş kayıtlar yerinde kalsın diye.
    ========================================================================== */
 
-export const BUILD = '2026-09-22b';
+export const BUILD = '2026-09-22c';
 
 export const BASLIK = "126'dan 105'e";
 
@@ -41,14 +41,24 @@ export const TOPLAM = [
 
 /* ---------------------------------------------------------------- öğünler */
 
+/*  Satır başına makrolar standart besin bileşim değerlerinden (100 g başına)
+    ve plandaki gramajlardan türetildi. Uydurma olmadıklarının kanıtı planın
+    kendi rakamları: türetilen öğün proteinleri 45 / 77 / 74 çıkıyor ve plan da
+    aynısını yazıyor; günlük yağ 57,8 (plan 57), lif 19,4 (plan ~19,5),
+    karbonhidrat 175 (plan 176). Ayrıca planın metin içinde tek tek verdiği
+    iki rakam da tutuyor: kahvaltıdaki 6 g yağ, bulgurun 9,2 g lifi.
+
+    Satır kalorisi türetilmiyor, plandan olduğu gibi alınıyor — Atwater
+    yuvarlamaları yüzünden ikisi birkaç kalori ayrışıyor ve bu ayrımda
+    otorite plan. */
 export const OGUNLER = [
   {
     key: 'kahvalti', ad: 'Kahvaltı', emoji: '🍳',
     kcal: 418, protein: 45,
     satirlar: [
-      { key: 'cream', ad: 'Cream of rice',   gram: '40 g',  not: 'kuru',       kcal: 146 },
-      { key: 'sut',   ad: 'Yarım yağlı süt', gram: '200 ml', not: '',          kcal: 92 },
-      { key: 'whey',  ad: 'Whey protein',    gram: '45 g',  not: '1,5 ölçek',  kcal: 180 },
+      { key: 'cream', ad: 'Cream of rice',   gram: '40 g',  not: 'kuru',       kcal: 146, p: 2.4, k: 32.0, y: 0.4, lif: 0.5 },
+      { key: 'sut',   ad: 'Yarım yağlı süt', gram: '200 ml', not: '',          kcal: 92, p: 6.8, k: 9.6, y: 3.2, lif: 0.0 },
+      { key: 'whey',  ad: 'Whey protein',    gram: '45 g',  not: '1,5 ölçek',  kcal: 180, p: 36.0, k: 3.6, y: 2.7, lif: 0.0 },
     ],
     not: "Whey'i OCAKTAN ALDIKTAN SONRA çırpıp sos olarak üstüne dök — "
        + 'kaynarken atarsan topaklanır. Pişmiş toplam ~220 g.',
@@ -57,13 +67,13 @@ export const OGUNLER = [
     key: 'oglen', ad: 'Öğlen', emoji: '🍗',
     kcal: 772, protein: 77,
     satirlar: [
-      { key: 'bulgur',    ad: 'Bulgur',       gram: '140 g pişmiş', not: '50 g çiğ',  kcal: 171 },
-      { key: 'tavuk',     ad: 'Tavuk göğsü',  gram: '200 g pişmiş', not: '265 g çiğ', kcal: 305 },
-      { key: 'salatalik', ad: 'Salatalık',    gram: '1 adet',       not: '~200 g',    kcal: 30 },
-      { key: 'domates',   ad: 'Domates',      gram: '1 adet',       not: '~120 g',    kcal: 22 },
-      { key: 'lahana',    ad: 'Mor lahana',   gram: '100 g',        not: '',          kcal: 31 },
-      { key: 'zeytinyag', ad: 'Zeytinyağı',   gram: '15 g',         not: '1 yemek kaşığı', kcal: 135 },
-      { key: 'yogurt',    ad: 'Yoğurt',       gram: '150 g',        not: '',          kcal: 78 },
+      { key: 'bulgur',    ad: 'Bulgur',       gram: '140 g pişmiş', not: '50 g çiğ',  kcal: 171, p: 6.2, k: 38.0, y: 0.7, lif: 9.2 },
+      { key: 'tavuk',     ad: 'Tavuk göğsü',  gram: '200 g pişmiş', not: '265 g çiğ', kcal: 305, p: 61.2, k: 0.0, y: 6.9, lif: 0.0 },
+      { key: 'salatalik', ad: 'Salatalık',    gram: '1 adet',       not: '~200 g',    kcal: 30, p: 1.4, k: 7.2, y: 0.2, lif: 1.0 },
+      { key: 'domates',   ad: 'Domates',      gram: '1 adet',       not: '~120 g',    kcal: 22, p: 1.1, k: 4.7, y: 0.2, lif: 1.4 },
+      { key: 'lahana',    ad: 'Mor lahana',   gram: '100 g',        not: '',          kcal: 31, p: 1.4, k: 7.4, y: 0.2, lif: 2.1 },
+      { key: 'zeytinyag', ad: 'Zeytinyağı',   gram: '15 g',         not: '1 yemek kaşığı', kcal: 135, p: 0.0, k: 0.0, y: 15.0, lif: 0.0 },
+      { key: 'yogurt',    ad: 'Yoğurt',       gram: '150 g',        not: '',          kcal: 78, p: 5.3, k: 7.1, y: 2.7, lif: 0.0 },
     ],
     not: 'Zeytinyağını TART, göz kararı dökme. Günlük yağının çoğu buradan geliyor.',
   },
@@ -71,13 +81,13 @@ export const OGUNLER = [
     key: 'aksam', ad: 'Akşam', emoji: '🐟',
     kcal: 781, protein: 74,
     satirlar: [
-      { key: 'basmati',   ad: 'Basmati pirinç', gram: '150 g pişmiş', not: '50 g çiğ',  kcal: 180 },
-      { key: 'tavuk',     ad: 'Tavuk göğsü',    gram: '200 g pişmiş', not: '265 g çiğ', kcal: 305 },
-      { key: 'salatalik', ad: 'Salatalık',      gram: '1 adet',       not: '~200 g',    kcal: 30 },
-      { key: 'domates',   ad: 'Domates',        gram: '1 adet',       not: '~120 g',    kcal: 22 },
-      { key: 'lahana',    ad: 'Mor lahana',     gram: '100 g',        not: '',          kcal: 31 },
-      { key: 'zeytinyag', ad: 'Zeytinyağı',     gram: '15 g',         not: '1 yemek kaşığı', kcal: 135 },
-      { key: 'yogurt',    ad: 'Yoğurt',         gram: '150 g',        not: '',          kcal: 78 },
+      { key: 'basmati',   ad: 'Basmati pirinç', gram: '150 g pişmiş', not: '50 g çiğ',  kcal: 180, p: 3.8, k: 39.0, y: 0.4, lif: 0.7 },
+      { key: 'tavuk',     ad: 'Tavuk göğsü',    gram: '200 g pişmiş', not: '265 g çiğ', kcal: 305, p: 61.2, k: 0.0, y: 6.9, lif: 0.0 },
+      { key: 'salatalik', ad: 'Salatalık',      gram: '1 adet',       not: '~200 g',    kcal: 30, p: 1.4, k: 7.2, y: 0.2, lif: 1.0 },
+      { key: 'domates',   ad: 'Domates',        gram: '1 adet',       not: '~120 g',    kcal: 22, p: 1.1, k: 4.7, y: 0.2, lif: 1.4 },
+      { key: 'lahana',    ad: 'Mor lahana',     gram: '100 g',        not: '',          kcal: 31, p: 1.4, k: 7.4, y: 0.2, lif: 2.1 },
+      { key: 'zeytinyag', ad: 'Zeytinyağı',     gram: '15 g',         not: '1 yemek kaşığı', kcal: 135, p: 0.0, k: 0.0, y: 15.0, lif: 0.0 },
+      { key: 'yogurt',    ad: 'Yoğurt',         gram: '150 g',        not: '',          kcal: 78, p: 5.3, k: 7.1, y: 2.7, lif: 0.0 },
     ],
     not: 'Öğlenle aynı, tek fark bulgur yerine basmati. Zeytinyağı yine tartılacak.',
   },
@@ -338,6 +348,25 @@ export const FOOTER = 'Bu plan gerçek bir diyetisyen muayenesinin yerini tutmaz
   + 'karaciğer enzimleri, TSH, D vitamini.';
 
 /* -------------------------------------------------------------- yardımcılar */
+
+/** Satır listesinin makro toplamı. */
+export function makroTopla(satirlar) {
+  return satirlar.reduce((t, x) => ({
+    kcal: t.kcal + (Number(x.kcal) || 0),
+    p: t.p + (Number(x.p) || 0),
+    k: t.k + (Number(x.k) || 0),
+    y: t.y + (Number(x.y) || 0),
+    lif: t.lif + (Number(x.lif) || 0),
+  }), { kcal: 0, p: 0, k: 0, y: 0, lif: 0 });
+}
+
+/** Bir öğünün makroları — satırlarından türetilir, ayrıca yazılmaz. */
+export function ogunMakro(o) {
+  return makroTopla(o.satirlar);
+}
+
+/** Planın tamamı yendiğinde günün makroları. */
+export const GUNLUK_MAKRO = makroTopla(OGUNLER.flatMap((o) => o.satirlar));
 
 /** Bir günün öğün satırlarının toplam kalorisi (hepsi işaretlenirse). */
 export const GUNLUK_KCAL = OGUNLER.reduce((s, o) => s + o.kcal, 0);

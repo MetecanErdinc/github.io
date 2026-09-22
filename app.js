@@ -15,7 +15,7 @@ import * as PlanNS from './plan.js';
 import * as StoreNS from './store.js';
 import * as RaporNS from './rapor.js';
 
-const BUILD = '2026-09-22b';
+const BUILD = '2026-09-22c';
 
 import {
   today, dateKey, parseKey, addDays, diffDays, gunEtiketi, kisaTarih, esc, sayi, yaz,
@@ -29,7 +29,8 @@ import {
   ALISVERIS_HAFTALIK, KURALLAR, YOL_HARITASI, YOL_NOT, LIF_NOTU, SU_NOTU,
   ANTRENMANLAR, HAFTA, ANTRENMAN_NOTU, ISINMA, ISINMA_NOTU, SOGUMA,
   ILK_IKI_HAFTA, CIFT_ILERLEME, ARTIS, ILERLEME_NOTU, DELOAD, FOOTER,
-  GUNLUK_KCAL, gununAntrenmani, hareketAnahtari, setSayisi,
+  GUNLUK_KCAL, GUNLUK_MAKRO, ogunMakro, makroTopla,
+  gununAntrenmani, hareketAnahtari, setSayisi,
   KARDIYO_TURLERI, KARDIYO_NOTU, kardiyoAdi, WATCH_NOTU,
 } from './plan.js';
 
@@ -103,6 +104,33 @@ function toast(msg, ms = 2600) {
 /* ==========================================================================
    Diyet
    ========================================================================== */
+
+/** "36 P · 3,6 K · 2,7 Y · 0,5 lif" — sıfır olan lif yazılmaz. */
+function makroSatiri(x) {
+  const p = [`${yaz(Math.round(x.p * 10) / 10)} P`,
+             `${yaz(Math.round(x.k * 10) / 10)} K`,
+             `${yaz(Math.round(x.y * 10) / 10)} Y`];
+  if (x.lif) p.push(`${yaz(Math.round(x.lif * 10) / 10)} lif`);
+  return p.join(' · ');
+}
+
+/** O gün işaretlenen öğün satırlarının makro toplamı. */
+function yenenMakro(d = state.date) {
+  const isaret = gun(d).diet;
+  const satirlar = [];
+  for (const o of OGUNLER) {
+    for (const s of o.satirlar) {
+      if (isaret[`${o.key}.${s.key}`]) satirlar.push(s);
+    }
+  }
+  const t = makroTopla(satirlar);
+
+  /*  Kaçamakların makroları da sayılır: gün içinde ne aldığını gösteren
+      çubuk, planın dışında yenenleri saymazsa yanıltır. Kaçamakta lif
+      sorulmuyor, o yüzden lif yalnızca plandan gelir. */
+  const ek = ekstraToplam(ekstralar(d));
+  return { kcal: t.kcal + ek.kcal, p: t.p + ek.p, k: t.k + ek.k, y: t.y + ek.y, lif: t.lif };
+}
 
 /** O gün işaretlenen öğün satırlarının kalorisi. */
 function ogunKcal(d = state.date) {
@@ -265,6 +293,7 @@ function viewDiyet() {
   const adimDeger = sayacDegeri('adim', g);
   const ek = ekstralar();
   const ekTop = ekstraToplam(ek);
+  const makro = yenenMakro();
   const yenen = yenenKcal();
   const kalan = HEDEF.kcal - yenen;
   const asti = kalan < 0;
@@ -278,7 +307,7 @@ function viewDiyet() {
     <section class="card">
       <div class="card-head">
         <div class="ch-title">${o.emoji} ${esc(o.ad)}</div>
-        <div class="ch-meta">${o.kcal} kcal · ${o.protein} g protein · ${yapilan}/${toplamSatir}</div>
+        <div class="ch-meta">${o.kcal} kcal · ${makroSatiri(ogunMakro(o))} · ${yapilan}/${toplamSatir}</div>
       </div>
       ${o.satirlar.map((s) => {
         const k = `${o.key}.${s.key}`;
@@ -290,6 +319,7 @@ function viewDiyet() {
           <div class="grow">
             <div class="r-name">${esc(s.ad)}</div>
             <div class="r-sub"><b>${esc(s.gram)}</b>${s.not ? ` · ${esc(s.not)}` : ''}</div>
+            <div class="r-makro">${makroSatiri(s)}</div>
           </div>
           <div class="r-kcal">${s.kcal}</div>
         </div>`;
@@ -319,6 +349,20 @@ function viewDiyet() {
       <div class="kcal-big ${asti ? 'over' : ''}">${Math.abs(kalan).toLocaleString('tr-TR')}
         <span>kcal ${asti ? 'aşıldı' : 'kaldı'}</span></div>
       <div class="bar"><i style="width:${oran}%" class="${asti ? 'over' : ''}"></i></div>
+      <div class="makro-bar">
+        ${[['p', 'protein'], ['k', 'karb.'], ['y', 'yağ'], ['lif', 'lif']].map(([alan, ad]) => {
+          const alinan = Math.round(makro[alan]);
+          const hedefM = Math.round(GUNLUK_MAKRO[alan]);
+          const oranM = hedefM ? Math.min(100, Math.round((alinan / hedefM) * 100)) : 0;
+          return `
+            <div class="mb">
+              <div class="mb-say">${alinan}<span>/${hedefM} g</span></div>
+              <div class="mb-cizgi"><i style="width:${oranM}%"></i></div>
+              <div class="mb-ad">${ad}</div>
+            </div>`;
+        }).join('')}
+      </div>
+
       <div class="kcal-sub">Hedef ${HEDEF.kcal.toLocaleString('tr-TR')} ·
         yenen ${yenen.toLocaleString('tr-TR')}${ekTop.kcal
           ? ` (öğün ${ogunKcal().toLocaleString('tr-TR')} + kaçamak ${ekTop.kcal.toLocaleString('tr-TR')})`
@@ -1260,8 +1304,11 @@ function raporAc(bas) {
       <div class="pairs">
         <div class="pair"><span>Kayıt girilen gün</span><span class="v">${r.diyet.yazilanGun} / 7</span></div>
         <div class="pair"><span>Plan tutturma</span><span class="v">%${r.diyet.tutma}</span></div>
-        <div class="pair"><span>Protein <em class="mini">yaklaşık</em></span>
+        <div class="pair"><span>Protein</span>
           <span class="v">${r.diyet.ortProtein} g <em>/ ${r.diyet.planProtein}</em></span></div>
+        <div class="pair"><span>Karbonhidrat · yağ · lif</span>
+          <span class="v">${r.diyet.ortKarb} · ${r.diyet.ortYag} · ${r.diyet.ortLif} g
+            <em>/ ${r.diyet.planKarb} · ${r.diyet.planYag} · ${r.diyet.planLif}</em></span></div>
         <div class="pair"><span>Kaçamak</span>
           <span class="v">${r.diyet.ekstraKcal.toLocaleString('tr-TR')} kcal <em>${r.diyet.ekstraAdet} adet</em></span></div>
         <div class="pair"><span>Su · adım</span>
@@ -1310,9 +1357,9 @@ function raporAc(bas) {
         <div class="section-h">En iyi setler</div>
         <div class="pairs">${r.antrenman.hareketler.map(hareketSatiri).join('')}</div>` : ''}
 
-      <p class="tiny-note">Protein satır bazında bilinmiyor; öğünün yenen kalorisine
-        oranlanarak hesaplanıyor, o yüzden yaklaşık. Ortalamalar yalnızca kayıt
-        girilen günlerden alınıyor.</p>
+      <p class="tiny-note">Kalori ve makro ortalamaları yalnızca yemek kaydı
+        girilen günlerden; su ve adım ise herhangi bir kaydı olan günlerden
+        alınıyor.</p>
     </div>
 
     <div class="modal-actions">
