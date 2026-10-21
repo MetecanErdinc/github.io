@@ -10,15 +10,7 @@ lang: tr
 **Bölüm:** Dokuz Eylül Üniversitesi, Makina Mühendisliği\
 **Deney:** İç İçe (Çift) Borulu Isı Değiştiricisi
 
-> **Önce okuyun: varsayılan değerler.** Föyün fotoğraflanan sayfalarında üç geometrik değer yok. Raporda bunlar için aşağıdaki değerler kabul edildi. Gerçek değerleri föyün Şekil 1'inden veya düzenek üzerinden alıp `hesap.py` dosyasının başındaki satırlara yazarsanız tüm sonuçlar aynı yöntemle yeniden hesaplanır:
->
-> | Büyüklük | Kabul edilen değer | Not |
-> |---|---|---|
-> | Hava venturisi giriş/boğaz çapı $D_A/D_B$ | 40 mm / 20 mm | Föy Şekil 1'den alınmalı |
-> | Isı değiştirici boyu $L$ | 1,0 m | Düzenekten ölçülmeli |
-> | İç boru et kalınlığı $t$ | 1 mm | $D_1 = 16-2\cdot1 = 14$ mm |
->
-> Hocanın notuna göre ısı değiştiricisinde **kovan iç çapı $D_3 = 26$ mm** ve **iç boru dış çapı $D_2 = 16$ mm** alınmıştır.
+> **Önce okuyun: varsayılan değer.** Isı değiştiricisinin ölçüleri düzenekten alınmıştır: $D_1 = 36{,}2$ mm, $D_2 = 42$ mm, $D_3 = 70$ mm, $D_4 = 76$ mm, $L = 1650$ mm. Föyün fotoğraflanan sayfalarında yalnızca **hava venturisinin çapları** yoktur; bunlar için $D_A = 40$ mm, $D_B = 20$ mm **kabul edilmiştir**. Gerçek değerleri föyün Şekil 1'inden alıp `hesap.py` dosyasının başına yazarsanız tüm sonuçlar aynı yöntemle yeniden hesaplanır.
 
 ---
 
@@ -137,10 +129,12 @@ $$U_{toplam} = \frac{1}{\dfrac{r_2}{r_1 h_{iç}}+\dfrac{r_2}{k_{çelik}}\ln\dfra
 
 | Büyüklük | Değer | Kaynak |
 |---|---|---|
-| $D_1$ (iç boru iç çapı) | 14 mm | $D_2-2t$, $t=1$ mm kabul |
-| $D_2$ (iç boru dış çapı) | 16 mm | Hoca notu |
-| $D_3$ (kovan iç çapı) | 26 mm | Hoca notu |
-| $L$ | 1,0 m | **Kabul** |
+| $D_1$ (iç boru iç çapı) | 36,2 mm | Düzenek |
+| $D_2$ (iç boru dış çapı) | 42 mm | Düzenek |
+| $D_3$ (kovan iç çapı) | 70 mm | Düzenek |
+| $D_4$ (kovan dış çapı) | 76 mm | Düzenek (hesapta kullanılmaz) |
+| $L$ | 1650 mm | Düzenek |
+| Hava venturisi $D_A/D_B$ | 40 / 20 mm | **Kabul** |
 | $k_{çelik}$ | 60,5 W/m·K | Sade karbon çeliği, 300 K [1, Tablo A.1] |
 | $C_D$ | 0,98 | Föy |
 | $P_{atm}$, $R_{hava}$ | 101 325 Pa, 287 J/kg·K | Standart atmosfer |
@@ -263,123 +257,123 @@ $$\Delta T_{lm} = \frac{51{,}8-28{,}1}{\ln(51{,}8/28{,}1)} = \frac{23{,}7}{\ln 1
 
 Isı transfer alanı (iç borunun dış yüzeyi):
 
-$$A_2 = 2\pi r_2 L = \pi D_2 L = \pi\times0{,}016\times1{,}0 = 0{,}05027\ \text{m}^2$$
+$$A_2 = 2\pi r_2 L = \pi D_2 L = \pi\times0{,}042\times1{,}65 = 0{,}2177\ \text{m}^2$$
 
 Deneysel toplam ısı geçiş katsayısı, hava tarafındaki ısı esas alınarak:
 
-$$U_{deneysel} = \frac{q_{hava}}{A_2\,\Delta T_{lm}} = \frac{217{,}3}{0{,}05027\times38{,}75} = \mathbf{111{,}6\ W/m^2K}$$
+$$U_{deneysel} = \frac{q_{hava}}{A_2\,\Delta T_{lm}} = \frac{217{,}3}{0{,}2177\times38{,}75} = \frac{217{,}3}{8{,}436} = \mathbf{25{,}8\ W/m^2K}$$
 
-Karşılaştırma için: $q_{su}$ esas alınsaydı $U = 2047{,}7/(0{,}05027\times38{,}75) \approx 1051$ W/m²K çıkardı. Bu değer, hava-su ısı değiştiricisi için fiziksel olarak mümkün değildir, çünkü hava tarafı direnci $U$'yu sınırlar (bkz. 6.9). Bu da hava tarafının esas alınmasının doğru olduğunu gösterir.
+Karşılaştırma için: $q_{su}$ esas alınsaydı $U = 2047{,}7/8{,}436 \approx 243$ W/m²K çıkardı. Bu değer, teorik hesaptaki hava tarafı direncinin izin verdiği üst sınırın ($h_{iç}$ ≈ 35 W/m²K, bkz. 6.8) çok üzerindedir; fiziksel olarak mümkün değildir. Bu da hava tarafının esas alınmasının doğru olduğunu gösterir.
 
 ### 6.7 Reynolds sayıları (İstenen 5)
 
-**Hava (iç boru, dairesel kesit, $D_h = D_1 = 14$ mm).**
+**Hava (iç boru, dairesel kesit, $D_h = D_1 = 36{,}2$ mm).**
 
 Kesit alanı:
 
-$$A_1 = \frac{\pi D_1^2}{4} = \frac{\pi\,(0{,}014)^2}{4} = 1{,}539\times10^{-4}\ \text{m}^2$$
+$$A_1 = \frac{\pi D_1^2}{4} = \frac{\pi\,(0{,}0362)^2}{4} = 1{,}029\times10^{-3}\ \text{m}^2$$
 
-Ortalama hız:
+Ortalama hız (ortalama sıcaklıktaki yoğunlukla):
 
-$$V_{hava} = \frac{\dot m}{\rho_m A_1} = \frac{8{,}19\times10^{-3}}{1{,}049\times1{,}539\times10^{-4}} = 50{,}7\ \text{m/s}$$
+$$V_{hava} = \frac{\dot m}{\rho_m A_1} = \frac{8{,}19\times10^{-3}}{1{,}049\times1{,}029\times10^{-3}} = 7{,}59\ \text{m/s}$$
 
 Reynolds sayısı:
 
-$$Re_{hava} = \frac{\rho V D_1}{\mu} = \frac{4\dot m}{\pi D_1 \mu} = \frac{4\times8{,}19\times10^{-3}}{\pi\times0{,}014\times201{,}8\times10^{-7}} = \mathbf{36\,900}$$
+$$Re_{hava} = \frac{\rho V D_1}{\mu} = \frac{1{,}049\times7{,}59\times0{,}0362}{201{,}8\times10^{-7}} = \frac{4\dot m}{\pi D_1 \mu} = \frac{4\times8{,}19\times10^{-3}}{\pi\times0{,}0362\times201{,}8\times10^{-7}} = \mathbf{14\,280}$$
 
-Akış türbülanslıdır.
+$Re > 10\,000$ olduğundan akış türbülanslıdır.
 
 **Su (halkasal bölge).** Hidrolik çap ve kesit alanı:
 
-$$D_h = D_3 - D_2 = 26 - 16 = 10\ \text{mm}$$
-$$A_{halka} = \frac{\pi}{4}(D_3^2 - D_2^2) = \frac{\pi}{4}(0{,}026^2-0{,}016^2) = 3{,}299\times10^{-4}\ \text{m}^2$$
+$$D_h = D_3 - D_2 = 70 - 42 = 28\ \text{mm}$$
+$$A_{halka} = \frac{\pi}{4}(D_3^2 - D_2^2) = \frac{\pi}{4}(0{,}070^2-0{,}042^2) = \frac{\pi}{4}\times3{,}136\times10^{-3} = 2{,}463\times10^{-3}\ \text{m}^2$$
 
 Ortalama hız:
 
-$$V_{su} = \frac{0{,}1884}{997{,}7\times3{,}299\times10^{-4}} = 0{,}572\ \text{m/s}$$
+$$V_{su} = \frac{\dot m_{su}}{\rho A_{halka}} = \frac{0{,}1884}{997{,}7\times2{,}463\times10^{-3}} = 0{,}0767\ \text{m/s}$$
 
 Reynolds sayısı:
 
-$$Re_{su} = \frac{997{,}7\times0{,}572\times0{,}010}{926{,}8\times10^{-6}} = \mathbf{6\,160}$$
+$$Re_{su} = \frac{\rho V D_h}{\mu} = \frac{997{,}7\times0{,}0767\times0{,}028}{926{,}8\times10^{-6}} = \mathbf{2\,310}$$
 
-$2300 < Re < 10\,000$ olduğundan akış **geçiş bölgesindedir**.
+$Re \approx 2300$ olduğundan su akışı **laminer–geçiş sınırındadır**. Halkanın kesiti geniş olduğu için su çok yavaş (≈ 7,7 cm/s) akmaktadır.
 
 ### 6.8 Nusselt sayıları ve taşınım katsayıları (İstenen 6)
 
 **İç boru, hava soğuyor → $n = 0{,}3$:**
 
-$$Nu_{hava} = 0{,}023\,(36\,900)^{0{,}8}(0{,}702)^{0{,}3} = 0{,}023\times4506\times0{,}8995 = \mathbf{93{,}2}$$
+$$Nu_{hava} = 0{,}023\,(14\,280)^{0{,}8}(0{,}702)^{0{,}3} = 0{,}023\times2107\times0{,}8994 = \mathbf{43{,}6}$$
 
-$$h_{iç} = \frac{Nu\,k}{D_1} = \frac{93{,}2\times0{,}0290}{0{,}014} = \mathbf{193\ W/m^2K}$$
+$$h_{iç} = \frac{Nu\,k}{D_1} = \frac{43{,}6\times0{,}0290}{0{,}0362} = \mathbf{34{,}9\ W/m^2K}$$
 
-**Halka, su ısınıyor → $n = 0{,}4$:**
+**Halka, su ısınıyor → $n = 0{,}4$ (föydeki Dittus–Boelter bağıntısı):**
 
-$$Nu_{su} = 0{,}023\,(6\,160)^{0{,}8}(6{,}375)^{0{,}4} = 0{,}023\times1076\times2{,}098 = \mathbf{51{,}9}$$
+$$Nu_{su} = 0{,}023\,(2\,310)^{0{,}8}(6{,}375)^{0{,}4} = 0{,}023\times490{,}7\times2{,}098 = \mathbf{23{,}7}$$
 
-$$h_{dış} = \frac{Nu\,k}{D_h} = \frac{51{,}9\times0{,}608}{0{,}010} = \mathbf{3158\ W/m^2K}$$
+$$h_{dış} = \frac{Nu\,k}{D_h} = \frac{23{,}7\times0{,}608}{0{,}028} = \mathbf{514\ W/m^2K}$$
 
-Su tarafında $Re<10\,000$ olduğu için, kontrol amacıyla geçiş bölgesinde de geçerli olan Gnielinski bağıntısı da uygulanmıştır ($3000\le Re\le5\times10^6$) [1, Denk. 8.62]. Sürtünme faktörü:
+Su tarafında $Re \approx 2300$ olduğu için Dittus–Boelter'in geçerlilik aralığının çok dışındayız (Gnielinski bağıntısı da ancak $Re \ge 3000$ için geçerlidir). Bu nedenle kontrol amacıyla **laminer, tam gelişmiş halkasal akış** için de hesap yapılmıştır. İç yüzeyden ısıtılan, dış yüzeyi yalıtılmış halka için Nusselt sayısı [1, Tablo 8.2]'den $D_i/D_o = 42/70 = 0{,}60$ değerinde enterpolasyonla alınır:
 
-$$f = (0{,}790\ln Re - 1{,}64)^{-2} = 0{,}0362$$
+$$Nu_i = 5{,}74 + \frac{0{,}60-0{,}50}{1{,}00-0{,}50}\,(4{,}86-5{,}74) = 5{,}56$$
 
-Nusselt sayısı:
+$$h_{dış,lam} = \frac{5{,}56\times0{,}608}{0{,}028} = 121\ \text{W/m}^2\text{K}$$
 
-$$Nu = \frac{(f/8)(Re-1000)Pr}{1+12{,}7\sqrt{f/8}\,(Pr^{2/3}-1)} = 48{,}3$$
-
-Buradan $h_{dış} = 2940$ W/m²K bulunur. Bu değer Dittus–Boelter sonucundan yalnızca ~%7 farklıdır.
+Gerçek değer bu iki sınır (121–514 W/m²K) arasındadır. Geçiş bölgesindeki akışta Dittus–Boelter $h$'yi olduğundan büyük tahmin eder.
 
 ### 6.9 Teorik toplam ısı geçiş katsayısı (İstenen 7)
 
-Yarıçaplar: $r_1 = 7$ mm, $r_2 = 8$ mm. Denklem (17)'deki terimler (iç borunun dış yüzeyine göre, m²K/W):
+Yarıçaplar: $r_1 = 18{,}1$ mm, $r_2 = 21$ mm. Denklem (17)'deki terimler (iç borunun dış yüzeyine göre, m²K/W, $h_{dış}$ Dittus–Boelter ile):
 
 | Direnç terimi | Hesap | Değer | Pay |
 |---|---|---|---|
-| İç taşınım $\dfrac{r_2}{r_1h_{iç}}$ | $\dfrac{0{,}008}{0{,}007\times193}$ | $5{,}920\times10^{-3}$ | %94,7 |
-| Cidar iletimi $\dfrac{r_2}{k}\ln\dfrac{r_2}{r_1}$ | $\dfrac{0{,}008}{60{,}5}\ln\dfrac{8}{7}$ | $1{,}77\times10^{-5}$ | %0,3 |
-| Dış taşınım $\dfrac{1}{h_{dış}}$ | $\dfrac{1}{3158}$ | $3{,}167\times10^{-4}$ | %5,1 |
-| **Toplam** | | $6{,}254\times10^{-3}$ | |
+| İç taşınım $\dfrac{r_2}{r_1h_{iç}}$ | $\dfrac{0{,}021}{0{,}0181\times34{,}9}$ | $3{,}323\times10^{-2}$ | %94,3 |
+| Cidar iletimi $\dfrac{r_2}{k}\ln\dfrac{r_2}{r_1}$ | $\dfrac{0{,}021}{60{,}5}\ln\dfrac{21}{18{,}1}$ | $5{,}16\times10^{-5}$ | %0,15 |
+| Dış taşınım $\dfrac{1}{h_{dış}}$ | $\dfrac{1}{514}$ | $1{,}944\times10^{-3}$ | %5,5 |
+| **Toplam** | | $3{,}523\times10^{-2}$ | |
 
-$$U_{teorik} = \frac{1}{6{,}254\times10^{-3}} = \mathbf{159{,}9\ W/m^2K}$$
+$$U_{teorik} = \frac{1}{3{,}523\times10^{-2}} = \mathbf{28{,}4\ W/m^2K}$$
 
-Su tarafında Gnielinski kullanılırsa $U_{teorik} = 159{,}3$ W/m²K bulunur; sonuç neredeyse değişmez. Denklem (16) ile teorik ısı akışı:
+Denklem (16) ile teorik ısı akışı:
 
-$$q_{teorik} = U A_2 \Delta T_{lm} = 159{,}9\times0{,}05027\times38{,}75 = 311\ \text{W}$$
+$$q_{teorik} = U A_2 \Delta T_{lm} = 28{,}4\times0{,}2177\times38{,}75 = 239{,}5\ \text{W}$$
+
+Su tarafı için laminer değer ($h_{dış} = 121$ W/m²K) kullanılırsa dış direnç $8{,}27\times10^{-3}$ m²K/W olur (toplamın %20'si) ve $U_{teorik} = 24{,}1$ W/m²K bulunur. Yani teorik U, su tarafındaki belirsizliğe bağlı olarak **24,1–28,4 W/m²K** aralığındadır.
 
 **Bağıntı koşullarının kontrolü:**
 
 | Koşul | Hava (iç boru) | Su (halka) |
 |---|---|---|
 | $0{,}6\le Pr\le160$ | $Pr=0{,}702$ ✔ | $Pr=6{,}375$ ✔ |
-| $Re\ge10\,000$ | $Re=36\,900$ ✔ | $Re=6\,160$ ✘ (geçiş bölgesi) |
-| $L/D_h\ge10$ | $L/D_1 = 1/0{,}014 = 71$ ✔ | $L/D_h = 1/0{,}010 = 100$ ✔ |
+| $Re\ge10\,000$ | $Re=14\,280$ ✔ | $Re=2\,310$ ✘ (laminer–geçiş sınırı) |
+| $L/D_h\ge10$ | $L/D_1 = 1{,}65/0{,}0362 = 45{,}6$ ✔ | $L/D_h = 1{,}65/0{,}028 = 58{,}9$ ✔ |
 
-Hava tarafı Dittus–Boelter'in tüm koşullarını sağlar. Su tarafında Reynolds koşulu **sağlanmamaktadır**. Su debisi düşük, halkanın hidrolik çapı küçük ve suyun viskozitesi yüksek olduğu için akış tam türbülanslı değildir. Dittus–Boelter bu bölgede taşınım katsayısını genelde olduğundan büyük tahmin eder. Ancak su tarafının toplam dirence katkısı yalnızca %5 olduğundan, bu hatanın $U_{teorik}$ üzerindeki etkisi küçüktür (Gnielinski ile fark %0,4). Ayrıca Dittus–Boelter dairesel boru için türetilmiştir. Halkasal kesitte hidrolik çap yaklaşımı yaklaşık sonuç verir; özellikle iç çeper ısıtıldığında halkada gerçek Nu değeri farklı olabilir [1, Bölüm 8.6].
+Hava tarafı Dittus–Boelter'in tüm koşullarını sağlar. Su tarafında Reynolds koşulu **sağlanmamaktadır**: su debisi halkanın geniş kesitine (2,46×10⁻³ m²) göre küçük olduğundan hız düşük, suyun viskozitesi de yüksektir. Bu yüzden akış türbülanslı değildir ve Dittus–Boelter su tarafında $h$'yi olduğundan büyük verir. Ancak toplam direncin büyük kısmı hava tarafında olduğundan, bu hatanın $U_{teorik}$ üzerindeki etkisi sınırlıdır (%15). Ayrıca Dittus–Boelter dairesel boru için türetilmiştir; halkasal kesitte hidrolik çap yaklaşımı yaklaşık sonuç verir [1, Bölüm 8.6]. Laminer bölgede tam gelişmiş akış için gereken giriş uzunluğu da ($x_{fd,t} \approx 0{,}05\,Re\,Pr\,D_h \approx 0{,}05\times2310\times6{,}4\times0{,}028 \approx 20$ m) boru boyundan çok büyüktür; yani su tarafında akış ısıl olarak gelişmekte olan bölgededir ve gerçek $h$ tam gelişmiş laminer değerden yüksektir.
 
 **Deneysel ve teorik U'nun karşılaştırılması:**
 
-$$\frac{U_{teorik}-U_{deneysel}}{U_{teorik}} = \frac{159{,}9-111{,}6}{159{,}9} = \%30$$
+$$\frac{U_{teorik}-U_{deneysel}}{U_{teorik}} = \frac{28{,}4-25{,}8}{28{,}4} = \%9{,}3$$
 
-Deneysel değer teorik değerden ~%30 düşüktür. Olası nedenler:
+Deneysel değer, föydeki Dittus–Boelter ile bulunan teorik değerden yaklaşık %9 düşüktür ve laminer kabulle bulunan alt sınırdan (24,1 W/m²K) biraz yüksektir; yani **deneysel U, teorik aralığın içindedir**. Dittus–Boelter'in kendi belirsizliğinin ±%25 mertebesinde olduğu [1] düşünülürse uyum iyidir. Kalan farkın olası nedenleri:
 
+- **Su tarafının rejimi:** Su tarafı türbülanslı kabul edilerek hesaplanmıştır; gerçekte akış laminer–geçiş bölgesindedir ve $h_{dış}$ daha düşüktür. Bu tek başına farkın büyük kısmını açıklar.
 - **Kirlilik (fouling) direnci:** Kullanılmış bir düzenekte çelik borunun su tarafında kireç/pas, hava tarafında is/toz birikir. Bu ek dirençler teorik hesapta yoktur.
-- **Giriş bölgesi ve tam gelişmemiş akış:** Bağıntılar tam gelişmiş akış içindir. Bu fark normalde girişte $h$'yi artırır, ancak giriş ağzındaki akış düzensizlikleri ve bağlantı parçaları belirsizlik yaratır.
-- **Ampirik bağıntıların belirsizliği:** Dittus–Boelter'in kendi hata payı ±%25 mertebesindedir [1]. Su tarafında geçiş bölgesi koşulu da sağlanmamaktadır.
-- **Özellik değişimi:** Hava 26 K soğurken $\mu$, $k$ ve $\rho$ değişir. Ortalama sıcaklıkta özellik almak bir yaklaşımdır. Ayrıca cidar ile akışkan arasındaki sıcaklık farkı büyük olduğundan, özellik değişimi düzeltmesi (Sieder–Tate gibi) ihmal edilmiştir.
-- **Ölçüm hataları:** $U_{deneysel}$ doğrudan $\dot m_{hava}$'ya bağlıdır. Hava venturisi boyutları ve $C_D$ kabulü, ısıl çift hataları ve $L$ kabulü bu değeri etkiler. Örneğin gerçek $L$ 1 m'den kısaysa $U_{deneysel}$ artar ve fark kapanır.
-- **Isı kayıpları:** Havanın venturi/ısıtıcı ile ısı değiştirici arasındaki borularda çevreye ısı vermesi ve uçlardaki eksenel iletim, gerçek ısı geçişini etkiler.
-- **Yüzey pürüzlülüğü ve geometri:** Bağıntılar düzgün, eş merkezli borular içindir. İç borunun kovan içinde tam merkezde olmaması (eksantriklik) halka tarafındaki taşınımı değiştirir.
+- **Ampirik bağıntıların belirsizliği:** Dittus–Boelter ±%25 belirsizlik taşır; halkasal kesit için hidrolik çap yaklaşımı da ayrıca hata getirir.
+- **Özellik değişimi:** Hava 26 K soğurken $\mu$, $k$ ve $\rho$ değişir. Ortalama sıcaklıkta özellik almak bir yaklaşımdır.
+- **Ölçüm hataları:** $U_{deneysel}$ doğrudan $\dot m_{hava}$'ya bağlıdır. Hava venturisi boyutlarının kabulü, $C_D$ ve ısıl çift hataları bu değeri etkiler.
+- **Isı kayıpları ve geometri:** Havanın ısıtıcı ile ısı değiştirici arasındaki borularda çevreye ısı vermesi, uçlardaki bağlantı parçaları ve iç borunun kovan içinde tam merkezde olmaması (eksantriklik) gerçek ısı geçişini değiştirir.
 
 ### 6.10 Sistemin uygulanabilirliği (İstenen 8)
 
-- **Hava tarafı kontrol eder.** Toplam direncin ~%95'i hava tarafındadır ($h_{iç}\approx193 \ll h_{dış}\approx3160$ W/m²K). Bu nedenle $U$, $h_{iç}$'nin biraz altında kalır. Su debisini artırmak ısı geçişini neredeyse hiç iyileştirmez; yalnızca pompa gücünü artırır. Cidar direnci (%0,3) ihmal edilebilir, yani boru malzemesini (ör. bakıra) değiştirmek de anlamlı bir kazanç sağlamaz.
-- **Etkinlik düşüktür.** $C_{min} = C_{hava} = 8{,}26$ W/K ve $C_r = 0{,}0105$'tir. Etkinlik $\varepsilon = q/[C_{min}(T_{h,g}-T_{s,g})] = 217{,}3/(8{,}26\times54{,}4) = 0{,}48$, $NTU = UA/C_{min} = 0{,}68$'dir. Hava, suyun sıcaklığına yaklaşamadan (50 °C) çıkmaktadır.
-- **Gereken alan büyüktür.** $U\approx110$–160 W/m²K değerleri, gaz-sıvı ısı değiştiricileri için literatürdeki tipik aralıkla (10–250 W/m²K [1, Tablo 11.2]) uyumludur. Ancak çift borulu yapı birim hacim başına az alan sunar. Örneğin $\varepsilon=0{,}9$ için $NTU\approx2{,}3$ gerekir, bu da yaklaşık 3,4 kat daha uzun bir boru demektir.
+- **Hava tarafı kontrol eder.** Toplam direncin %80–95'i hava tarafındadır ($h_{iç}\approx35 \ll h_{dış}\approx121$–514 W/m²K). Bu nedenle $U$, $h_{iç}$'nin altında kalır. Cidar direnci (%0,15) ihmal edilebilir; boru malzemesini (ör. bakıra) değiştirmek anlamlı bir kazanç sağlamaz.
+- **Etkinlik düşüktür.** $C_{min} = C_{hava} = 8{,}26$ W/K ve $C_r = 0{,}0105$'tir. Etkinlik $\varepsilon = q/[C_{min}(T_{h,g}-T_{s,g})] = 217{,}3/(8{,}26\times54{,}4) = 0{,}48$, $NTU = UA/C_{min} = 25{,}8\times0{,}2177/8{,}26 = 0{,}68$'dir. Hava, suyun sıcaklığına yaklaşamadan (50 °C) çıkmaktadır.
+- **Gereken alan büyüktür.** $U\approx24$–28 W/m²K değerleri, gaz-sıvı ısı değiştiricileri için literatürdeki tipik aralığın (10–250 W/m²K [1, Tablo 11.2]) alt kısmındadır. Örneğin $\varepsilon=0{,}9$ için $NTU = -\ln(1-0{,}9) \approx 2{,}3$ gerekir; bu da mevcut borudan yaklaşık 3,4 kat uzun, yani ≈ 5,6 m'lik bir ısı değiştirici demektir.
 - **İyileştirme önerileri:**
-  - Hava tarafına kanat (fin) eklemek ya da iç boruya türbülatör/burgulu şerit yerleştirmek $h_{iç}$'yi ve alanı artırır.
-  - Hava hızı artırılabilir; ancak 50 m/s civarındaki mevcut hız zaten yüksektir ve basınç kaybı ile fan gücü hızla artar.
-  - Daha az su debisi kullanılabilir. Su tarafı zaten kontrol etmediği için bu hem pompa gücünü azaltır hem de su $\Delta T$'sini büyütür; su tarafı ölçüm hassasiyeti artar ve enerji dengesi daha güvenilir kontrol edilir.
+  - Hava tarafına kanat (fin) eklemek ya da iç boruya türbülatör/burgulu şerit yerleştirmek $h_{iç}$'yi ve alanı artırır. En etkili iyileştirme budur.
+  - Hava hızı (≈ 7,6 m/s) artırılabilir; $h_{iç} \propto Re^{0,8}$ olduğundan hava debisini iki katına çıkarmak $h_{iç}$'yi ~%74 artırır. Bunun bedeli basınç kaybı ve fan gücüdür.
+  - Su tarafında hız çok düşüktür (≈ 7,7 cm/s). Halka aralığını daraltmak veya su debisini artırmak akışı türbülanslı yapar; ancak su tarafı kontrol etmediği için kazanç sınırlıdır.
+  - Su debisi azaltılırsa su $\Delta T$'si büyür ve su tarafı ölçüm hassasiyeti artar, enerji dengesi daha güvenilir kontrol edilir.
   - Kovanın dışı yalıtılmalı, ölçümler daha uzun bir dengeye ulaşma süresinden sonra yapılmalıdır.
-- **Sonuç:** Mevcut sistem, küçük ısıl yüklerde (yüzlerce W) gazdan sıvıya ısı geri kazanımı veya eğitim amaçlı kullanım için uygundur. Yüksek kapasiteli endüstriyel hava-su uygulamaları için ise kanatlı borulu veya plakalı/gövde-borulu ısı değiştiriciler daha uygundur.
+- **Sonuç:** Mevcut sistem, küçük ısıl yüklerde (yüzlerce W) gazdan sıvıya ısı geri kazanımı veya eğitim amaçlı kullanım için uygundur. Yüksek kapasiteli endüstriyel hava-su uygulamaları için kanatlı borulu ya da gövde-borulu ısı değiştiriciler daha uygundur.
 
 ## 7. Sonuç Tablosu
 
@@ -389,19 +383,21 @@ Deneysel değer teorik değerden ~%30 düşüktür. Olası nedenler:
 | $\dot m_{su}$ | 0,1884 kg/s |
 | $q_{hava}$ / $q_{su}$ | 217,3 W / 2047,7 W |
 | $\Delta T_{lm}$ | 38,75 K |
-| $Re_{hava}$ / $Re_{su}$ | 36 900 / 6 160 |
-| $Nu_{hava}$ / $Nu_{su}$ | 93,2 / 51,9 |
-| $h_{iç}$ / $h_{dış}$ | 193 / 3158 W/m²K |
-| $U_{deneysel}$ | 111,6 W/m²K |
-| $U_{teorik}$ | 159,9 W/m²K |
-| Fark | %30 |
+| $A_2$ | 0,2177 m² |
+| $Re_{hava}$ / $Re_{su}$ | 14 280 / 2 310 |
+| $Nu_{hava}$ / $Nu_{su}$ | 43,6 / 23,7 |
+| $h_{iç}$ / $h_{dış}$ | 34,9 / 514 W/m²K |
+| $U_{deneysel}$ | 25,8 W/m²K |
+| $U_{teorik}$ (Dittus–Boelter) | 28,4 W/m²K |
+| $U_{teorik}$ (su tarafı laminer) | 24,1 W/m²K |
+| Fark (Dittus–Boelter'e göre) | %9,3 |
 | Etkinlik $\varepsilon$ / NTU | 0,48 / 0,68 |
 
-Deneyde hava tarafından 217 W ısı suya aktarılmış, deneysel toplam ısı geçiş katsayısı 112 W/m²K bulunmuştur. Ampirik bağıntılarla hesaplanan teorik değer 160 W/m²K'dir. Aradaki ~%30'luk fark kirlilik direnci, bağıntı belirsizlikleri, su tarafının geçiş rejiminde olması ve ölçüm/kabul belirsizlikleriyle açıklanabilir. Su tarafı ısı hesabındaki büyük sapma, yüksek su debisi nedeniyle çok küçük kalan sıcaklık farkının (2,6 K) ısıl çift hassasiyetine yakın olmasından kaynaklanır. Isı değiştiricinin performansını hava tarafı taşınımı belirlemektedir.
+Deneyde hava tarafından 217 W ısı suya aktarılmış, deneysel toplam ısı geçiş katsayısı 25,8 W/m²K bulunmuştur. Ampirik bağıntılarla hesaplanan teorik değer 28,4 W/m²K'dir (su tarafı laminer kabul edilirse 24,1 W/m²K). Aradaki ~%9'luk fark; su tarafının türbülanslı değil laminer–geçiş rejiminde olması, bağıntı belirsizlikleri, kirlilik direnci ve ölçüm/kabul belirsizlikleriyle açıklanabilir. Su tarafı ısı hesabındaki büyük sapma, yüksek su debisi nedeniyle çok küçük kalan sıcaklık farkının (2,6 K) ısıl çift hassasiyetine yakın olmasından kaynaklanır. Isı değiştiricinin performansını hava tarafı taşınımı belirlemektedir.
 
 ## 8. Kaynakça
 
-[1] Incropera, F. P., DeWitt, D. P., Bergman, T. L., & Lavine, A. S. (2007). *Fundamentals of Heat and Mass Transfer* (6th ed.). John Wiley & Sons. Tablo A.1 (çelik), A.4 (hava), A.6 (doymuş su), Denk. 8.60 (Dittus–Boelter), Denk. 8.62 (Gnielinski), Tablo 11.2 (tipik U değerleri).
+[1] Incropera, F. P., DeWitt, D. P., Bergman, T. L., & Lavine, A. S. (2007). *Fundamentals of Heat and Mass Transfer* (6th ed.). John Wiley & Sons. Tablo A.1 (çelik), A.4 (hava), A.6 (doymuş su), Denk. 8.60 (Dittus–Boelter), Tablo 8.2 (laminer halkasal akış), Tablo 11.2 (tipik U değerleri).
 
 [2] DEÜ Makina Mühendisliği Bölümü, *MAK 4097 Ölçüm ve Analiz Laboratuvarı – İç İçe Borulu Isı Değiştiricisi Deney Föyü*.
 

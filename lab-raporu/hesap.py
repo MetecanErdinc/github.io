@@ -14,11 +14,11 @@ dp_su_mmSS = 40.0                 # mmSS (U manometre)
 # ---------------- Geometri ----------------
 DA_su, DB_su = 0.026, 0.016       # su venturisi (olculen)
 DA_hava, DB_hava = 0.040, 0.020   # VARSAYIM: hava venturisi (Sekil 1'den alin)
-D2 = 0.016                        # ic boru dis capi (hoca notu: 26-16)
-D3 = 0.026                        # kovan ic capi
-t = 0.001                         # VARSAYIM: ic boru et kalinligi
-D1 = D2 - 2 * t                   # ic boru ic capi
-L = 1.0                           # VARSAYIM: isi degistirici boyu, m
+D1 = 0.0362                       # ic boru ic capi
+D2 = 0.042                        # ic boru dis capi
+D3 = 0.070                        # kovan ic capi
+D4 = 0.076                        # kovan dis capi (hesapta kullanilmiyor)
+L = 1.65                          # isi degistirici boyu, m
 k_celik = 60.5                    # W/mK, karbon celigi (Incropera Tablo A.1)
 
 # ---------------- Sabitler ----------------
@@ -115,6 +115,12 @@ Nu_cG, f_c = gnielinski(Re_c, Pr_c)
 h_disG = Nu_cG * k_c / Dh
 p(f"   Gnielinski (su): f = {f_c:.5f}, Nu = {Nu_cG:.2f}, h_dis = {h_disG:.1f} W/m2K")
 
+# Laminer halka, ic yuzey isitiliyor dis yuzey yalitimli: Incropera Tablo 8.2
+Di_Do = D2 / D3
+Nu_cL = lin(Di_Do, 0.50, 1.00, 5.74, 4.86)
+h_disL = Nu_cL * k_c / Dh
+p(f"   Laminer (Tablo 8.2, Di/Do = {Di_Do:.3f}): Nu = {Nu_cL:.2f}, h_dis = {h_disL:.1f} W/m2K")
+
 # ---------------- 6.3 Teorik U ----------------
 r1, r2 = D1 / 2, D2 / 2
 R_ic = r2 / (r1 * h_ic)
@@ -129,6 +135,8 @@ p(f"Pay: ic %{R_ic/Rt*100:.1f}, cidar %{R_cidar/Rt*100:.2f}, dis %{R_dis/Rt*100:
 p(f"U_teorik = {U_teo:.2f} W/m2K, q (denk.16) = {q_teo:.1f} W")
 U_teoG = 1 / (R_ic + R_cidar + 1 / h_disG)
 p(f"U_teorik (su icin Gnielinski) = {U_teoG:.2f} W/m2K")
+U_teoL = 1 / (R_ic + R_cidar + 1 / h_disL)
+p(f"U_teorik (su icin laminer Nu) = {U_teoL:.2f} W/m2K, dis pay %{(1/h_disL)/(R_ic+R_cidar+1/h_disL)*100:.1f}")
 p(f"Fark (U_teo - U_den)/U_teo = {(U_teo-U_den)/U_teo*100:.1f} %")
 
 # Etkinlik - NTU kontrolu
