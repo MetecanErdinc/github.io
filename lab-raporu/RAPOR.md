@@ -131,7 +131,7 @@ $$U_{toplam} = \frac{1}{\dfrac{r_2}{r_1 h_{iç}}+\dfrac{r_2}{k_{çelik}}\ln\dfra
 | $T_{su,giriş}$ | 22,1 °C | $T_{su,çıkış}$ | 24,7 °C |
 | $\Delta p_{hava}$ | 328,7 Pa | $\Delta p_{su}$ | 40 mmSS |
 | Su venturisi $D_A$ | 26 mm | Su venturisi $D_B$ | 16 mm |
-| $\dot m_{hava}$ | 0,00819 kg/s (hesap) | $\dot m_{su}$ | 0,1884 kg/s (hesap) |
+| $\dot m_{hava}$ | 0,00819 kg/s (hesap, bkz. 6.2) | $\dot m_{su}$ | 0,1884 kg/s (hesap, bkz. 6.3) |
 
 **Tablo 2.** Hesaplarda kullanılan geometri ve sabitler
 
@@ -167,51 +167,61 @@ $$U_{toplam} = \frac{1}{\dfrac{r_2}{r_1 h_{iç}}+\dfrac{r_2}{k_{çelik}}\ln\dfra
 - $Pr = 6{,}62 - 0{,}31\,(6{,}62-5{,}83) = 6{,}375$
 - $\rho = 997{,}7$ kg/m³
 
-### 6.2 Hava debisinin hesabı
+### 6.2 Hava debisinin hesabı (Tablo 1'deki $\dot m_{hava}$)
 
-Venturi giriş sıcaklığında ($76{,}5\ °C = 349{,}65$ K) hava yoğunluğu ideal gaz bağıntısından bulunur:
+Debiler, föyün 5. bölümündeki venturi bağıntısıyla hesaplanmıştır:
 
-$$\rho_{hava} = \frac{P_{atm}}{R\,T} = \frac{101325}{287\times349{,}65} = 1{,}0097\ \text{kg/m}^3$$
+$$V_B = C_D\sqrt{\frac{2\,\Delta p}{\rho\,(1-\beta^4)}},\qquad \beta=\frac{D_B}{D_A},\qquad A_B=\frac{\pi D_B^2}{4},\qquad \dot m = \rho\,A_B\,V_B$$
 
-Çap oranı:
+**Veriler:** $\Delta p_{hava} = 328{,}7$ Pa (elektronik ölçerden doğrudan Pa olarak okunduğu için birim çevirmeye gerek yok), $T_{hava,giriş} = 76{,}5$ °C, $C_D = 0{,}98$. Hava venturisinin çapları için $D_A = 40$ mm ve $D_B = 20$ mm **kabul edilmiştir**; gerçek değerler föyün Şekil 1'inden alınmalıdır.
 
-$$\beta = \frac{D_B}{D_A} = \frac{20}{40} = 0{,}5 \;\Rightarrow\; \beta^4 = 0{,}0625$$
+**a) Havanın yoğunluğu.** Föydeki nota göre venturi giriş sıcaklığında ve standart atmosfer basıncında, ideal gaz bağıntısıyla:
 
-Boğaz hızı, Denklem (5) ile:
+$$\rho_{hava} = \frac{P_{atm}}{R\,T} = \frac{101325}{287\times(76{,}5+273{,}15)} = \frac{101325}{287\times349{,}65} = 1{,}0097\ \text{kg/m}^3$$
 
-$$V_B = 0{,}98\sqrt{\frac{2\times328{,}7}{1{,}0097\times(1-0{,}0625)}} = 0{,}98\sqrt{694{,}5} = 0{,}98\times26{,}35 = 25{,}83\ \text{m/s}$$
+**b) Çap oranı:**
 
-Boğaz kesit alanı:
+$$\beta = \frac{D_B}{D_A} = \frac{20}{40} = 0{,}5 \;\Rightarrow\; \beta^4 = 0{,}0625 \;\Rightarrow\; 1-\beta^4 = 0{,}9375$$
+
+**c) Boğaz hızı:**
+
+$$V_B = 0{,}98\sqrt{\frac{2\times328{,}7}{1{,}0097\times0{,}9375}} = 0{,}98\sqrt{\frac{657{,}4}{0{,}9466}} = 0{,}98\sqrt{694{,}5} = 0{,}98\times26{,}35 = 25{,}83\ \text{m/s}$$
+
+**d) Boğaz kesit alanı:**
 
 $$A_B = \frac{\pi D_B^2}{4} = \frac{\pi\,(0{,}020)^2}{4} = 3{,}142\times10^{-4}\ \text{m}^2$$
 
-Kütlesel debi:
+**e) Kütlesel debi:**
 
-$$\dot m_{hava} = \rho A_B V_B = 1{,}0097\times3{,}142\times10^{-4}\times25{,}83 = \mathbf{8{,}19\times10^{-3}\ kg/s}$$
+$$\dot m_{hava} = \rho\,A_B\,V_B = 1{,}0097\times3{,}142\times10^{-4}\times25{,}83 = \mathbf{8{,}19\times10^{-3}\ kg/s}$$
 
-### 6.3 Su debisinin hesabı
+### 6.3 Su debisinin hesabı (Tablo 1'deki $\dot m_{su}$)
 
-Manometre okuması Pa'ya çevrilir ($1\ \text{mmSS} = \rho_{su} g h = 1000\times9{,}81\times0{,}001 = 9{,}81$ Pa):
+**Veriler:** $\Delta p_{su} = 40$ mmSS, $D_A = 26$ mm, $D_B = 16$ mm, $C_D = 0{,}98$. Suyun yoğunluğu giriş sıcaklığında (22,1 °C) $\rho = 997{,}8$ kg/m³ alınmıştır.
+
+**a) Basınç farkının Pa'ya çevrilmesi.** $1\ \text{mmSS} = \rho g h = 1000\times9{,}81\times0{,}001 = 9{,}81$ Pa olduğundan:
 
 $$\Delta p_{su} = 40\times9{,}81 = 392{,}4\ \text{Pa}$$
 
-Çap oranı:
+**b) Çap oranı:**
 
-$$\beta = \frac{16}{26} = 0{,}6154 \;\Rightarrow\; \beta^4 = 0{,}1434$$
+$$\beta = \frac{D_B}{D_A} = \frac{16}{26} = 0{,}6154 \;\Rightarrow\; \beta^4 = 0{,}6154^4 = 0{,}1434 \;\Rightarrow\; 1-\beta^4 = 0{,}8566$$
 
-Boğaz hızı ($\rho_{su}$ = 997,8 kg/m³, 22,1 °C'de):
+**c) Boğaz hızı:**
 
-$$V_B = 0{,}98\sqrt{\frac{2\times392{,}4}{997{,}8\times(1-0{,}1434)}} = 0{,}98\sqrt{0{,}9182} = 0{,}9391\ \text{m/s}$$
+$$V_B = 0{,}98\sqrt{\frac{2\times392{,}4}{997{,}8\times0{,}8566}} = 0{,}98\sqrt{\frac{784{,}8}{854{,}7}} = 0{,}98\sqrt{0{,}9182} = 0{,}98\times0{,}9582 = 0{,}9391\ \text{m/s}$$
 
-Boğaz kesit alanı:
+**d) Boğaz kesit alanı:**
 
-$$A_B = \frac{\pi\,(0{,}016)^2}{4} = 2{,}011\times10^{-4}\ \text{m}^2$$
+$$A_B = \frac{\pi D_B^2}{4} = \frac{\pi\,(0{,}016)^2}{4} = 2{,}011\times10^{-4}\ \text{m}^2$$
 
-Kütlesel debi:
+**e) Kütlesel debi:**
 
-$$\dot m_{su} = 997{,}8\times2{,}011\times10^{-4}\times0{,}9391 = \mathbf{0{,}1884\ kg/s}$$
+$$\dot m_{su} = \rho\,A_B\,V_B = 997{,}8\times2{,}011\times10^{-4}\times0{,}9391 = \mathbf{0{,}1884\ kg/s}$$
 
-Hacimsel olarak bu debi $1{,}89\times10^{-4}$ m³/s ≈ 11,3 L/dk eder.
+Hacimsel olarak bu debi $\dot m/\rho = 1{,}89\times10^{-4}$ m³/s, yani yaklaşık 11,3 L/dk eder.
+
+**Not:** Su debisi tamamen ölçülen değerlerle hesaplandığı için kesindir. Hava debisi ise kabul edilen venturi çaplarına bağlıdır; gerçek $D_A$ ve $D_B$ ile yeniden hesaplanmalıdır.
 
 ### 6.4 Hava ve su tarafında aktarılan ısı (İstenen 2)
 
