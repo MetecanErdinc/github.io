@@ -6,8 +6,8 @@ lang: tr
 
 # İç İçe Borulu Isı Değiştiricisi Deney Raporu
 
-**Ders:** MAK 4097 – Ölçüm ve Analiz Laboratuvarı
-**Bölüm:** Dokuz Eylül Üniversitesi, Makina Mühendisliği
+**Ders:** MAK 4097 – Ölçüm ve Analiz Laboratuvarı\
+**Bölüm:** Dokuz Eylül Üniversitesi, Makina Mühendisliği\
 **Deney:** İç İçe (Çift) Borulu Isı Değiştiricisi
 
 > **Önce okuyun: varsayılan değerler.** Föyün fotoğraflanan sayfalarında üç geometrik değer yok. Raporda bunlar için aşağıdaki değerler kabul edildi. Gerçek değerleri föyün Şekil 1'inden veya düzenek üzerinden alıp `hesap.py` dosyasının başındaki satırlara yazarsanız tüm sonuçlar aynı yöntemle yeniden hesaplanır:
